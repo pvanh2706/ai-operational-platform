@@ -1,0 +1,899 @@
+﻿<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hai bài toán tri thức</title>
+<style>
+  :root{
+    --paper:#F5F6F7;
+    --surface:#FFFFFF;
+    --surface-2:#ECEEF0;
+    --line:#D2D8DC;
+    --line-soft:#E4E7EA;
+    --ink:#161A1E;
+    --ink-2:#3D454C;
+    --ink-3:#6C757D;
+    --accent:#14595F;
+    --accent-soft:#E1EBEC;
+    --ok:#376B48;
+    --ok-soft:#E2EDE5;
+    --warn:#875D12;
+    --warn-soft:#F5EBD5;
+    --risk:#98452F;
+    --risk-soft:#F5E4DF;
+
+    --serif:Cambria,"Noto Serif",Georgia,"Times New Roman",serif;
+    --sans:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;
+    --mono:"Cascadia Mono",Consolas,"SF Mono",ui-monospace,monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#12161A;
+      --surface:#191E23;
+      --surface-2:#20262C;
+      --line:#2F363D;
+      --line-soft:#242A30;
+      --ink:#E6E9EB;
+      --ink-2:#B2BAC1;
+      --ink-3:#828C94;
+      --accent:#63B7BD;
+      --accent-soft:#173234;
+      --ok:#7FB48D;
+      --ok-soft:#1B2C21;
+      --warn:#D3A44E;
+      --warn-soft:#332916;
+      --risk:#D28A76;
+      --risk-soft:#33211C;
+    }
+  }
+
+  :root[data-theme="dark"]{
+    --paper:#12161A;
+    --surface:#191E23;
+    --surface-2:#20262C;
+    --line:#2F363D;
+    --line-soft:#242A30;
+    --ink:#E6E9EB;
+    --ink-2:#B2BAC1;
+    --ink-3:#828C94;
+    --accent:#63B7BD;
+    --accent-soft:#173234;
+    --ok:#7FB48D;
+    --ok-soft:#1B2C21;
+    --warn:#D3A44E;
+    --warn-soft:#332916;
+    --risk:#D28A76;
+    --risk-soft:#33211C;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16.5px;
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .page{
+    max-width:848px;
+    margin:0 auto;
+    padding:0 24px 96px;
+    display:flex;
+    flex-direction:column;
+    gap:56px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    padding:64px 0 32px;
+    border-bottom:2px solid var(--ink);
+  }
+  .kicker{
+    font-family:var(--mono);
+    font-size:11.5px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--accent);
+  }
+  .masthead h1{
+    font-family:var(--serif);
+    font-weight:700;
+    font-size:clamp(2.3rem,6vw,3.35rem);
+    line-height:1.06;
+    letter-spacing:-.015em;
+    margin:0;
+    text-wrap:balance;
+  }
+  .standfirst{
+    font-family:var(--serif);
+    font-size:1.16rem;
+    line-height:1.5;
+    color:var(--ink-2);
+    max-width:56ch;
+    margin:0;
+  }
+  .meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 26px;
+    font-family:var(--mono);
+    font-size:11.5px;
+    letter-spacing:.05em;
+    color:var(--ink-3);
+    padding-top:6px;
+  }
+  .meta b{color:var(--ink-2);font-weight:600;}
+
+  /* ---------- sections ---------- */
+
+  .sec{
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  .sec-head{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:10px;
+  }
+  .sec-num{
+    font-family:var(--mono);
+    font-size:11.5px;
+    letter-spacing:.1em;
+    color:var(--accent);
+    padding-top:6px;
+    flex:none;
+  }
+  .sec-head h2{
+    font-family:var(--serif);
+    font-weight:700;
+    font-size:1.72rem;
+    line-height:1.16;
+    letter-spacing:-.01em;
+    margin:0;
+    text-wrap:balance;
+  }
+
+  p{margin:0;max-width:64ch;}
+  .lede{font-size:1.06rem;color:var(--ink-2);}
+  strong{font-weight:650;color:var(--ink);}
+  .u{
+    text-decoration:underline;
+    text-decoration-color:var(--accent);
+    text-decoration-thickness:2px;
+    text-underline-offset:3px;
+  }
+
+  /* ---------- two stories ---------- */
+
+  .pair{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+  }
+  @media (max-width:720px){.pair{grid-template-columns:1fr;}}
+
+  .story{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-top:3px solid var(--accent);
+    padding:22px 22px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .story-tag{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.13em;
+    text-transform:uppercase;
+    color:var(--ink-3);
+  }
+  .story h3{
+    font-family:var(--serif);
+    font-size:1.22rem;
+    line-height:1.25;
+    font-weight:700;
+    margin:0;
+    text-wrap:balance;
+  }
+  .story p{font-size:.965rem;color:var(--ink-2);max-width:none;}
+  .story-out{
+    margin-top:auto;
+    padding-top:12px;
+    border-top:1px dashed var(--line);
+    font-size:.94rem;
+    font-weight:600;
+    color:var(--ink);
+  }
+
+  /* ---------- emphasis band ---------- */
+
+  .band{
+    background:var(--accent-soft);
+    border-left:4px solid var(--accent);
+    padding:24px 26px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .band-label{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:600;
+  }
+  .band p{font-size:1.05rem;color:var(--ink);max-width:62ch;}
+
+  /* ---------- figures / numbers ---------- */
+
+  .stats{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+  }
+  .stat{
+    background:var(--surface);
+    border:1px solid var(--line);
+    padding:16px 20px;
+    flex:1 1 220px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .stat-n{
+    font-family:var(--serif);
+    font-size:1.85rem;
+    font-weight:700;
+    line-height:1;
+    color:var(--accent);
+    font-variant-numeric:tabular-nums;
+  }
+  .stat-l{font-size:.9rem;color:var(--ink-2);}
+  .caveat{
+    font-family:var(--mono);
+    font-size:11.5px;
+    line-height:1.6;
+    color:var(--ink-3);
+    max-width:70ch;
+  }
+
+  /* ---------- ordered capability list ---------- */
+
+  .steps{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    counter-reset:s;
+  }
+  .step{
+    display:grid;
+    grid-template-columns:44px 1fr;
+    gap:0 18px;
+    padding:20px 0;
+    border-top:1px solid var(--line-soft);
+    align-items:start;
+  }
+  .step:first-child{border-top:1px solid var(--line);}
+  .step::before{
+    counter-increment:s;
+    content:counter(s);
+    font-family:var(--serif);
+    font-size:1.7rem;
+    font-weight:700;
+    line-height:1;
+    color:var(--accent);
+    font-variant-numeric:tabular-nums;
+  }
+  .step h3{
+    font-family:var(--sans);
+    font-size:1.05rem;
+    font-weight:650;
+    margin:0 0 6px;
+    letter-spacing:-.005em;
+  }
+  .step p{font-size:.975rem;color:var(--ink-2);}
+
+  /* ---------- principles ---------- */
+
+  .rules{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+  }
+  @media (max-width:720px){.rules{grid-template-columns:1fr;}}
+  .rule{
+    background:var(--surface);
+    padding:18px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+  }
+  .rule-n{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    color:var(--ink-3);
+  }
+  .rule h4{
+    font-family:var(--sans);
+    font-size:1rem;
+    font-weight:650;
+    margin:0;
+    line-height:1.35;
+  }
+  .rule p{font-size:.925rem;color:var(--ink-2);max-width:none;}
+
+  /* ---------- record block (mono) ---------- */
+
+  .record{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    padding:18px 20px;
+    font-family:var(--mono);
+    font-size:12.8px;
+    line-height:1.85;
+    color:var(--ink-2);
+    overflow-x:auto;
+  }
+  .record .r-key{color:var(--ink-3);}
+  .record .r-bad{color:var(--risk);font-weight:600;}
+  .record .r-good{color:var(--ok);font-weight:600;}
+  .record .r-hd{
+    color:var(--ink);
+    font-weight:600;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    font-size:11px;
+    display:block;
+    padding-bottom:8px;
+  }
+
+  /* ---------- stage tracker ---------- */
+
+  .track{
+    display:flex;
+    flex-direction:column;
+    border:1px solid var(--line);
+  }
+  .lap{
+    display:grid;
+    grid-template-columns:132px 1fr;
+    gap:18px;
+    padding:14px 20px;
+    border-top:1px solid var(--line-soft);
+    align-items:baseline;
+    background:var(--surface);
+  }
+  .lap:first-child{border-top:none;}
+  .lap-now{background:var(--accent-soft);}
+  .lap-s{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.11em;
+    text-transform:uppercase;
+    font-weight:600;
+  }
+  .s-done{color:var(--ok);}
+  .s-now{color:var(--accent);}
+  .s-todo{color:var(--ink-3);}
+  .lap-t{font-size:.99rem;}
+  .lap-now .lap-t{font-weight:650;}
+  .s-todo + .lap-t{color:var(--ink-3);}
+
+  /* ---------- findings ---------- */
+
+  .finds{display:flex;flex-direction:column;gap:16px;}
+  .find{
+    background:var(--surface);
+    border:1px solid var(--line);
+    display:flex;
+    flex-direction:column;
+  }
+  .find-top{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    padding:16px 20px 12px;
+  }
+  .find-i{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--ink-3);
+    flex:none;
+    padding-top:3px;
+  }
+  .find-top h3{
+    font-family:var(--sans);
+    font-size:1.06rem;
+    font-weight:650;
+    margin:0;
+    line-height:1.35;
+    flex:1;
+  }
+  .chip{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    font-weight:600;
+    padding:4px 8px;
+    border-radius:2px;
+    flex:none;
+    white-space:nowrap;
+  }
+  .chip-warn{background:var(--warn-soft);color:var(--warn);}
+  .chip-risk{background:var(--risk-soft);color:var(--risk);}
+  .chip-ok{background:var(--ok-soft);color:var(--ok);}
+  .find-body{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:0 20px 18px;
+  }
+  .fl{
+    display:grid;
+    grid-template-columns:96px 1fr;
+    gap:14px;
+    align-items:baseline;
+  }
+  @media (max-width:620px){.fl{grid-template-columns:1fr;gap:2px;}}
+  .fl-k{
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-3);
+    padding-top:4px;
+  }
+  .fl p{font-size:.95rem;color:var(--ink-2);max-width:none;}
+  .fl-do p{color:var(--ink);font-weight:550;}
+
+  /* ---------- table ---------- */
+
+  .tw{overflow-x:auto;border:1px solid var(--line);}
+  table{
+    border-collapse:collapse;
+    width:100%;
+    min-width:520px;
+    background:var(--surface);
+    font-size:.945rem;
+  }
+  th,td{
+    text-align:left;
+    padding:11px 18px;
+    border-top:1px solid var(--line-soft);
+    vertical-align:top;
+  }
+  thead th{
+    border-top:none;
+    background:var(--surface-2);
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:.11em;
+    text-transform:uppercase;
+    font-weight:600;
+    color:var(--ink-2);
+  }
+  td:first-child{color:var(--ink-2);}
+  td:last-child{font-weight:600;}
+  .is-k{color:var(--accent);}
+
+  /* ---------- questions ---------- */
+
+  .asks{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);}
+  .ask{
+    background:var(--surface);
+    padding:18px 20px;
+    display:grid;
+    grid-template-columns:28px 1fr;
+    gap:16px;
+    align-items:start;
+  }
+  .ask-n{
+    font-family:var(--serif);
+    font-size:1.3rem;
+    font-weight:700;
+    color:var(--accent);
+    line-height:1.2;
+  }
+  .ask p{font-size:1rem;max-width:none;}
+
+  .closing{
+    border-top:2px solid var(--ink);
+    padding-top:26px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .closing p{font-family:var(--serif);font-size:1.1rem;color:var(--ink-2);max-width:60ch;}
+</style>
+<style>
+  @page{ margin:16mm 14mm; }
+  @media print{
+    :root{
+      --paper:#FFFFFF; --surface:#FFFFFF; --surface-2:#F3F5F6;
+      --line:#C6CCD1; --line-soft:#E1E5E8;
+      --ink:#000000; --ink-2:#282E33; --ink-3:#565D64;
+      --accent:#0F4A50; --accent-soft:#E9F1F2;
+    }
+    body{ font-size:11pt; }
+    .page{ max-width:none; padding:0; gap:30px; }
+    .masthead{ padding:0 0 22px; }
+    .sec-head{ break-after:avoid; page-break-after:avoid; }
+    .story,.find,.record,.rule,.band,.stat,.ask,.tw,.track,.step{
+      break-inside:avoid; page-break-inside:avoid;
+    }
+    .closing{ break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="kicker">Nền tảng Tri thức &amp; Quy trình Vận hành · Bản tóm tắt nội bộ</div>
+    <h1>Hai bài toán tri thức</h1>
+    <p class="standfirst">Vì sao “gắn AI vào Jira” không giải quyết được vấn đề của chúng ta — và việc cần chốt tiếp theo.</p>
+    <div class="meta">
+      <span><b>Ngày</b> 20/08/2026</span>
+      <span><b>Giai đoạn</b> Thiết kế nghiệp vụ — chưa viết code</span>
+      <span><b>Người đọc</b> Team &amp; Ban lãnh đạo</span>
+    </div>
+  </header>
+
+  <!-- 1 -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Bài toán</h2>
+    </div>
+
+    <p class="lede">Chúng ta đang xây một nền tảng giúp nhân viên <strong>tìm đúng tri thức</strong> và <strong>làm đúng bước</strong> khi xử lý công việc. Nhưng “thiếu tri thức” thực chất là <span class="u">hai vấn đề khác nhau</span> — và chúng cần hai giải pháp khác nhau.</p>
+
+    <div class="pair">
+      <article class="story">
+        <span class="story-tag">Vấn đề A</span>
+        <h3>Tri thức có sẵn, nhưng người cần không tìm ra</h3>
+        <p>Khách báo: “Booking Traveloka không về PMS”. Một bạn support mới nhận việc.</p>
+        <p>Công ty <strong>đã có</strong> tài liệu hướng dẫn xử lý đúng tình huống này. Nhưng bạn ấy không biết là có tài liệu đó — nên đi hỏi người cũ, hoặc đẩy sang Technical.</p>
+        <div class="story-out">→ Tổ chức trả tiền lần thứ hai cho một câu trả lời đã có.</div>
+      </article>
+
+      <article class="story">
+        <span class="story-tag">Vấn đề B</span>
+        <h3>Tri thức phát sinh, nhưng không được ghi lại</h3>
+        <p>Một case khó. Technical đọc log, phát hiện một dạng dữ liệu từ OTA bị hệ thống bỏ qua, sửa code, xong việc. Ticket đóng lại với comment “Đã xử lý”.</p>
+        <p>Sáu tháng sau, case tương tự. Không ai học được gì từ ticket cũ, vì ticket không ghi đã làm những gì.</p>
+        <div class="story-out">→ Không có gì để tìm lại.</div>
+      </article>
+    </div>
+
+    <div class="band">
+      <span class="band-label">Điểm mấu chốt</span>
+      <p>Một công cụ tìm kiếm — kể cả AI — <strong>chỉ giải được vấn đề A</strong>. Với vấn đề B, tri thức chưa từng được viết ra, nên không có công cụ tìm kiếm nào tìm được nó.</p>
+      <p>Đây là lý do sản phẩm này không thể chỉ là “chatbot hỏi đáp tài liệu”.</p>
+    </div>
+
+    <p class="lede">Chúng ta đã kiểm chứng vấn đề B trên dữ liệu Jira thật — 500 case đã Fixed:</p>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-n">306 / 500</span>
+        <span class="stat-l">case không ghi lại bước xử lý cụ thể</span>
+      </div>
+      <div class="stat">
+        <span class="stat-n">~45%</span>
+        <span class="stat-l">case không thể dùng lại được cho case sau</span>
+      </div>
+      <div class="stat">
+        <span class="stat-n">100 / 100</span>
+        <span class="stat-l">case có field “Version đang sử dụng” bị bỏ trống</span>
+      </div>
+    </div>
+
+    <p class="caveat">Lưu ý về độ tin cậy: các nhãn “dùng lại được / không dùng lại được” do máy suy luận, chưa có người gán nhãn đối chiếu. Riêng con số 100/100 field trống là dữ kiện chắc chắn — và nó nói một điều quan trọng: <strong>thêm field không tạo ra tri thức.</strong></p>
+  </section>
+
+  <!-- 2 -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Sản phẩm làm ba việc</h2>
+    </div>
+
+    <p class="lede">Ba việc này đã được chốt. Đây là phạm vi bản đầu tiên — không thêm việc thứ tư.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div>
+          <h3>Tìm đúng tri thức</h3>
+          <p>Case vừa xuất hiện, hệ thống tự đưa ra tài liệu và hướng dẫn liên quan. Người mới không cần biết tên file, không cần biết là có tài liệu, không cần biết phải gõ từ khóa gì.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3>Dẫn từng bước</h3>
+          <p>Không chỉ đưa tài liệu rồi thôi. Hệ thống biết quy trình nào đang áp dụng, bước nào đã xong, bước tiếp theo là gì, và khi nào thì thật sự nên chuyển Technical.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3>Ghi lại và đo lường</h3>
+          <p>Khi case xong, hệ thống hỏi vài câu, tự soạn bản nháp tri thức, người xác nhận là xong — thay vì bắt ai đó ngồi viết tài liệu. Song song, ghi nhận AI có thật sự giúp được hay không.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="band">
+      <span class="band-label">Ba việc tạo thành một vòng</span>
+      <p>Dùng tri thức → xử lý công việc → sinh ra tri thức mới → dùng lại. Việc 1 và 2 giải vấn đề A. Việc 3 giải vấn đề B, và là thứ giúp kho tri thức tự lớn lên theo thời gian.</p>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>Bảy nguyên tắc đã chốt</h2>
+    </div>
+
+    <p class="lede">Đây là các quyết định đã xác nhận. Chúng tồn tại để sản phẩm không bị bó vào một công cụ, và để AI không tự biến phỏng đoán thành sự thật của tổ chức.</p>
+
+    <div class="rules">
+      <div class="rule">
+        <span class="rule-n">01</span>
+        <h4>Jira chỉ là một nguồn dữ liệu, không phải sản phẩm</h4>
+        <p>Mai này cắm email, CRM, helpdesk hay form nội bộ vào thì vẫn phải chạy. Không thiết kế dính chết vào field và workflow của Jira.</p>
+      </div>
+      <div class="rule">
+        <span class="rule-n">02</span>
+        <h4>Ba khái niệm phải tách nhau</h4>
+        <p>Việc đang xử lý · Tổ chức biết gì · Nên xử lý thế nào. Trộn ba thứ này lại thì sau này không tách ra được nữa.</p>
+      </div>
+      <div class="rule">
+        <span class="rule-n">03</span>
+        <h4>Sự thật khác với AI suy đoán</h4>
+        <p>Dữ liệu nguồn không tự động trở thành kết luận. Xem ví dụ thật ngay bên dưới.</p>
+      </div>
+      <div class="rule">
+        <span class="rule-n">04</span>
+        <h4>“Chưa biết” là một câu trả lời hợp lệ</h4>
+        <p>Không ép về có/không cho gọn dữ liệu. Chưa xác định, đang chờ, bằng chứng mâu thuẫn — đều là dữ liệu thật, cần lưu đúng như vậy.</p>
+      </div>
+      <div class="rule">
+        <span class="rule-n">05</span>
+        <h4>Lưu cả dòng thời gian, không chỉ trạng thái hiện tại</h4>
+        <p>Support → Technical → Support → Xong. Ai nhận việc lúc nào, đang chờ ai, chờ bao lâu. Ảnh chụp trạng thái hiện tại là không đủ.</p>
+      </div>
+      <div class="rule">
+        <span class="rule-n">06</span>
+        <h4>Thông tin quan trọng phải truy được nguồn</h4>
+        <p>Ai hoặc cái gì tạo ra, dựa vào bằng chứng nào, lúc nào, đã ai xác minh chưa. Nếu AI đoán rồi Technical xác nhận đúng, vẫn phải ghi “gốc là AI đoán” — để về sau đo được AI đúng bao nhiêu phần trăm.</p>
+      </div>
+      <div class="rule">
+        <span class="rule-n">07</span>
+        <h4>Bảo mật tính từ đầu</h4>
+        <p>Dữ liệu vận hành có mật khẩu, token, thông tin khách hàng, URL nội bộ, log. Không để phần này làm sau cùng.</p>
+      </div>
+      <div class="rule">
+        <span class="rule-n">—</span>
+        <h4>Và một giới hạn về phạm vi</h4>
+        <p>Tầm nhìn dài hạn được giữ đầy đủ trong tài liệu, nhưng bản đầu tiên chỉ làm ba việc. Không xây trước những gì chưa cần.</p>
+      </div>
+    </div>
+
+    <div class="record">
+      <span class="r-hd">Nguyên tắc 03 — ví dụ thật từ dữ liệu Jira</span>
+      <span class="r-key">Dữ liệu nguồn</span>&nbsp;&nbsp;Field “Bạn tái lập lại được lỗi?” = “Không”<br>
+      <br>
+      <span class="r-key">AI KHÔNG được hiểu thành</span>&nbsp;&nbsp;<span class="r-bad">“Đã thử tái lập và thất bại”</span><br>
+      <span class="r-key">Vì</span>&nbsp;&nbsp;Nghiệp vụ xác nhận: nhiều người chọn “Không” khi <em>chưa thử</em><br>
+      <br>
+      <span class="r-key">Kết luận đúng</span>&nbsp;&nbsp;<span class="r-good">Tình trạng tái lập = CHƯA XÁC ĐỊNH</span>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>Chúng ta đang ở đâu</h2>
+    </div>
+
+    <div class="track">
+      <div class="lap"><span class="lap-s s-done">Đã xong</span><span class="lap-t">Chốt sản phẩm làm gì, cho ai, use case đầu tiên là gì</span></div>
+      <div class="lap"><span class="lap-s s-done">Đã xong</span><span class="lap-t">Chốt mô hình “Việc cần xử lý” — một việc gồm những gì, đi qua những trạng thái nào</span></div>
+      <div class="lap lap-now"><span class="lap-s s-now">Đang làm</span><span class="lap-t">Mô hình “Tri thức” — tri thức là gì và không phải là gì</span></div>
+      <div class="lap"><span class="lap-s s-todo">Chưa tới</span><span class="lap-t">Mô hình “Quy trình”</span></div>
+      <div class="lap"><span class="lap-s s-todo">Chưa tới</span><span class="lap-t">Kiến trúc hệ thống</span></div>
+      <div class="lap"><span class="lap-s s-todo">Chưa tới</span><span class="lap-t">Viết code bản đầu tiên</span></div>
+    </div>
+
+    <div class="band">
+      <span class="band-label">Câu hỏi sẽ bị hỏi: sao phải ngồi định nghĩa, code luôn đi?</span>
+      <p>Nếu không định nghĩa, mặc định mọi người sẽ code thành: <strong>tri thức = tài liệu</strong> → cắt tài liệu thành đoạn → nhét vào AI → ra một chatbot hỏi đáp tài liệu.</p>
+      <p>Cái đó chúng ta đã kết luận là không đủ: người dùng vẫn phải biết mà hỏi; hệ thống không biết họ đang ở bước nào; tri thức mới không được ghi lại; và không đo được là có giúp gì hay không. Còn với vấn đề B, nó trả về rỗng.</p>
+      <p>Định nghĩa trước là cách rẻ nhất để không phải làm lại. Việc này tính bằng ngày, không phải bằng tháng.</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2>Năm điểm cần lưu ý</h2>
+    </div>
+
+    <p class="lede">Đây là phần phản biện. Không điểm nào đề nghị đổi quyết định đã chốt — nhưng cả năm đều ảnh hưởng đến việc thiết kế tiếp theo.</p>
+
+    <div class="finds">
+
+      <article class="find">
+        <div class="find-top">
+          <span class="find-i">01</span>
+          <h3>Thiếu một tài liệu gốc</h3>
+          <span class="chip chip-risk">Cần xử lý</span>
+        </div>
+        <div class="find-body">
+          <div class="fl"><span class="fl-k">Vấn đề</span><p>Tài liệu chốt “sản phẩm làm gì” không còn trong repo, chỉ còn bản rút gọn. Mất phần “vì sao chọn như vậy”, và quan trọng nhất là <strong>thước đo thành công của bản đầu tiên</strong>.</p></div>
+          <div class="fl"><span class="fl-k">Hệ quả</span><p>Không biết “thành công” nghĩa là gì thì rất dễ làm quá tay, hoặc làm lệch hướng mà không ai phát hiện.</p></div>
+          <div class="fl fl-do"><span class="fl-k">Đề nghị</span><p>Tìm lại tài liệu, hoặc dựng lại và chốt lại thước đo trước khi thiết kế sâu hơn.</p></div>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top">
+          <span class="find-i">02</span>
+          <h3>Việc số 3 đang được mô tả theo hai kiểu khác nhau</h3>
+          <span class="chip chip-warn">Cần xác nhận</span>
+        </div>
+        <div class="find-body">
+          <div class="fl"><span class="fl-k">Vấn đề</span><p>Hai phiên bản: <strong>(a)</strong> AI đọc lịch sử hàng trăm case, phát hiện quy luật, tự soạn tài liệu — làm ngoài luồng, quy mô lớn. <strong>(b)</strong> Sau khi xong một case thì hỏi vài câu rồi soạn bản nháp — làm ngay trong luồng, quy mô một case.</p></div>
+          <div class="fl"><span class="fl-k">Hệ quả</span><p>Khối lượng công việc rất khác nhau. Bản mới hơn là (b), và tôi tìm được bằng chứng gián tiếp trong tài liệu khác xác nhận điều đó.</p></div>
+          <div class="fl fl-do"><span class="fl-k">Đề nghị</span><p>Xác nhận rõ: việc “đào lịch sử” đã ra khỏi bản đầu tiên và chuyển sang giai đoạn sau.</p></div>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top">
+          <span class="find-i">03</span>
+          <h3>Bằng chứng mạnh nhất không nằm ở việc được ưu tiên trước</h3>
+          <span class="chip chip-warn">Cần lưu ý</span>
+        </div>
+        <div class="find-body">
+          <div class="fl"><span class="fl-k">Vấn đề</span><p>Dữ liệu thật chứng minh mạnh <strong>vấn đề B</strong>. Còn <strong>vấn đề A</strong> hiện chỉ dựa trên một câu chuyện (case Traveloka), chưa có số. Nhưng bản đầu tiên lại đặt A lên trước — việc 1 và việc 2.</p></div>
+          <div class="fl"><span class="fl-k">Hệ quả</span><p>Không đề nghị đổi thứ tự. Nhưng đừng giả định là có sẵn một kho tài liệu lớn và tốt — rất có thể use case đầu tiên chỉ có <em>một</em> tài liệu. Thiết kế phải chạy được với kho tri thức nhỏ, thiếu và không đều, và phải chỉ ra được “chỗ này chưa có tài liệu”.</p></div>
+          <div class="fl fl-do"><span class="fl-k">Đề nghị</span><p>Đo thử vấn đề A trước khi build: hỏi 5 bạn support mới xem họ có biết tài liệu đó tồn tại không. Vài giờ làm việc, ra ngay một con số để bảo vệ quyết định.</p></div>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top">
+          <span class="find-i">04</span>
+          <h3>Cách đo “thiếu tri thức” còn một lỗ hổng đã biết</h3>
+          <span class="chip chip-warn">Cần lưu ý</span>
+        </div>
+        <div class="find-body">
+          <div class="fl"><span class="fl-k">Vấn đề</span><p>Phân tích trước đây cố tình không đọc ảnh và file đính kèm. Nên có thể có trường hợp tri thức <strong>đã có</strong> trong ảnh chụp màn hình, nhưng bị đếm là “không có”.</p></div>
+          <div class="fl"><span class="fl-k">Hệ quả</span><p>Cần ba trạng thái, không phải hai: <em>không tồn tại</em> · <em>có nhưng máy không đọc được</em> (ảnh, cuộc gọi, trong đầu người) · <em>có và tìm được</em>.</p></div>
+          <div class="fl fl-do"><span class="fl-k">Đề nghị</span><p>Đưa ba trạng thái này vào mô hình. Giá trị của sản phẩm chính là chuyển trạng thái 2 sang 3 — nếu mô hình chỉ có “có/không” thì ta không đo được đúng thứ mình đang bán.</p></div>
+        </div>
+      </article>
+
+      <article class="find">
+        <div class="find-top">
+          <span class="find-i">05</span>
+          <h3>“Tri thức” và “quy trình” sẽ chồng nhau ngay ở use case đầu tiên</h3>
+          <span class="chip chip-risk">Chốt trước tiên</span>
+        </div>
+        <div class="find-body">
+          <div class="fl"><span class="fl-k">Vấn đề</span><p>Tài liệu hướng dẫn “booking không về PMS” bản chất là <strong>một danh sách bước có điều kiện</strong>. Vậy nó là tri thức, hay là quy trình?</p></div>
+          <div class="fl"><span class="fl-k">Hệ quả</span><p>Không có quy tắc phân định thì cùng một tài liệu bị làm hai lần ở hai giai đoạn khác nhau, hoặc rơi vào khe giữa và không ai làm.</p></div>
+          <div class="fl fl-do"><span class="fl-k">Đề nghị</span><p>Quy tắc đề xuất: có các bước theo thứ tự và theo dõi được “đang ở bước nào” cho từng case → là <strong>quy trình</strong>. Là một phát biểu, giải thích hoặc điều kiện áp dụng, không có bước để chạy → là <strong>tri thức</strong>. Một file tài liệu có thể là nguồn cho cả hai.</p></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">06</span>
+      <h2>Việc tiếp theo: chốt “tri thức là gì”</h2>
+    </div>
+
+    <p class="lede">Cách làm: một định nghĩa, một bài test bốn câu, rồi đi qua từng ranh giới một. Không dựng cả mô hình rồi coi như đã xong.</p>
+
+    <div class="band">
+      <span class="band-label">Định nghĩa đề xuất</span>
+      <p>Tri thức là một <strong>phát biểu dùng lại được</strong>, nói về cách nghiệp vụ vận hành hoặc cách xử lý một <strong>loại</strong> tình huống; đã được tổ chức chấp nhận ở một mức nào đó; và <strong>tồn tại độc lập</strong> với bất kỳ case cụ thể nào.</p>
+    </div>
+
+    <div class="record">
+      <span class="r-hd">Bài test bốn câu — đưa một mẩu thông tin vào và hỏi</span>
+      1 &nbsp;Xóa case đã sinh ra nó, nó còn giá trị không?<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="r-key">Không →</span> là dữ liệu của case, không phải tri thức<br>
+      <br>
+      2 &nbsp;Nó nói về một LOẠI tình huống, hay một ca cụ thể?<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="r-key">Ca cụ thể →</span> chưa phải tri thức<br>
+      <br>
+      3 &nbsp;Đã có người hoặc quy trình nào chấp nhận nó chưa?<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="r-key">Chưa →</span> mới là bản nháp<br>
+      <br>
+      4 &nbsp;Nó có giúp ra quyết định hoặc hành động không?<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="r-key">Không →</span> đúng nhưng vô dụng, không cần lưu<br>
+      <br>
+      <span class="r-good">Qua cả bốn câu → là tri thức.</span>
+    </div>
+
+    <p class="lede">Áp bài test vào những thứ chúng ta gặp hàng ngày:</p>
+
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th>Ví dụ cụ thể</th><th>Là gì</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>“Booking ABC123 không về PMS”</td><td>Việc cần xử lý</td></tr>
+          <tr><td>Ảnh chụp lỗi khách gửi</td><td>Bằng chứng</td></tr>
+          <tr><td>“Booking ABC123 không về vì lỗi đọc dữ liệu”</td><td>Nhận định trong một case</td></tr>
+          <tr><td>“Dữ liệu OTA dạng X sẽ bị bản dưới 2.3 bỏ qua”</td><td class="is-k">Tri thức</td></tr>
+          <tr><td>File SOP.docx trên Drive</td><td>Vật chứa tri thức</td></tr>
+          <tr><td>Ticket ES-123 đã xử lý vấn đề tương tự</td><td>Tiền lệ để tham khảo</td></tr>
+          <tr><td>Bản AI tự tổng hợp, chưa ai duyệt</td><td>Bản nháp</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="lede">Nghe có vẻ hiển nhiên, nhưng nếu không viết ra thì mỗi người trong team sẽ code theo một cách hiểu khác nhau — và ba tháng sau ta có một kho lẫn lộn giữa tri thức, bằng chứng, ticket cũ và bản nháp chưa ai duyệt.</p>
+  </section>
+
+  <!-- 7 -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">07</span>
+      <h2>Ba câu cần quyết</h2>
+    </div>
+
+    <div class="asks">
+      <div class="ask">
+        <span class="ask-n">1</span>
+        <p>Tài liệu hướng dẫn “booking không về PMS” — chúng ta coi nó là <strong>tri thức</strong>, là <strong>quy trình</strong>, hay là một file làm nguồn cho cả hai?</p>
+      </div>
+      <div class="ask">
+        <span class="ask-n">2</span>
+        <p>Việc “tìm case cũ tương tự” có nằm trong bản đầu tiên không? Nó khác với việc tìm tài liệu, và cần thiết kế riêng.</p>
+      </div>
+      <div class="ask">
+        <span class="ask-n">3</span>
+        <p>Việc số 3 xác nhận là bản “hỏi sau khi xong case”, và việc “đào lịch sử hàng trăm case” chuyển sang giai đoạn sau — đúng không?</p>
+      </div>
+    </div>
+
+    <div class="closing">
+      <p>Trả lời được ba câu này là chốt xong bước hiện tại. Sau đó mới sang chi tiết mô hình tri thức: các loại tri thức, phạm vi áp dụng, vòng đời từ bản nháp đến chính thức, và cách xử lý khi tri thức bị mâu thuẫn.</p>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>
