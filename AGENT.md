@@ -17,6 +17,7 @@ Trước khi phân tích, thiết kế hoặc code, hãy đọc theo thứ tự:
 1. `docs/00_CURRENT_STATE.md` — **đọc trước tiên.** Trạng thái hiện tại, quyết định mới nhất, việc đang làm.
 2. `docs/PROJECT_CONTEXT.md`
 3. `docs/Canonical Case Model v0.2.md`
+4. `docs/04_KNOWLEDGE_MODEL_V0.1.md` — **Knowledge Boundary đã chốt 2026-08-21.** Đọc trước khi bàn bất cứ gì về Knowledge.
 
 ## ⚠️ Lưu ý về tài liệu (cập nhật 2026-08-21)
 
@@ -220,6 +221,30 @@ Không được coi security là phần bổ sung sau cùng.
 
 ---
 
+## 3.8 Không tự làm PHỎNG TO một Capability đã chốt (G11)
+
+`CONFIRMED 2026-08-21` — quyết định `S1`. Chi tiết: `docs/04_KNOWLEDGE_MODEL_V0.1.md` §1 và `docs/00_CURRENT_STATE.md` §2.3.
+
+G9 chặn việc **thêm** Capability #4, #5. G11 chặn hướng còn lại: làm một capability đã chốt **phình ra tới mức khác bản chất**.
+
+Cụ thể cho Capability #3 (theo D6):
+
+```text
+ĐƯỢC                                   KHÔNG ĐƯỢC
+gom theo yêu cầu của người dùng        tự quyết chủ đề nào cần SOP
+tập nguồn CÓ GIỚI HẠN                  quét toàn bộ corpus tìm quy luật mới
+có điểm đầu và điểm cuối               job chạy nền liên tục
+người duyệt mới thành tri thức         AI tự công nhận
+```
+
+**Vì sao cần G11 riêng, G9 không đủ:** *"tự đào quy luật từ 500 case"* vẫn nằm **TRONG** Capability #3 về mặt chữ nghĩa — nó không tạo capability mới. Nên G9 không chặn được nó.
+
+Cột phải chính là `Process Discovery` + `Knowledge Gap Detection` — đã có nhãn *future capability* ở `PROJECT_CONTEXT.md` §17.
+
+Cùng nguyên tắc áp cho Capability #1 và #2 khi có quyết định phạm vi tương ứng.
+
+---
+
 # 4. Current Product Decisions
 
 ## Primary Persona
@@ -292,6 +317,28 @@ Hệ quả bắt buộc:
 - Nút cổ chai sẽ dịch từ "AI có hiểu không" sang "AI có được phép xem không" → permission + provenance + outcome là cốt lõi sản phẩm, không phải phần phụ.
 - Nâng năng lực bằng policy (autonomy level), không bằng rewrite.
 
+## D6 — "Gom nhiều case cũ thành một SOP theo yêu cầu" NẰM TRONG Capability 3 của MVP
+
+`CONFIRMED 2026-08-21` — người dùng xác nhận trực tiếp. Đây là Open Question `Q-A` đã chặn Step 1 của Workstream 04. Lý do và phân tích đầy đủ: `docs/00_CURRENT_STATE.md` §2.3 và §4.
+
+Phạm vi chính xác — **phần bên phải là guardrail, không phải mô tả**:
+
+```text
+THUỘC D6                                    KHÔNG THUỘC D6
+người nói "tôi cần SOP cho chủ đề X"        AI tự quyết chủ đề nào cần SOP
+kéo một tập CÓ GIỚI HẠN case liên quan      quét toàn bộ corpus tìm quy luật mới
+AI soạn nháp → người sửa → người duyệt      AI tự công nhận (vi phạm D4)
+một hành động, có điểm bắt đầu và kết thúc  job chạy nền liên tục
+```
+
+Cột phải chính là `Process Discovery` + `Knowledge Gap Detection` — đã nằm ở `PROJECT_CONTEXT.md` §17 với nhãn *future capability*. D6 **không** kéo chúng vào MVP và **không** tạo Capability #4 (giữ G9).
+
+Hai hệ quả đã ghi nhận:
+
+- **Q-C co lại.** Để gom N case cũ, hệ thống buộc phải tìm được N case cũ liên quan → cỗ máy "tìm case cũ tương tự" trở thành **dependency của Capability 3**, không còn là lựa chọn của Capability 1. Q-C chuyển từ *"có build không"* (đắt) thành *"có bày ra cho người dùng không"* (gần như miễn phí).
+- **D6 là bánh đà của D5.** Mỗi lần dùng tính năng này sinh ra một cặp *(bản nháp AI, bản người sửa)*. `diff` giữa hai bản chính là nhãn mà bộ eval cần — sinh ra bởi hành vi sử dụng sản phẩm, không phải bởi một phase gán nhãn riêng.
+- **D6 là điều kiện để D2 dùng được ở khách hàng đầu tiên.** Engine gợi ý quy trình không có gì để gợi ý nếu khách chưa có quy trình nào trong hệ thống.
+
 ## Dữ liệu thực tế quan trọng — 10/30/60
 
 ```text
@@ -300,7 +347,7 @@ SOP chỉ nằm trong đầu người                        30%
 SOP rải rác: vài comment Jira, một email, ghi chú  60%
 ```
 
-Nghĩa là Capability #1 (retrieval) chỉ có việc để làm ở ~10% trường hợp ngày đầu. Xem `docs/00_CURRENT_STATE.md` §3 và §4 để biết hệ quả với thứ tự MVP và câu hỏi đang chờ quyết.
+Nghĩa là Capability #1 (retrieval) chỉ có việc để làm ở ~10% trường hợp ngày đầu. Xem `docs/00_CURRENT_STATE.md` §3 và §4 để biết hệ quả với thứ tự MVP. Câu hỏi chặn Step 1 (`Q-A`) đã được trả lời — xem D6 ở trên.
 
 ---
 
@@ -394,11 +441,14 @@ Product Foundation             ✅  (artifact bị mất — xem 00_CURRENT_STAT
 Canonical Case Model v0.2      ✅
 
 Knowledge Model v0.1           🔵 ĐANG LÀM
-                                  Step 1 (Define Knowledge Boundary) đã chuẩn bị xong,
-                                  chờ người dùng review. Nội dung: 00_CURRENT_STATE.md §5.
-                                  Còn 1 quyết định đang chặn: §4.
+                                  Step 1 Knowledge Boundary        ✅ CONFIRMED 2026-08-21
+                                  Step 2 Concepts & Granularity    ✅ CONFIRMED 2026-08-21
+                                     → docs/04_KNOWLEDGE_MODEL_V0.1.md §1 và §3
+                                  Step 3 Knowledge ↔ Case ↔ Process 🔵 TIẾP THEO
 
 Process Model                  ⚪ AFTER KNOWLEDGE
+                                  ⚠ nhưng xem 04 §1.4: Knowledge và Process
+                                    chia nhau một KERNEL, không tách rời hoàn toàn.
 MVP Architecture               ⚪ LATER
 MVP Implementation             ⚪ LATER
 ```
@@ -415,7 +465,10 @@ Workstream tiếp theo:
 
 > **Đang làm Step 1 — Define Knowledge Boundary.**
 > Nội dung đã chuẩn bị đầy đủ ở `docs/00_CURRENT_STATE.md` §5 (định nghĩa ứng viên, discriminator test 4 câu, 4 chiều của Knowledge, bảng ranh giới 8 concept, 7 boundary claim, trình tự chạy).
-> Còn **1 quyết định đang chặn** — `docs/00_CURRENT_STATE.md` §4.
+> **Step 1 và Step 2 đã CHỐT** — `docs/04_KNOWLEDGE_MODEL_V0.1.md` §1 (Boundary) và §3 (Concepts).
+> Đọc file đó trước khi làm bất cứ gì trong workstream này. Nó chứa 15 quyết định `CONFIRMED`
+> (S1-S8, K-B9, Q-B, Q-C, T1-T4), 9 boundary claim K-B1..K-B9, và điều kiện dừng.
+> **Đang làm: Step 3 — Knowledge ↔ Case ↔ Process relationships.**
 > Không thiết kế toàn bộ Knowledge Model trong một lượt.
 
 Cần làm rõ:
@@ -495,6 +548,38 @@ LLM framework
 ```
 
 rồi suy ngược domain model.
+
+---
+
+## 10.1 Chốt công nghệ là quyền của người dùng — `CONFIRMED 2026-08-21`
+
+Người dùng yêu cầu trực tiếp: **trước khi viết code, phải báo trước để người dùng chốt công nghệ.**
+
+```text
+BẮT BUỘC BÁO TRƯỚC VÀ CHỜ XÁC NHẬN, không được tự chọn:
+  · ngôn ngữ / runtime / framework backend
+  · framework frontend
+  · database (quan hệ, vector, cache)
+  · LLM provider / model / SDK
+  · hạ tầng, deployment, hosting
+  · thư viện lớn hoặc bất kỳ thứ gì khó thay về sau
+```
+
+Agent **được** đề xuất phương án kèm đánh đổi, và **nên** phản biện. Nhưng không được:
+
+- viết file code đầu tiên rồi mới hỏi;
+- coi một công nghệ là "mặc định hiển nhiên" (kể cả khi repo đã có dấu vết của nó);
+- suy ra lựa chọn công nghệ từ ví dụ trong tài liệu — `C# entity` và `Vue component` ở §10 là **ví dụ về việc KHÔNG được bắt đầu từ đâu**, không phải quyết định stack.
+
+Nhất quán với `D5`: chọn công nghệ sai tạo ra **giàn giáo tạm** — thứ trở thành nợ khi model mạnh lên. Nên đây không phải chi tiết triển khai, nó là quyết định sản phẩm.
+
+Ràng buộc thời điểm:
+
+```text
+Workstream 04, 05  Domain Modeling      → KHÔNG code. Chưa cần chốt công nghệ.
+Workstream 06      MVP Architecture     → ĐÂY là lúc chốt công nghệ, trước khi sang 07.
+Workstream 07      MVP Implementation   → chỉ bắt đầu sau khi người dùng đã chốt.
+```
 
 ---
 

@@ -2,11 +2,77 @@
 
 ## AI Operational Knowledge & Process Platform
 
-> **Cập nhật:** 2026-08-21
+> **Cập nhật:** 2026-08-21 (buổi 2 — D6 chốt, **Step 1 + Step 2 CHỐT**, §8.1 đã chạy)
 > **Mục đích:** File này là điểm vào cho phiên làm việc tiếp theo. Đọc file này TRƯỚC, rồi mới đọc các tài liệu khác.
 > **Dành cho:** AI Agent hoặc người mới tiếp tục project, kể cả trên máy khác.
 
 ---
+
+---
+
+# TL;DR — đọc 30 giây này trước
+
+```text
+DỰ ÁN     AI Operational Knowledge & Process Platform
+          Sản phẩm ĐỂ BÁN (D1), multi-tenant từ ngày đầu.
+          Bản build đầu: engine gợi ý quy trình + tri thức, nhúng được (D2).
+
+STAGE     Domain Modeling. Workstream 04 — Knowledge Model v0.1.
+          Step 1 Knowledge Boundary        ✅ CHỐT  → 04 §1
+          Step 2 Concepts & Granularity    ✅ CHỐT  → 04 §3
+          Step 3 Knowledge ↔ Case ↔ Process 🔵 TIẾP THEO
+
+CHƯA CODE. Chốt công nghệ là quyền của người dùng — AGENT.md §10.1.
+          Đúng thời điểm chốt là Workstream 06, không phải bây giờ.
+```
+
+## Ba con số phải nhớ
+
+```text
+10 / 30 / 60   SOP có và tìm được 10% · trong đầu người 30% · rải rác 60%
+               → Capability 1 (retrieval) ngày đầu gần như không có gì để trả
+
+5 bước         Quy trình THẬT của first use case (§8.1-KQ):
+               Kibana → response → tài liệu → issue cũ → ĐƯA RA KẾT LUẬN
+               Tuyến tính, KHÔNG nhánh. Giá trị nằm trọn ở bước cuối,
+               và đó là bước duy nhất không ai ghi lại.
+
+5-10           Số loại nguyên nhân của first use case.  ⚠ n=1, chưa xác nhận.
+               → kho tri thức ~10 record, không phải 500.
+               → toàn bộ 04 §3.5 đứng trên con số này. Xem R-K4.
+```
+
+## Việc tiếp theo, theo thứ tự giá trị
+
+```text
+1  §8.2  ĐẾM 20 case OTA gần nhất — nguyên nhân rơi vào mấy nhóm?
+         Việc của NGƯỜI DÙNG, ngoài thiết kế. Giá trị cao nhất còn lại.
+         Xác nhận/bác bỏ con số 5-10 → xác nhận/bác bỏ 04 §3.5.
+         Cũng cho Q-E (Success Metrics) con số thật thay vì ứng viên.
+
+2  Step 3  Knowledge ↔ Case ↔ Process. Mang theo N-3b, N-6, N-7 (04 §3.6).
+
+3  H-3..H-7  Housekeeping, gộp một lần cuối workstream 04.
+```
+
+## Cách làm việc mà người dùng đã yêu cầu
+
+```text
+· Hỏi từng quyết định qua FORM để tích chọn, không liệt kê rồi chờ trả lời bằng chữ
+· Phản biện TRƯỚC khi đề xuất. Không chỉ đồng ý.
+· Ngôn ngữ dễ hiểu, tránh thuật ngữ không cần thiết
+· Ghi quyết định xuống tài liệu NGAY khi chốt — dự án đã từng mất tài liệu 02
+  cùng toàn bộ Success Metrics mà không ai phát hiện
+· Không tự chuyển PROPOSED → CONFIRMED, không tự đóng OPEN QUESTION
+```
+
+## Tổng số quyết định đã chốt trong workstream 04
+
+```text
+Step 1   S1-S8, K-B9, Q-B, Q-C     11 quyết định   → 04 §1, §4
+Step 2   T1-T4                      4 quyết định   → 04 §3, §4
+Nền      D1-D6, G1-G11              → AGENT.md §3, §4, §4B
+```
 
 # 1. Đọc gì, theo thứ tự nào
 
@@ -15,6 +81,7 @@
 2. AGENT.md                          ← cách agent phải làm việc trong project
 3. docs/PROJECT_CONTEXT.md           ← Discovery + Vision (consolidated 2026-08-18)
 4. docs/Canonical Case Model v0.2.md ← Domain Model đã chốt
+5. docs/04_KNOWLEDGE_MODEL_V0.1.md   ← Knowledge Boundary đã chốt (Step 1)
 ```
 
 ## ⚠️ Cảnh báo về tài liệu
@@ -127,6 +194,58 @@ Bốn hệ quả:
 
 ---
 
+## 2.3 Chốt trong phiên 2026-08-21 (buổi 2) — `CONFIRMED`
+
+### D6 — "Gom nhiều case cũ thành một SOP theo yêu cầu" NẰM TRONG Capability 3 của MVP
+
+Người dùng xác nhận trực tiếp. Đây là Open Question `Q-A` — quyết định duy nhất đang chặn Step 1 của Workstream 04. Toàn bộ phân tích dẫn tới câu hỏi này vẫn được giữ nguyên ở §4 (không rewrite history).
+
+Chọn **phiên bản nhẹ** đã đề xuất ở §4 — *"gom theo yêu cầu"*, không phải *"tự đào quy luật"*.
+
+**Phạm vi chính xác — cột phải là guardrail, không phải mô tả:**
+
+```text
+THUỘC D6                                    KHÔNG THUỘC D6
+người nói "tôi cần SOP cho chủ đề X"        AI tự quyết chủ đề nào cần SOP
+kéo một tập CÓ GIỚI HẠN case liên quan      quét toàn bộ corpus tìm quy luật mới
+AI soạn nháp → người sửa → người duyệt      AI tự công nhận (vi phạm D4)
+một hành động, có điểm đầu và điểm cuối     job chạy nền liên tục
+```
+
+Cột phải chính là `Process Discovery` (PROJECT_CONTEXT §7.2) + `Knowledge Gap Detection` (§8.2) — đã có nhãn *future capability* ở `PROJECT_CONTEXT.md` §17. D6 **không** kéo chúng vào MVP, **không** tạo Capability #4 → giữ G9.
+
+> ⚠️ **Cảnh báo trôi phạm vi.** Sẽ có lúc ai đó đề nghị *"hay là mình tự động phát hiện chủ đề nào cần SOP luôn"*. Câu đó nghe rất hợp lý và nó là cột phải. Ghi xuống đây để lần sau có chỗ đối chiếu.
+
+**Ba hệ quả đã ghi nhận:**
+
+**(1) `Q-C` co lại — không còn là câu hỏi tốn kém.**
+Để gom N case cũ thành SOP, hệ thống buộc phải tìm được N case cũ liên quan. Nên:
+
+```text
+cỗ máy "tìm case cũ tương tự"  →  giờ là DEPENDENCY của Capability 3
+                                  không còn là lựa chọn của Capability 1
+```
+
+Q-C chuyển từ *"có build không?"* (đắt) thành *"có bày ra cho người dùng thấy không?"* (gần như miễn phí, vì phần đắt đã trả rồi).
+
+**(2) D6 là bánh đà của D5 — điểm này chưa từng được ghi.**
+`D5 hệ quả 1` đòi bộ eval là first-class, nhưng gán nhãn tay thì không ai muốn làm. D6 giải quyết miễn phí:
+
+```text
+AI soạn nháp SOP     →  bản A
+người sửa và duyệt   →  bản B
+diff(A, B)           →  đúng cái nhãn eval cần
+```
+
+Mỗi lần dùng tính năng sinh ra một cặp *(nháp, bản người sửa)* — tín hiệu chất lượng cao nhất có thể có, vì nó ghi lại **con người sửa gì**. Sinh ra bởi hành vi dùng sản phẩm, không phải bởi một phase gán nhãn riêng.
+
+→ D6 không chỉ là một feature. Nó là **cơ chế** biến D5 từ nguyên tắc thành thứ chạy được.
+
+**(3) D6 là điều kiện để D2 dùng được ở khách hàng đầu tiên.**
+Engine gợi ý quy trình (D2) không có gì để gợi ý nếu khách chưa có quy trình nào trong hệ thống. Với 10% (§3), engine đó gần như im lặng ngày đầu. D6 là thứ nạp đạn cho nó. Đã kiểm chứng ở cả vertical thứ hai: rule *"khách ở Negotiation im hơn 7 ngày → gửi case study cùng ngành"* cũng được suy ra từ các deal won/lost — cùng cơ chế, khác tên.
+
+---
+
 # 3. Con số quan trọng nhất: 10 / 30 / 60
 
 Người dùng cung cấp 2026-08-21. Thực tế SOP tại công ty:
@@ -181,11 +300,13 @@ Nó chuyển thẳng người dùng sang Capability 3 → vòng lặp tự khép
 
 ---
 
-# 4. Quyết định DUY NHẤT đang chặn Step 1
+# 4. Quyết định đã chặn Step 1 — nay ĐÃ GIẢI
 
-> ## ❓ "Gom nhiều case cũ thành một SOP theo yêu cầu" có nằm trong Capability 3 của MVP không?
+> ## ✅ "Gom nhiều case cũ thành một SOP theo yêu cầu" có nằm trong Capability 3 của MVP không?
 
-Tình trạng: `OPEN — cần người dùng quyết`
+Tình trạng: **`RESOLVED 2026-08-21` — CÓ, ở phiên bản "gom theo yêu cầu".** Xem `D6` §2.3.
+
+Phần còn lại của §4 là **phân tích lịch sử dẫn tới quyết định** — giữ nguyên, không rewrite. Đọc để hiểu *vì sao* D6 được chốt như vậy, đặc biệt là mismatch giữa hai tài liệu và hai nhánh hệ quả.
 
 ## Vì sao đây là câu hỏi thật, không phải chi tiết
 
@@ -240,7 +361,7 @@ Agent nghiêng về **CÓ**, ở phiên bản "gom theo yêu cầu". Nhưng đâ
 
 ---
 
-# 5. Việc của phiên tiếp theo: Step 1 — Define Knowledge Boundary
+# 5. Step 1 — Define Knowledge Boundary  (✅ ĐÃ CHỐT — kết quả ở docs/04_KNOWLEDGE_MODEL_V0.1.md)
 
 Workstream: `04 — Knowledge Model v0.1`. Stage: Domain Modeling.
 
@@ -375,6 +496,250 @@ Cùng khuôn với `AI DRAFT → HUMAN REVIEW` đã chốt (D4), chỉ áp cho *
      → chỉ tạo file SAU khi Step 1 được người dùng chốt
 10 Sang Step 2 (Knowledge Concepts & Granularity)
 ```
+
+---
+
+## 5.9 Bảy quyết định để đóng Step 1 — **TẤT CẢ ĐÃ `CONFIRMED 2026-08-21`**
+
+> ✅ **S1–S7 đã được người dùng chốt, cộng thêm S8, K-B9, Q-B, Q-C.**
+> Kết quả chính thức nằm ở **`docs/04_KNOWLEDGE_MODEL_V0.1.md` §1** — đó là source of truth.
+> Phần dưới đây giữ nguyên **lập luận** dẫn tới từng quyết định (không rewrite history).
+> Người dùng chốt **đúng phương án đề xuất** ở cả 9 câu.
+
+Sinh ra từ phiên 2026-08-21 buổi 2, sau khi D6 được chốt.
+
+### S1 — Guardrail phạm vi D6
+Ghi xuống rằng D6 giới hạn ở *"gom theo yêu cầu"*; *"tự phát hiện chủ đề cần SOP"* là future capability, không phải MVP. → đã ghi ở §2.3, cần xác nhận là guardrail chính thức.
+
+### S2 — Sửa định nghĩa Knowledge ở §5.2
+Định nghĩa hiện tại đặt *"được tổ chức chấp nhận"* làm **điều kiện vào cửa**. Hệ quả: 60% fragment, bản nháp AI, email senior chưa duyệt — **tất cả nằm ngoài mô hình tri thức của chính sản phẩm**, và không có chỗ nào để đặt chúng.
+
+Chẩn đoán: §5.2 đang định nghĩa **state `VERIFIED KNOWLEDGE`**, không phải **domain Knowledge**.
+
+Đề xuất sửa:
+
+> **Knowledge = một phát biểu tái sử dụng được, ở mức LỚP tình huống (không phải một case cụ thể), về việc nghiệp vụ vận hành thế nào hoặc một loại tình huống nên được xử lý thế nào — có applicability scope, có provenance, và có một mức verification (bao gồm cả mức "chưa ai duyệt"); tồn tại độc lập với bất kỳ Case cụ thể nào.**
+
+Thay đổi duy nhất: *"được chấp nhận"* chuyển từ **điều kiện vào cửa** → **một trạng thái trên timeline**.
+
+Hệ quả: trả lời luôn `Q-J` theo hướng **state**, đúng như K-B5 đã nghiêng, giữ được provenance liên tục draft→verified như G6 đòi.
+
+### S3 — Sửa Discriminator Test §5.3
+Hai lỗi kỹ thuật:
+
+```text
+T1 CASE-INDEPENDENCE  →  quyết định CÓ PHẢI Knowledge          (discriminator)
+T2 CLASS-LEVEL        →  quyết định CÓ PHẢI Knowledge          (discriminator)
+T3 ORG ACCEPTANCE     →  quyết định Ở TRẠNG THÁI NÀO           (không phải discriminator)
+T4 DECISION VALUE     →  quyết định CÓ ĐÁNG ƯU TIÊN            (không phải discriminator)
+```
+
+- Câu *"Pass cả 4 → Knowledge"* **tự mâu thuẫn với T3** (T3 đã ghi "Chưa → Draft", tức vẫn trong model). Sửa thành **2 test biên giới + 2 phép phân loại**.
+- T4 hiện ghi *"không persist"* → **vi phạm tinh thần G4 + G6**. Một ứng viên bị loại chính nó là dữ liệu: nó chỉ ra khoảng trống ở chủ đề đó, và nó là tín hiệu eval (AI đề xuất gì mà người từ chối). Sửa **"không persist"** → **"không PROMOTE"**. Từ chối là một **quyết định được ghi lại**, không phải một phép xóa.
+
+### S4 — Kernel dùng chung cho ba domain
+`CaseClaim` v0.2 **đã** có Origin + Verification + Evidence. Nên bốn chiều ở §5.4 không phải phát minh của Knowledge Model.
+
+```text
+              ┌──────────────────────────────────────────┐
+              │  KERNEL DÙNG CHUNG                       │
+              │  Origin · Evidence · Verification level  │
+              │  Applicability · Visibility · Authority  │
+              └──────────────────────────────────────────┘
+                   ▲              ▲               ▲
+              CaseClaim      KnowledgeRecord   ProcessDefinition
+              (đã có v0.2)    (Step 1-5)        (Workstream 05)
+```
+
+**Danh sách bước có MỘT nhà duy nhất: Process domain**, ở state DRAFT khi mới được AI gom. Không có bản sao thứ hai.
+
+Vì sao cần: đầu ra của D6 là một SOP = danh sách bước. Áp rule K-B6 thì **cái đầu tiên MVP tạo ra lại thuộc Process domain**, trong khi ta đang làm Knowledge Model. Kernel dùng chung làm mâu thuẫn đó biến mất thay vì phải chọn bên.
+
+Ba cái lợi:
+1. Không phải chọn giữa "nhận thua" và "bẻ K-B6".
+2. **Giải luôn §6.9** — một bộ *verification level* dùng chung + *lifecycle state* riêng từng domain → `VERIFIED` thôi trùng nghĩa.
+3. Knowledge Model v0.1 nhỏ lại đáng kể → đúng §6.7.
+
+Cái giá: Knowledge Model v0.1 và Process Model v0.1 **không thể làm tuần tự hoàn toàn** nữa; chúng chia nhau một mối nối. Mối nối đó tồn tại thật, không phải do ta thiết kế ra.
+
+Kỷ luật từ vựng đi kèm: *"SOP"* = tài liệu con người đọc (carrier); *"ProcessDefinition"* = thứ hệ thống dùng để dẫn từng bước. Nếu team cứ gọi cả hai là "SOP", hai domain sẽ lại nhập nhèm.
+
+### S5 — `K-B8`: Capability 3 có hai nửa, ở hai domain khác nhau
+Tài liệu đang gộp hai thứ có **kinh tế học hoàn toàn khác nhau**:
+
+```text
+PATH A — KÉO (pull), do người yêu cầu
+  N case  →  1 bản nháp SOP/Knowledge
+  Tần suất: mỗi chủ đề một lần
+  Ngân sách chú ý: PHÚT — người ta chủ động xin, sẵn sàng bỏ công
+  Domain đầu ra: Knowledge (+ Process nếu là danh sách bước)
+
+PATH B — ĐẨY (push), hệ thống nhắc lúc đóng case
+  1 case  →  một mảnh ghi nhận
+  Tần suất: 500 lần
+  Ngân sách chú ý: GIÂY — người ta không xin, đang muốn đóng case
+  Domain đầu ra: KHÔNG PHẢI Knowledge
+```
+
+**Điểm then chốt: Path B không tạo ra Knowledge.** Nó chỉ làm dày hồ sơ Case (`CaseAction` / `CaseClaim` / `CaseOutcome` — v0.2 đã có sẵn hết), để **sau này Path A gom được**.
+
+Nếu chấp nhận:
+- **§6.4 hết mâu thuẫn.** Ràng buộc 20 giây áp cho Path B (xác nhận tóm tắt case của *chính mình*), không áp cho Path A (duyệt một SOP 9 bước tốn 30 phút là hợp lý — người ta chủ động xin nó).
+- Knowledge domain **sạch**: chỉ chứa phát biểu class-level, không có sọt "fragment chưa xử lý".
+- Nguy cơ *"Capability 3 chính là cái field `Version đang sử dụng` mặc áo đẹp hơn"* (§6.4) bị chặn đúng chỗ: cái field đó là Path B, và Path B giờ chỉ được phép hỏi những gì **đã có** trong case.
+
+### S6 — Nạp tài liệu KHÔNG tự sinh KnowledgeRecord
+`D5` đã trả lời gián tiếp: *"pipeline cắt chunk, template extraction"* nằm ở cột **GIÀN GIÁO TẠM**. Một pipeline bóc tách .docx thành KnowledgeRecord là đúng cái sẽ thành nợ khi model mạnh lên.
+
+```text
+nạp tài liệu     →  tạo Document (carrier) + nội dung đọc được
+                    KHÔNG tự tạo KnowledgeRecord
+
+KnowledgeRecord  →  chỉ sinh ra khi có một HÀNH VI KHẲNG ĐỊNH:
+                    người viết ra, hoặc Path A gom rồi người duyệt
+```
+
+> **KnowledgeRecord lưu những gì tổ chức đã KHẲNG ĐỊNH, không lưu tất cả những gì tổ chức CÓ.** Phần "có" nằm ở Document.
+
+Làm Knowledge Model nhỏ lại rất nhiều, và nhất quán với D5 thay vì chống lại D5.
+
+### S7 — Quy tắc visibility cho MVP (thu hẹp `Q-D`, không giải)
+`D2` đã đẩy ví dụ đáng sợ nhất của §5.7 (AI đọc private repo) sang **v2** → bớt phần nóng nhất. Nhưng vấn đề vẫn sống ở dạng nhẹ: một comment trong Jira project nội bộ mà Support không xem được, gom vào SOP → SOP đó ai xem được?
+
+Quy tắc duy nhất đề xuất cho MVP:
+
+```text
+Mặc định:  visibility của tri thức tổng hợp = HẸP NHẤT trong các nguồn của nó
+Mở rộng:   là một HÀNH VI TƯỜNG MINH của người thấy được TẤT CẢ nguồn
+           ghi lại: ai mở, khi nào, mở từ đâu tới đâu
+Không bao giờ: hệ thống tự mở
+```
+
+Cùng khuôn với `D4`, chỉ áp cho *quyền xem* thay vì *nội dung*.
+
+Model chỉ cần ba chỗ chứa — quyết định hôm nay, rất rẻ:
+```text
+1. visibility của bản thân KnowledgeRecord
+2. visibility của từng nguồn chống lưng nó
+3. ai mở rộng, khi nào, lý do
+```
+
+Phần khó (bôi đen chọn lọc, tách kết luận khỏi dẫn chứng ở mức từng câu) → **v2**, `Q-D` giữ nguyên `OPEN`.
+
+**⚠️ Hệ quả bất lợi phải nói thẳng:** với quy tắc "hẹp nhất", **60% sẽ tệ đi trước khi tốt lên**. Một SOP gom từ 20 case Jira, nếu có một comment nội bộ, sẽ **vô hình với đúng bạn support mới cần nó**.
+
+→ Bước **mở quyền xem phải là một bước hiển thị rõ trong luồng Capability 3**, không phải một trang cấu hình admin nhớ ra sau. Nếu để sau, tính năng sẽ "chạy được" trong demo và "im lặng vô dụng" trong thực tế.
+
+→ Ràng buộc về người duyệt:
+```text
+duyệt nội dung   →  cần người GIỎI NGHIỆP VỤ      (senior support / L3)
+duyệt quyền xem  →  cần người THẤY ĐƯỢC MỌI NGUỒN
+```
+Hai người khác nhau → tắc. Ép một người không đủ quyền → rò rỉ. **Đề xuất MVP:** người duyệt phải là người thấy được tất cả nguồn; duyệt nội dung + quyền xem trong **một hành động**; log cả hai. Thu hẹp đáng kể `Q-G`.
+
+---
+
+### S8 — Cấu trúc bản nháp gom · `CONFIRMED`
+Sinh ra từ stress-test 60% (§5.10). Bản nháp gom từ N case mang theo một **phân bố**, không phải một phát biểu → **evidence link ở mức TỪNG PHÁT BIỂU** + **`CONFLICTING` bắt buộc**. Chi tiết: `04_KNOWLEDGE_MODEL_V0.1.md` §1.11.
+
+### K-B9 — Evidence trỏ trực tiếp vào Knowledge · `CONFIRMED`
+Chi tiết: `04_KNOWLEDGE_MODEL_V0.1.md` §1.6.
+
+---
+
+## 5.10 Kết quả stress-test Step 1 — `CONFIRMED`, sinh ra 2026-08-21 buổi 2
+
+### First Use Case — OTA booking không về PMS
+
+| Vật thể | Phân loại | Ghi chú |
+|---|---|---|
+| SOP "booking không về PMS" | **Document** (carrier) + **ProcessDefinition** (phần bước) + **Knowledge** (phần không phải bước, vd *"không có incoming log → lỗi phía OTA"*) | Ba thứ, không phải một. Đúng như K-B6 dự đoán. Đây là câu trả lời đề xuất cho `Q-B`. |
+| *"Parser < v2.3 drop payload dạng X"* | **Knowledge** — ví dụ sạch nhất | class-level ✓, case-independent ✓, có giá trị quyết định ✓. `applicability` = khoảng version. Cũng là vật thể có vấn đề quyền xem ở §5.7. |
+| Jira ES-123 đã fix cùng vấn đề | **Historical Case** → precedent/evidence | Không phải Knowledge (K-B1). Là **nguyên liệu** của D6. |
+| Screenshot log khách gửi | **Evidence**, machine readability = thấp | Đúng trạng thái `KNOWLEDGE_EXISTS_NOT_RETRIEVABLE` ở §6.3. |
+
+SOP tách thành ba vật thể là **kết quả đúng**, không phải dấu hiệu model sai. Nhưng nó dẫn thẳng tới S6.
+
+### Ba thực tế 10 / 30 / 60
+
+- **10%** — xem `S6`. Tài liệu ở lại dạng Document; KnowledgeRecord chỉ sinh khi có hành vi khẳng định.
+- **30%** — `K-B7` áp trực tiếp: chưa vào model. Đường vào **duy nhất** khả thi là **Path B** (`S5`). Nên §6.4 không phải lời khuyên UX — **nó là điều kiện để 30% tồn tại trong sản phẩm.**
+- **60%** — **kết quả tốt: không cần entity mới nào.**
+
+```text
+comment Jira, action, outcome  →  v0.2 đã có (CaseClaim/CaseAction/CaseOutcome/Evidence)
+email, ghi chú Zalo rời        →  Document/SourceReference → Evidence   (cần K-B9)
+"gom lại"                      →  không phải entity, mà là một TRUY VẤN + một HÀNH VI
+```
+
+60% không đòi thêm concept. Nó đòi **một truy vấn tìm case liên quan** + **một hành vi tổng hợp**. Đầu tư vào Case v0.2 trả cổ tức lần nữa.
+
+### ⚠️ Chỗ đang bị bỏ sót — quan trọng
+
+Một bản nháp gom từ 20 case **khác về bản chất** với bản nháp viết từ 1 case. Bản gom mang theo một **phân bố**, không phải một phát biểu:
+
+```text
+bước "kiểm tra room mapping"        →  14/20 case đã làm
+bước "gọi OTA trước khi check log"  →  6/20 làm, 8/20 làm ngược lại    ← XUNG ĐỘT
+```
+
+Nếu bản nháp được lưu như một khối văn bản với danh sách nguồn ở cuối, **ta ném đi đúng thứ giá trị nhất**: bước nào được bao nhiêu case chống lưng, và chỗ nào các case **không đồng ý với nhau**.
+
+Chỗ không đồng ý chính là chỗ người duyệt cần nhìn — nó cho phép duyệt trong 10 phút thay vì 2 giờ, vì họ chỉ phán xét mấy điểm tranh chấp; phần còn lại đã có 14/20 đồng thuận.
+
+→ **Knowledge/Process draft cần giữ evidence link ở mức TỪNG PHÁT BIỂU, không phải ở mức tài liệu.**
+→ **Trạng thái `CONFLICTING` là BẮT BUỘC, không phải tùy chọn** — gom N case thì xung đột là chuyện thường ngày. (`CONFLICTING` đã có trong Case v0.2 §7.3, **thiếu** trong `PROJECT_CONTEXT` §13.4 — xem §6.9.)
+
+Điều này cũng trả lời câu §4 đặt ra (*"nếu CÓ thì Step 1 phải định nghĩa rõ trạng thái tri thức gom từ nhiều nguồn rời, chưa ai duyệt"*):
+
+```text
+trạng thái đó = state DRAFT
+              + origin AI_INFERENCE
+              + evidence link theo từng phát biểu
+              + có thể CONFLICTING
+→ KHÔNG cần entity mới.
+```
+
+### Non-Jira: SOP .docx trên Drive + email hướng dẫn của senior
+
+- **.docx** → Document (dạng A), có version + ACL riêng. Không tự thành Knowledge (`S6`).
+- **Email của senior** → ca thú vị nhất. Phát biểu class-level do **một con người có chuyên môn** đưa ra. **Không** phải AI draft. Cũng **không** được tổ chức duyệt.
+
+Ca này chứng minh chiều **Authority** (§5.4) kiếm được chỗ đứng: cần phân biệt
+
+```text
+"một chuyên gia nói câu này một lần trong email"
+        vs
+"tổ chức đã review và công bố"
+```
+
+Một trục `DRAFT / VERIFIED` không diễn đạt được hai thứ này → củng cố `S4`: **verification level** (mức tin) phải tách khỏi **lifecycle state** (mức công bố). Đúng vấn đề §6.9.
+
+### Vertical thứ hai: CRM deal
+
+Rule *"khách ở Negotiation im hơn 7 ngày → gửi case study cùng ngành"*: có điều kiện + có hành động, nhưng **không có thứ tự bước** và **không theo dõi "đang ở bước nào"** → **KNOWLEDGE**. Rule K-B6 chạy đúng, không phải bẻ gì.
+
+Hai điều học được:
+1. Ở vertical sales, Knowledge phần lớn là **khuyến nghị có điều kiện** (*nếu X thì làm Y*), không phải **giải thích cơ chế** (*parser drop payload*). Đây là loại **dễ lẫn với Process nhất** → rule K-B6 sẽ bị vắt kiệt ở đây, không phải ở support. Nhớ khi làm Step 2 (Knowledge types).
+2. Rule đó suy ra từ các deal won/lost → **đúng cơ chế D6, khác tên**. D6 phổ quát, không đặc thù support.
+
+### `K-B9` mới — Evidence phải trỏ trực tiếp vào Knowledge được, không qua Case — `PROPOSED`
+
+Lỗ hiện tại: v0.2 §9 định nghĩa Evidence hỗ trợ *Claim / Problem / Action / Event* — đều scoped vào Case. §11.2 nói Case *"contributes evidence toward Knowledge"* — qua trung gian Case.
+
+Nhưng một email của senior, hay một tin Zalo, **không thuộc case nào**. Với 60% là fragment rải rác, đây không phải trường hợp hiếm.
+
+Đáng mừng: v0.2 §9 **đã** viết *"Một EvidenceItem có thể liên quan nhiều Case"* và *"Không mặc định 1 Evidence = owned exclusively by 1 Case"*. Nên đây là **mở rộng nhỏ, an toàn**, không phải bẻ model: cho phép `Evidence → SUPPORT/REFUTE → Knowledge` trực tiếp.
+
+---
+
+## 5.11 Cảnh báo về thứ tự — §8.1 nặng hơn trước
+
+§8.1 nói: hỏi 2 người xem SOP thật nằm ở đâu, 30 phút, giá trị cao nhất.
+
+Với D6 vừa chốt, câu đó **nặng hơn**. Vì D6 nói: sản phẩm sẽ **tự sinh ra** SOP đầu tiên. Nếu không biết một SOP thật trông thế nào (mấy bước? có rẽ nhánh? ai viết? cập nhật lần cuối bao giờ?), thì ta đang thiết kế **cỗ máy sản xuất một thứ chưa từng nhìn thấy**.
+
+30 phút của §8.1 sẽ **kiểm chứng hoặc đánh sập `S4`** — phần đề xuất thay đổi nhiều nhất và cũng là phần ít tự tin nhất.
 
 ---
 
@@ -536,11 +901,227 @@ Tài liệu Drive, comment Jira, email và file code là **bốn loại vật ch
 # 8. Việc ngoài thiết kế — nên làm song song
 
 ## 8.1 Đi tìm SOP thật — 30 phút, giá trị cao nhất
+
+> ⛔ **CHẶN STEP 2** — `CONFIRMED 2026-08-21`. Người dùng quyết: chạy §8.1 **trước** Step 2.
+> Lý do: Step 2 là Knowledge Concepts & Granularity, và câu *"một KnowledgeRecord to bằng nào"*
+> gần như không trả lời đúng được nếu chưa thấy một SOP thật. Xem `04` §6 R-K2.
 Hỏi 2 người: bạn support kỳ cựu nhất, và người xử lý case OTA gần nhất — *"khi gặp case này, anh/chị làm theo cái gì?"*
 
 Cần lấy về: SOP (nếu có) nằm ở đâu, format gì, bao nhiêu bước, có rẽ nhánh không, cập nhật lần cuối bao giờ.
 
 Kết quả dùng để: stress-test Step 1 bằng tri thức thật thay vì ví dụ tự nghĩ. **Không thể thiết kế cái hộp trước khi biết bên trong đựng gì.**
+
+---
+
+# 8.1-KQ. KẾT QUẢ §8.1 — SOP THẬT · `EVIDENCE-SUPPORTED 2026-08-21`
+
+## Nguyên văn người dùng cung cấp
+
+> *"Mọi người lấy dữ liệu ở Kibana rồi xem response trả về sau đó xem tài liệu và issue xử lý trước đó để đưa ra kết luận"*
+
+**Giữ nguyên văn. Mọi thứ dưới đây là phân tích, nhãn `PROPOSED`, chưa được xác nhận.**
+
+## Cấu trúc suy ra
+
+```text
+B1  lấy dữ liệu ở Kibana            → source type E (tín hiệu hệ thống)
+B2  xem response trả về             → source type E
+B3  xem tài liệu                    → source type A   ("tài liệu gì" — chưa rõ)
+B4  xem issue xử lý trước đó        → source type B (historical case)
+B5  đưa ra kết luận                 → PHÁN XÉT CỦA CON NGƯỜI
+```
+
+## Ba điều được kiểm chứng
+
+### (1) `S4` sống — và ranh giới rơi đúng chỗ tự nhiên
+
+B1–B4 có per-case execution state (*"đã lấy Kibana chưa?"* trả lời được) → **Process**, đúng rule K-B6.
+B5 là phán xét, không phải bước quan sát được → **Knowledge**.
+
+Ranh giới Knowledge/Process rơi đúng vào khe giữa **GOM** và **KẾT LUẬN**. Sạch hơn dự kiến.
+
+### (2) `Q-C` được xác nhận mạnh hơn mức đã chốt
+
+*"Xem issue xử lý trước đó"* là **B4 của quy trình thật**. Nghĩa là "tìm case cũ tương tự" không phải nice-to-have, cũng không chỉ là dependency của Capability 3 — **nó là một bước của quy trình mà con người đang làm hằng ngày**.
+
+### (3) `S5` Path A nhắm đúng đích — xem §8.1-KQ mục "Tinh chỉnh 10/30/60"
+
+## Ba điều bị thay đổi
+
+### (A) SOP thật KHÔNG có nhánh — trái với SOP tưởng tượng trong tài liệu
+
+```text
+PROJECT_CONTEXT §5.3 (tưởng tượng)      SOP thật (người dùng cung cấp)
+────────────────────────────────────    ──────────────────────────────
+Check booking exists                    B1  Kibana
+→ Check room mapping                    B2  response
+→ Check rate mapping                    B3  tài liệu
+→ Check incoming log                    B4  issue cũ
+→ No log        → contact OTA           B5  kết luận
+→ Has log fail  → Technical
+CÓ ĐIỀU KIỆN, CÓ NHÁNH                  TUYẾN TÍNH, KHÔNG NHÁNH
+= decision procedure                    = evidence checklist + phán xét
+```
+
+Hai hình dạng khác nhau về bản chất. **`PROJECT_CONTEXT` §5.3 nên bị đánh dấu là ví dụ minh hoạ, không phải SOP thật.** → thêm mục housekeeping `H-7`.
+
+### (B) Toàn bộ giá trị nằm ở B5 — bước duy nhất không ai ghi lại
+
+```text
+B1-B4  gom bằng chứng    →  làm một lần là biết. Giá trị bão hoà sau tuần đầu.
+B5     kết luận          →  giá trị vĩnh viễn. KHÔNG AI GHI LẠI.
+```
+
+Đây chính là thứ mà con số **306/500 case không ghi bước xử lý** (§10.5 PROJECT_CONTEXT) đang đo. Cái thiếu không phải *quy trình*, mà là *luật kết luận*.
+
+Hệ quả cho Primary Persona (`New Support Employee`):
+
+```text
+Capability 2 trên B1-B4  →  có giá trị TUẦN ĐẦU, rồi bão hoà
+Capability 1 + luật B5   →  giá trị lâu dài, và là thứ quyết định
+                            có escalate lên Technical oan hay không (P1)
+```
+
+⚠️ Đây là **phản biện với §6.5** (*"Process Guidance phổ quát hơn Knowledge Retrieval"*). §6.5 vẫn đúng về **độ phổ quát giữa các ngành**, nhưng với **first use case** thì Process Guidance đơn thuần gần như rỗng: dẫn người ta qua 4 bước hiển nhiên không giải được vấn đề. Không mâu thuẫn, nhưng phải nói rõ để không kỳ vọng sai vào Capability 2.
+
+### (C) Tinh chỉnh 10/30/60 — cái thiếu là tri thức KẾT LUẬN, không phải tri thức QUY TRÌNH
+
+```text
+10%  có tài liệu, tìm được   →  tài liệu về HỆ THỐNG (API, field, behavior)
+                                 = B3, và nó KHÔNG chứa luật kết luận
+30%  trong đầu người         →  luật KẾT LUẬN
+60%  rải rác fragments       →  luật KẾT LUẬN, dưới dạng dấu vết trong case cũ
+```
+
+→ 90% đang thiếu **gần như toàn bộ là conclusion knowledge.** Path A (gom N case) nhắm đúng đích.
+
+→ **Câu trả lời sơ bộ cho `N-3` (granularity, Step 2):**
+
+```text
+Một KnowledgeRecord  ≈  MỘT LUẬT KẾT LUẬN
+   "thấy tín hiệu X trong log + response Y  →  nguyên nhân Z  →  làm W"
+
+KHÔNG phải "một SOP".  KHÔNG phải "một tài liệu".
+```
+
+Đây là thứ §8.1 lẽ ra phải sinh ra, và nó đã sinh ra.
+
+### (D) Hai bước đầu thuộc source type E — nguồn KHÔNG có trong 2 nguồn MVP đã đề xuất
+
+`§7` đề xuất MVP dùng 2 nguồn: **Jira (B)** + **tải tài liệu lên (A)**. Type E (log/monitoring/API) không nằm trong đó.
+
+Nhưng **B1 và B2 của quy trình thật đều là type E.**
+
+```text
+B1 Kibana         → type E
+B2 response       → type E
+B3 tài liệu       → type A   ✓ có trong MVP
+B4 issue cũ       → type B   ✓ có trong MVP
+```
+
+Đây là vấn đề phạm vi MVP thật, `OPEN`. Ba hướng, **chưa chọn**:
+
+```text
+(a) MVP không đọc Kibana — AI hướng dẫn người tự lấy, người dán kết quả vào.
+    AI làm B3+B4+B5. Rẻ nhất, và B5 vẫn là phần giá trị nhất.
+(b) Thêm Kibana thành nguồn thứ 3 — phình scope; type E có volume lớn,
+    giá trị theo thời điểm.
+(c) Query Kibana THEO YÊU CẦU cho một booking ID cụ thể, không index corpus log.
+    Khác hoàn toàn về chi phí so với (b). §7 đã nói MCP phù hợp đúng dạng này.
+```
+
+⚠️ Không quyết ở đây. Đây là kiến trúc → Workstream 06, và `AGENT.md` §10.1 nói chốt công nghệ là quyền người dùng.
+
+**Điều đáng mừng:** về mặt **domain model** thì Kibana không đòi gì mới. Kết quả query Kibana là `EvidenceItem` + `SourceReference`, `Origin = SYSTEM_FACT` (có phạm vi, v0.2 §7.6), machine readability cao. Canonical Case v0.2 đã phủ được. **Câu hỏi là phạm vi MVP, không phải mô hình.**
+
+## Ba câu bổ sung — trả lời 2026-08-21
+
+```text
+Có tài liệu viết?    KHÔNG có SOP xử lý. CÓ tài liệu hệ thống (API/field/behavior).
+Tập kết luận?        HỮU HẠN NHỎ — khoảng 5-10 loại nguyên nhân.
+Hỏi mấy người?       1 người.   ⚠ n=1, không suy rộng.
+```
+
+### Hệ quả (1) — first use case nằm trọn trong 30% + 60%
+
+```text
+10%  tài liệu HỆ THỐNG có     →  đó là B3, và nó KHÔNG chứa luật kết luận
+30%  luật kết luận trong đầu người
+60%  luật kết luận rải rác trong case cũ
+```
+
+Phân tích ở mục (C) được xác nhận: **cái thiếu là conclusion knowledge, không phải procedure knowledge.**
+
+⚠️ **Hệ quả về thứ tự MVP:** Capability 1 ngày đầu **không có SOP nào để retrieve** cho chính use case dùng để demo. Nó chỉ retrieve được tài liệu hệ thống — thứ trả lời *"field này là gì"*, không trả lời *"case này bị gì"*. → củng cố thứ tự vòng lặp `PROPOSED` ở §3 (Path A trước).
+
+### Hệ quả (2) — "5-10 nguyên nhân" là dữ liệu quan trọng nhất của phiên này
+
+**(a) Kho tri thức của first use case rất nhỏ.**
+
+```text
+~5-10 nguyên nhân  ≈  ~5-10 KnowledgeRecord cho toàn bộ first use case
+```
+
+Không phải 500. Xây và duyệt xong trong một ngày.
+
+**(b) Ở quy mô này, Capability 1 KHÔNG phải bài toán retrieval.**
+
+Với 10 record thì không cần vector DB, không cần RAG, không cần chunking. Bài toán thật là:
+
+```text
+KHÔNG PHẢI  "tìm tài liệu nào liên quan"
+MÀ LÀ       "bằng chứng của case này khớp với nguyên nhân nào trong 10 cái đã biết"
+            → đây là bài toán PHÂN LOẠI, không phải tìm kiếm
+```
+
+Nhất quán với `D5`: chunking/RAG pipeline nằm ở cột **giàn giáo tạm**. Ở quy mô 10 record thì dựng chúng lên là tự tạo nợ mà không được gì.
+
+⚠️ Đây **không** phải đề nghị đổi Capability #1 (giữ G9). Capability #1 vẫn là `Contextual Knowledge Retrieval`. Chỉ là: ở MVP, cách hiện thực đúng của nó là matching/classification, không phải semantic search.
+
+**(c) Bộ eval trở nên rẻ và định lượng được.**
+
+Tập nhãn hữu hạn + case lịch sử đã có outcome = bài toán phân loại có đáp án. Đây là `D5 hệ quả 1` trở thành cụ thể, không còn là nguyên tắc.
+
+**(d) Lần đầu có ứng viên cho `Q-E` (Success Metrics — mất cùng tài liệu 02).**
+
+Với tập nguyên nhân hữu hạn, ba thước đo sau đo được:
+
+```text
+· % case hệ thống chỉ ĐÚNG nguyên nhân
+· % case escalate lên Technical mà đáng ra không cần    (đo trực tiếp P1)
+· độ phủ: đã có luật cho bao nhiêu / tổng số nguyên nhân đã biết
+```
+
+`Q-E` vẫn `OPEN` — đây là ứng viên, không phải quyết định. Nhưng trước đó ta **không có cách nào** đo, giờ có.
+
+**(e) Nếu chỉ có 5-10 nguyên nhân thì cùng một đáp án đã bị tìm lại rất nhiều lần.**
+Khớp với `REUSE_OPPORTUNITY_MISSED` và `KNOWLEDGE_WAS_NOT_CAPTURED` (§10.7). Đây là câu nói mạnh nhất cho pitch — nhưng cần §8.2 đếm để định lượng, đừng dùng khi chưa có số.
+
+### Cảnh báo về độ tin cậy — `n=1`
+
+Con số 5-10 là **ước lượng của một người có kinh nghiệm**. Người kinh nghiệm nén thực tế lại; người mới thấy hỗn loạn. Hai rủi ro:
+
+```text
+· con số thật có thể lớn hơn (người kinh nghiệm gộp nhóm vô thức)
+· không biết độ biến thiên giữa người với người → không biết có PROCESS_DRIFT (P7) hay không
+```
+
+→ **§8.2 (đếm 20 case OTA gần nhất) giờ là việc có giá trị cao nhất còn lại.** Nó xác nhận hoặc bác bỏ cả (a), (c), (d).
+
+## Còn thiếu so với yêu cầu của §8.1
+
+§8.1 yêu cầu lấy về: SOP nằm ở đâu, **format gì**, bao nhiêu bước, **có rẽ nhánh không**, **cập nhật lần cuối bao giờ**.
+
+```text
+✓ bao nhiêu bước       5
+✓ có rẽ nhánh không    không, tuyến tính
+✓ có tài liệu VIẾT nào không?     KHÔNG có SOP xử lý; CÓ tài liệu hệ thống
+✓ "tài liệu" ở B3 là gì?          tài liệu hệ thống (API/field/behavior)
+✓ hỏi mấy người?                  1 người  ⚠ n=1
+✗ cập nhật lần cuối bao giờ?      chưa hỏi — ít quan trọng vì không có SOP viết
+```
+
+⚠️ **ĐÃ XÁC NHẬN: không có SOP viết.** Capability 1 ngày đầu chỉ retrieve được tài liệu hệ thống — thứ trả lời *"field này là gì"*, không trả lời *"case này bị gì"*. Đó là một sự thật về thứ tự MVP, không phải chi tiết.
 
 ## 8.2 Đo thử vấn đề A — vài giờ
 Hỏi 5 bạn support mới: *"bạn có biết tài liệu X tồn tại không?"* và *"lần cuối gặp case này bạn làm gì?"*
@@ -559,17 +1140,65 @@ Xem D5 hệ quả 1. Đây là cơ chế biến "model mạnh lên" thành "ph�
 
 ## Chặn Step 1
 ```text
-Q-A  "Gom nhiều case cũ thành SOP theo yêu cầu" có trong Capability 3 của MVP?   → §4
-Q-B  K-B6: SOP "booking không về PMS" là Knowledge, Process, hay Document
-     làm source cho cả hai?                                                      → §5.6
-Q-C  K-B1: "Tìm case cũ tương tự" có trong Capability #1 của MVP?                → §5.6
-Q-D  §5.7: Tri thức suy ra từ nguồn giới hạn quyền thì ai được xem?              → §5.7
+Q-A  RESOLVED 2026-08-21 → CÓ, phiên bản "gom theo yêu cầu".      Xem D6 §2.3
+Q-B  RESOLVED → SOP = Document + ProcessDefinition + Knowledge (BA vật thể)
+Q-C  RESOLVED → CÓ. Cap 1 trả HAI loại kết quả có nhãn tách biệt:
+                KnowledgeRecord và Historical Case
+Q-D  Phần dễ RESOLVED (quy tắc visibility MVP, xem S7 / 04 §1.10)
+     Phần khó vẫn OPEN → v2: tách kết luận/dẫn chứng mức từng câu, redaction
 ```
+
+> ✅ **Step 1 đã đóng.** Toàn bộ Q-A/Q-B/Q-C + S1-S8 + K-B9 nằm ở
+> `docs/04_KNOWLEDGE_MODEL_V0.1.md` §4 Decision Register.
+
+## Chín quyết định đóng Step 1 — tất cả `CONFIRMED 2026-08-21`
+```text
+S1  Guardrail phạm vi D6 → nâng thành G11 (AGENT.md §3.8)
+S2  Định nghĩa Knowledge: "được chấp nhận" là TRẠNG THÁI  → Q-J trả lời: state
+S3  2 discriminator + 2 phép phân loại; T4 = "không PROMOTE"
+S4  Kernel dùng chung 3 domain; bước có MỘT nhà = Process; verification ≠ lifecycle
+S5  K-B8: Path A tạo Knowledge, Path B chỉ làm dày Case
+S6  Nạp tài liệu KHÔNG tự sinh KnowledgeRecord
+S7  Visibility "hẹp nhất + mở rộng tường minh", bước mở quyền TRONG luồng Cap 3
+S8  Bản nháp gom: evidence link TỪNG PHÁT BIỂU + CONFLICTING bắt buộc
+K-B9 Evidence trỏ trực tiếp vào Knowledge, không qua Case
+
+Source of truth: docs/04_KNOWLEDGE_MODEL_V0.1.md §1 + §3
+```
+
+## Sinh ra từ Step 1 — cần Step 2-5
+```text
+N-1  Vocabulary: verification level vs lifecycle state (khóa riêng)  → Step 5
+N-2  Knowledge types taxonomy                                        → Step 2
+N-3  Granularity: một KnowledgeRecord to bằng nào?                   → Step 2
+N-4  Knowledge ↔ Knowledge (supersedes/refines/contradicts)          → Step 3
+N-5  Applicability biểu diễn thế nào                                 → Step 4
+```
+
+## Housekeeping ghi ngược vào tài liệu cũ
+```text
+H-1  ✅ ĐÃ LÀM 2026-08-21 — PROJECT_CONTEXT §13.4 đã thêm CONFLICTING
+                            + ghi rõ ladder này là verification level,
+                              không phải lifecycle state ở §8.3
+H-2  ✅ ĐÃ LÀM 2026-08-21 — Case v0.2 §11.2 đã thêm đường
+                            Evidence → Knowledge trực tiếp (K-B9)
+
+H-3  ⚪ PROJECT_CONTEXT §5.2: "senior memory" phải ghi là knowledge SOURCE (K-B7)
+H-4  ⚪ PROJECT_CONTEXT §14.2 SUPERSEDED bởi Case v0.2 (R7)
+H-5  ⚪ PROJECT_CONTEXT §16 nói "chưa formally locked" → trái AGENT.md §4
+H-6  ⚪ NEXT_CONVERSATION_PROMPT (1).md nên archive
+H-7  ⚪ MỚI — PROJECT_CONTEXT §5.3 mô tả SOP OTA CÓ NHÁNH (check booking →
+     mapping → log → rẽ nhánh). SOP thật (§8.1-KQ) TUYẾN TÍNH, không nhánh.
+     → phải đánh dấu §5.3 là VÍ DỤ MINH HOẠ, không phải SOP thật.
+```
+H-1/H-2 làm ngay vì là **contradiction thật** do S8/K-B9 sinh ra.
+H-3..H-6 chỉ là nhãn lỗi thời, không gây sai → gộp một lần cuối workstream 04.
 
 ## Cần trước Step 2–3
 ```text
 Q-E  Success Metrics của MVP là gì?                          (tài liệu 02 mất)
-Q-F  SOP thật của first use case trông thế nào?              (§8.1)
+Q-F  PARTIAL 2026-08-21 → có nguyên văn + cấu trúc 5 bước. Xem §8.1-KQ.
+     Còn thiếu: có tài liệu VIẾT không, format, cập nhật lần cuối, hỏi mấy người.
 Q-G  Ai có quyền verify Knowledge? Có phải Technical/L3?      (PROJECT_CONTEXT Q7)
 Q-H  AI có được suggest update knowledge đã verified?         (PROJECT_CONTEXT Q8)
 Q-I  Vai trò Secondary Persona L3 trong 3 MVP capabilities?   (không capability nào framing cho L3)
@@ -614,14 +1243,23 @@ Yêu cầu làm việc:
 - Chưa code, chưa thiết kế architecture
 - Trả lời bằng ngôn ngữ dễ hiểu, tránh thuật ngữ không cần thiết
 
+Đọc thêm: docs/04_KNOWLEDGE_MODEL_V0.1.md — Step 1 + Step 2 ĐÃ CHỐT (§1 và §3).
+
 Việc hôm nay:
-Workstream 04 — Knowledge Model v0.1, Step 1: Define Knowledge Boundary.
-Nội dung Step 1 đã được chuẩn bị ở 00_CURRENT_STATE.md §5.
+Workstream 04 — Knowledge Model v0.1, Step 3: Knowledge ↔ Case ↔ Process.
+Step 1 và Step 2 đã chốt — 15 quyết định. Đừng mở lại S1-S8 / K-B9 / T1-T4
+nếu không có evidence mới. Mang theo N-3b, N-6, N-7 ở file 04 §3.6.
+
+⚠ HỎI TÔI xem §8.2 (đếm 20 case OTA) đã chạy chưa. Toàn bộ file 04 §3.5
+  đứng trên con số "5-10 nguyên nhân" với n=1 — xem R-K4 ở file 04 §6.
+  T1/T2/T4 thì độc lập với con số đó, không bị ảnh hưởng.
+
+⛔ Không viết code. Chốt công nghệ là quyền của tôi — xem AGENT.md §10.1.
 
 Bắt đầu bằng cách:
 1. Xác nhận bạn đã đọc và hiểu trạng thái hiện tại (tóm tắt ngắn, không dài dòng)
-2. Nêu câu hỏi đang chặn Step 1 (§4) để tôi quyết
-3. Rồi chạy Step 1 theo trình tự §5.8
+2. Nhắc lại ranh giới đã chốt ở 04 §1 và §3 để chắc là không đi lệch
+3. Phản biện trước khi đề xuất, rồi hỏi tôi từng quyết định một qua form để tích chọn
 ```
 
 ---
@@ -642,12 +1280,63 @@ Chưa làm:
 - Chưa tạo `docs/04_KNOWLEDGE_MODEL_V0.1.md`
 - Chưa viết code, chưa thiết kế architecture
 
+---
+
+# 12. Nhật ký phiên 2026-08-21 buổi 2
+
+Việc đã làm:
+- **Chốt D6** (§2.3) — Q-A đã giải: "gom nhiều case cũ thành SOP theo yêu cầu" NẰM TRONG Capability 3, ở phiên bản "gom theo yêu cầu". Kèm guardrail phạm vi và 3 hệ quả.
+- Ghi nhận hai hệ quả chưa từng có trong tài liệu: **D6 là bánh đà của D5** (diff nháp/bản duyệt = nhãn eval miễn phí), và **D6 là điều kiện để D2 dùng được ở khách đầu tiên**.
+- Chạy Step 1: phản biện định nghĩa §5.2 và discriminator test §5.3; đi qua K-B1→K-B7; đề xuất K-B8 (Path A/Path B) và K-B9 (Evidence trỏ trực tiếp Knowledge).
+- Phát hiện mâu thuẫn: đầu ra của D6 là danh sách bước → theo K-B6 thì rơi vào Process domain, trong khi đang làm Knowledge Model. Đề xuất giải bằng **kernel dùng chung** (S4) — giải luôn §6.9.
+- Chạy 4 stress-test (§5.10): OTA, 10/30/60, non-Jira, CRM.
+- Phát hiện chỗ bị bỏ sót: bản nháp gom từ N case mang theo **một phân bố**, không phải một phát biểu → cần evidence link ở mức từng phát biểu + `CONFLICTING` là bắt buộc.
+- Đóng gói **7 quyết định S1-S7** (§5.9) — toàn bộ những gì còn chặn việc đóng Step 1.
+
+- **Chốt cả 9 quyết định** (S1-S8 + K-B9) — người dùng chọn đúng phương án đề xuất ở cả 9 câu.
+- Chốt luôn `Q-B` (SOP = ba vật thể) và `Q-C` (Cap 1 trả hai loại kết quả).
+- Nâng guardrail phạm vi D6 thành **G11** trong `AGENT.md` §3.8.
+- **Tạo `docs/04_KNOWLEDGE_MODEL_V0.1.md`** — Step 1 đóng.
+
+- Ghi `AGENT.md` §10.1: **chốt công nghệ là quyền của người dùng** — phải báo trước khi code.
+- Làm housekeeping **H-1** (PROJECT_CONTEXT §13.4 thêm `CONFLICTING`) và **H-2** (Case v0.2 §11.2 thêm đường Evidence → Knowledge trực tiếp).
+
+Bốn quyết định cuối phiên — `CONFIRMED`:
+```text
+1  §8.1 (đi tìm SOP thật) CHẶN Step 2 — chạy trước, không làm song song
+2  Thứ tự workstream: GIỮ TUẦN TỰ 04 → 05, chỉ chú thích kernel là của chung
+   → không tách kernel thành tài liệu riêng (tránh thêm một vòng modeling, §6.7)
+3  Housekeeping: làm ngay H-1 + H-2; H-3..H-6 gộp cuối workstream 04
+4  Dừng phiên ở đây, chưa sang Step 2
+```
+
+- **Chạy §8.1** — người dùng cung cấp quy trình thật + ba câu bổ sung. Kết quả: §8.1-KQ.
+  Ba phát hiện lớn: SOP thật **tuyến tính, không nhánh** (trái §5.3 PROJECT_CONTEXT) ·
+  giá trị nằm ở B5 *"đưa ra kết luận"* — bước duy nhất không ai ghi lại ·
+  tập kết luận **HỮU HẠN ~5-10 nguyên nhân**.
+- **Chốt Step 2** (`T1`-`T4`) — người dùng chọn đúng phương án đề xuất cả 4 câu.
+  Kết quả ở `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3.
+  Nổi bật: đơn vị Knowledge = MỘT NGUYÊN NHÂN · verification gắn TỪNG ASSERTION ·
+  chỉ HAI type (loại REFERENCE do S6, loại POLICY do chưa có ca thật).
+- Ghi nhận §3.5: ở quy mô ~10 record, Capability 1 là bài toán **phân loại**,
+  không phải semantic search → không dựng RAG/vector DB (D5 giàn giáo tạm).
+- Phát hiện `H-7` và rủi ro mới `R-K4` (n=1 cho con số 5-10).
+
+Chưa làm:
+- Chưa làm Step 3 (Knowledge ↔ Case ↔ Process)
+- Chưa chạy §8.2 (đếm 20 case OTA) — việc giá trị cao nhất còn lại, xem R-K4
+- Chưa xử lý H-3..H-7
+
 Trạng thái stage:
 ```text
 Product Foundation             ✅  (nhưng artifact mất — xem §6.1)
 Canonical Case Model v0.2      ✅
-Knowledge Model v0.1           🔵 ĐANG LÀM — Step 1 chuẩn bị xong, chờ review
-Process Model                  ⚪ sau Knowledge
+Knowledge Model v0.1           🔵 ĐANG LÀM
+                                  Step 1 ✅ CHỐT  → 04 §1  Boundary
+                                  Step 2 ✅ CHỐT  → 04 §3  Concepts & Granularity
+                                  Step 3 🔵 tiếp theo
+Process Model                  ⚪ sau Knowledge — nhưng xem 04 §1.4: chia nhau
+                                  KERNEL, không tách rời hoàn toàn được
 MVP Architecture               ⚪ later
 MVP Implementation             ⚪ later
 ```

@@ -1061,8 +1061,25 @@ SPECULATIVE
 PLAUSIBLE
 SUPPORTED
 VERIFIED
+CONFLICTING      ← bổ sung 2026-08-21, xem ghi chú dưới
 INVALIDATED
 ```
+
+> **Cập nhật 2026-08-21 (H-1) — `CONFIRMED`.**
+> `CONFLICTING` bị thiếu ở bản gốc của §13.4 nhưng **đã có** trong
+> `Canonical Case Model v0.2` §7.3. Hai vocabulary lệch nhau là một
+> contradiction thật, và quyết định `S8` của Knowledge Model v0.1 làm
+> `CONFLICTING` trở thành **bắt buộc**, không còn là tùy chọn:
+> một bản nháp gom từ N case luôn có chỗ các case không đồng ý với nhau
+> (ví dụ *"6/20 case gọi OTA trước khi check log, 8/20 làm ngược lại"*),
+> và chính chỗ đó là thứ người duyệt cần nhìn.
+>
+> Xem `docs/04_KNOWLEDGE_MODEL_V0.1.md` §1.11.
+>
+> ⚠️ Ladder này là **verification level** (mức tin). Nó **không** phải
+> lifecycle state ở §8.3 (`DRAFT / ACTIVE / NEEDS_REVIEW / DEPRECATED /
+> SUPERSEDED`). Hai trục khác nhau — xem `04` §1.4 quy tắc (2).
+> Vocabulary chính xác của cả hai trục sẽ được khóa ở Knowledge Model Step 5.
 
 ## 13.5 Timeline over snapshot
 

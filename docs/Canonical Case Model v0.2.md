@@ -1148,6 +1148,33 @@ Human Review
 Verified Knowledge
 ```
 
+### Bổ sung 2026-08-21 (H-2) — Evidence có đường TRỰC TIẾP tới Knowledge · `CONFIRMED`
+
+Quyết định `K-B9` của Knowledge Model v0.1. §11.2 bản gốc chỉ mô tả đường
+*"Case contributes evidence toward Knowledge"* — tức là **qua trung gian Case**.
+Đường trực tiếp giờ cũng hợp lệ:
+
+```text
+EvidenceItem  →  SUPPORT / REFUTE / CONTEXT_FOR  →  Knowledge
+                 (không cần Case làm trung gian)
+```
+
+**Vì sao cần:** một email hướng dẫn của senior, một tin Zalo, một ghi chú rời
+**không thuộc Case nào**. Với thực tế 60% SOP tồn tại dưới dạng fragment rải rác,
+đây không phải trường hợp hiếm. Nếu buộc phải qua Case thì phải tạo Case giả —
+hoặc không dùng được nguồn đó.
+
+**Vì sao không phá model:** §9 của tài liệu này **đã** viết
+*"Một EvidenceItem có thể liên quan nhiều Case"* và
+*"Không mặc định 1 Evidence = owned exclusively by 1 Case"*.
+Đây là mở rộng theo đúng hướng model đã đi.
+
+**Không thay đổi:** Case vẫn **không** có authority trực tiếp invalidate
+Official Knowledge (quy tắc ở trên giữ nguyên). Evidence chỉ support/refute;
+quyết định lifecycle vẫn thuộc Knowledge review process.
+
+Xem `docs/04_KNOWLEDGE_MODEL_V0.1.md` §1.6 (K-B9).
+
 ---
 
 ## 11.3 AssistanceAttempt
