@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="KnowledgePlatform.Domain/KnowledgePlatform.Domain.csproj" />
+  <Project Path="KnowledgePlatform.Infrastructure/KnowledgePlatform.Infrastructure.csproj" />
+</Solution>

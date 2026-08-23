@@ -1091,6 +1091,36 @@ ProcessRun có thể bị chọn sai hoặc abandoned mà Case vẫn tồn tại
 
 CaseAction, CaseClaim và Evidence cung cấp observations để ProcessRun xác định process state.
 
+### Bổ sung 2026-08-23 (Step 3, `L1`) — một BƯỚC của Process trỏ tới Knowledge · `CONFIRMED`
+
+§11.1 bản gốc mô tả `Case → ProcessRun → ProcessDefinition`, nhưng **không có đường
+nào từ Process tới Knowledge**. Chiều ngược lại thì đã có (`T2`: một
+`KnowledgeRecord` trỏ tới `ProcessDefinition` khi hành động cần nhiều bước).
+
+Chiều còn thiếu là chiều mà quy trình thật của first use case đòi:
+
+```text
+B1 Kibana → B2 response → B3 tài liệu → B4 issue cũ    =  PROCESS
+B5 ĐƯA RA KẾT LUẬN                                      =  tra KNOWLEDGE tại bước này
+```
+
+Quyết định `L1`:
+
+```text
+ProcessStep  →  CONSULTS  →  một TẬP Knowledge theo chủ đề / applicability
+                             KHÔNG trỏ tới từng KnowledgeRecord cụ thể
+```
+
+**Vì sao theo chủ đề:** mỗi lần Path A sinh một nguyên nhân mới mà phải sửa
+`ProcessDefinition` thì quy trình và tri thức dính chặt vào nhau — trong khi sinh
+nguyên nhân mới **chính là việc** của Path A. Trỏ theo chủ đề thì thêm nguyên nhân
+thứ 11 không cần chạm vào SOP.
+
+**Không thay đổi:** `ProcessStep` **không chứa** Knowledge; danh sách bước vẫn có
+**một nhà duy nhất** là Process domain (`S4`). L1 chỉ thêm một tham chiếu.
+
+Xem `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3B.1.
+
 ---
 
 ## 11.2 Knowledge
@@ -1101,11 +1131,51 @@ Phải phân biệt:
 
 ```text
 Knowledge Retrieved
-Knowledge Referenced
+Knowledge Referenced      ← đã BỎ, xem cập nhật L2 dưới đây
 Knowledge Used
 ```
 
 Retrieval không đồng nghĩa Knowledge thực sự được áp dụng.
+
+> ### ⚠️ Cập nhật 2026-08-23 (Step 3, `L2`) — thang này đã được GỘP thành 5 mốc · `CONFIRMED`
+>
+> Ba bộ từ vựng cùng diễn tả một thứ đã tồn tại song song:
+>
+> ```text
+> §11.2 (trên)              Retrieved · Referenced · Used
+> §11.3 (dưới)              retrieved · shown · accepted/rejected · actually used
+> M3 (02_SUCCESS_METRICS)   hiện ra · mở · chấp nhận · có mặt trong kết luận
+> ```
+>
+> Chúng **không xung đột** — chồng nhau lệch. `L2` gộp thành **từ vựng duy nhất**:
+>
+> ```text
+> 1  RETRIEVED   hệ thống lấy ra                 (có thể không bao giờ hiện)
+> 2  SHOWN       hiện ra trước mắt người
+> 3  OPENED      người mở / đọc
+> 4  ACCEPTED    người chấp nhận
+> 5  USED        có mặt trong KẾT LUẬN của case
+> ```
+>
+> **`Referenced` bị bỏ:** nó nằm lơ lửng giữa `OPENED` và `ACCEPTED` mà không thêm
+> thông tin quyết định nào. Nếu nó có nghĩa *"xuất hiện trong hồ sơ case"* thì đó là
+> dữ liệu của Case, không phải mức độ sử dụng tri thức.
+>
+> Thang 5 mốc là cách thực thi phân biệt `Knowledge Retrieved ≠ Knowledge Used`
+> (`AGENT.md` §6) — mỗi chỗ rơi chỉ ra một vấn đề khác nhau. Xem
+> `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3B.2.
+
+> ### Bổ sung 2026-08-23 (Step 3, `L3`) — `Case ↔ Knowledge` là NHIỀU-NHIỀU · `CONFIRMED`
+>
+> Một Case có thể có **hai nguyên nhân đồng thời**, và mỗi liên kết mang
+> **evidence + verification level RIÊNG**: nguyên nhân A có thể ở mức `VERIFIED`
+> trong khi nguyên nhân B ở mức `SPECULATIVE`. Gộp thành một mức là vi phạm `G3`
+> và `T4`.
+>
+> Nhất quán với §9 của tài liệu này (*"một EvidenceItem có thể liên quan nhiều
+> Case"*) và với `CaseProblem[]` số nhiều. Không đòi entity mới.
+>
+> Xem `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3B.3.
 
 Case có thể:
 
@@ -1199,6 +1269,34 @@ AI response
 ```
 
 Điều này hỗ trợ Eval và Capability #3 mà không biến CanonicalCase thành AI telemetry container.
+
+> ### Bổ sung 2026-08-23 — AssistanceAttempt phải ghi 5 mốc RIÊNG BIỆT · `CONFIRMED`
+>
+> Từ `L2` (Step 3) và `M3` (Success Metrics):
+>
+> ```text
+> RETRIEVED → SHOWN → OPENED → ACCEPTED → USED
+> ```
+>
+> **Không phải một cờ *"đã dùng"*.** Mỗi chỗ rơi chỉ ra một vấn đề khác nhau:
+>
+> ```text
+> 1→2  lấy ra nhưng không hiện     →  vấn đề xếp hạng / ngưỡng
+> 2→3  hiện mà không ai mở         →  vấn đề trình bày / thời điểm
+> 3→4  mở rồi thấy không đúng      →  vấn đề CHẤT LƯỢNG tri thức
+> 4→5  chấp nhận nhưng không dùng  →  vấn đề tin cậy / chưa đủ cụ thể
+> ```
+>
+> Hai yêu cầu thêm, từ `02_SUCCESS_METRICS_V1.md` §4:
+>
+> ```text
+> · mốc USED phải liên kết được tới KẾT LUẬN cuối của case (bước B5)
+> · Tầng 2 của Success Metrics cần biết trạng thái kho tri thức TẠI THỜI ĐIỂM
+>   escalate → cần lịch sử, không phải snapshot  (đúng guardrail G5)
+> ```
+>
+> ⚠️ `OPENED` là mốc §11.3 bản gốc chưa có; `Referenced` ở §11.2 đã bị bỏ.
+> Xem `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3B.2.
 
 ---
 

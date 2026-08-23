@@ -2,7 +2,21 @@
 
 ## AI Operational Knowledge & Process Platform
 
-> **Cập nhật:** 2026-08-21 (buổi 2 — D6 chốt, **Step 1 + Step 2 CHỐT**, §8.1 đã chạy)
+> **Cập nhật:** 2026-08-23 buổi 7 — ✅ **CÔNG NGHỆ ĐÃ CHỐT.** Workstream 06 đóng
+> (`AR1`-`AR5`, `G13`) → `docs/06_MVP_ARCHITECTURE.md`. Stack: **C#/.NET + PostgreSQL**.
+> Tiếp theo là **Workstream 07 — MVP Implementation**, và đây là lúc được viết code.
+> **Cùng ngày:** buổi 6 — ✅ **DOMAIN MODELING KẾT THÚC.** Workstream 05
+> (Process Model v0.1, PR1-PR4) đóng.
+> **Cùng ngày:** buổi 5 — ✅ **WORKSTREAM 04 ĐÓNG** (Step 5 chốt, V1-V5; §6.9 đóng)
+> **Cùng ngày:** buổi 4 — **Step 4 CHỐT** → `04` §3C (AP1-AP4)
+> **Cùng ngày:** buổi 3 — **Step 3 CHỐT** → `04` §3B (L1-L4); H-8 đã sửa
+> **Cùng ngày:** buổi 2 — **Q-E CHỐT** → `docs/02_SUCCESS_METRICS_V1.md` (M1-M4)
+> **Cùng ngày:** buổi 1 — housekeeping H-1..H-7 đóng hết
+>
+> 📌 **Đọc nhanh Knowledge Model:** `04` §3C.5 — hình dạng đầy đủ của một
+> `KnowledgeRecord` sau cả bốn Step, mọi dòng trỏ về một quyết định đã chốt.
+> **Trước đó:** 2026-08-22 (G12 chốt, §8.2 sang phiên bản nhẹ — §2.4)
+> **Trước đó:** 2026-08-21 buổi 2 (D6 chốt, Step 1 + Step 2 CHỐT, §8.1 đã chạy)
 > **Mục đích:** File này là điểm vào cho phiên làm việc tiếp theo. Đọc file này TRƯỚC, rồi mới đọc các tài liệu khác.
 > **Dành cho:** AI Agent hoặc người mới tiếp tục project, kể cả trên máy khác.
 
@@ -17,10 +31,25 @@ DỰ ÁN     AI Operational Knowledge & Process Platform
           Sản phẩm ĐỂ BÁN (D1), multi-tenant từ ngày đầu.
           Bản build đầu: engine gợi ý quy trình + tri thức, nhúng được (D2).
 
-STAGE     Domain Modeling. Workstream 04 — Knowledge Model v0.1.
-          Step 1 Knowledge Boundary        ✅ CHỐT  → 04 §1
-          Step 2 Concepts & Granularity    ✅ CHỐT  → 04 §3
-          Step 3 Knowledge ↔ Case ↔ Process 🔵 TIẾP THEO
+STAGE     ✅ DOMAIN MODELING KẾT THÚC 2026-08-23
+          ✅ Workstream 04 — Knowledge Model v0.1  (23 quyết định)
+          ✅ Workstream 05 — Process Model v0.1    (4 quyết định PR1-PR4)
+          ✅ Workstream 06 — MVP Architecture      (5 quyết định AR1-AR5)
+             CÔNG NGHỆ ĐÃ CHỐT: C#/.NET + PostgreSQL + blob storage
+          🔵 Workstream 07 — MVP Implementation  ← ĐANG LÀM, CÓ CODE
+             slice đầu: Path A. Nền móng đã build, build sạch 0 warning.
+             → src/ · nhật ký quyết định: docs/07_MVP_IMPLEMENTATION.md
+             ⚠ RLS chưa kiểm trên DB thật (môi trường không có Postgres)
+
+          ★ 04 §3C.5  hình dạng đầy đủ của một KnowledgeRecord
+          ★ 04 §3D.7  bảng từ vựng ĐÃ KHÓA — tham chiếu duy nhất
+          ★ 05 §5     hình dạng đầy đủ ProcessDefinition / ProcessRun
+          ★ 06 §8     decision register (stack + 5 quyết định)
+          ★ 06 §10    6 ràng buộc dễ sai nhất, mang sang Workstream 07
+
+          Ngoài workstream 04:
+          Success Metrics (Q-E)            ✅ CHỐT 2026-08-23
+                                           → 02_SUCCESS_METRICS_V1.md
 
 CHƯA CODE. Chốt công nghệ là quyền của người dùng — AGENT.md §10.1.
           Đúng thời điểm chốt là Workstream 06, không phải bây giờ.
@@ -42,17 +71,35 @@ CHƯA CODE. Chốt công nghệ là quyền của người dùng — AGENT.md §
                → toàn bộ 04 §3.5 đứng trên con số này. Xem R-K4.
 ```
 
-## Việc tiếp theo, theo thứ tự giá trị
+## Việc tiếp theo
 
 ```text
-1  §8.2  ĐẾM 20 case OTA gần nhất — nguyên nhân rơi vào mấy nhóm?
-         Việc của NGƯỜI DÙNG, ngoài thiết kế. Giá trị cao nhất còn lại.
-         Xác nhận/bác bỏ con số 5-10 → xác nhận/bác bỏ 04 §3.5.
-         Cũng cho Q-E (Success Metrics) con số thật thay vì ứng viên.
+1  Workstream 07 — tiếp slice Path A. Nền móng ĐÃ XONG (xem 07 §2).
+   Còn lại: truy vấn "tìm N case liên quan" · ISoạnNhápSOP gọi Anthropic SDK
+   · luồng duyệt (S7) · đường nhận tín hiệu · tính diff(A,B) cho M2.
+   ⚠ VIỆC ĐẦU TIÊN khi có PostgreSQL: apply migration và chạy RlsGuard.
+     SQL sinh ra đúng cú pháp, nhưng "đúng cú pháp" khác "chặn được thật".
 
-2  Step 3  Knowledge ↔ Case ↔ Process. Mang theo N-3b, N-6, N-7 (04 §3.6).
+2  §8.2  ĐẾM CASE OTA — bản nhẹ, ~30 phút, VIỆC CỦA BẠN. Chạy song song.
+         Luật quyết định đã chốt TRƯỚC khi đếm (≤15 / ≥40 / ở giữa).
+         ⚠ Nó quyết định BÀI TOÁN 1 (khớp bằng chứng với ~10 nguyên nhân),
+           KHÔNG quyết định bài toán 2 (tìm tài liệu) — xem R-A1 ở 04 §3.5.
+         Công dụng: 04 §3.5 · baseline M4a · 20 nhãn eval · spec §17 mục 21.
 
-3  H-3..H-7  Housekeeping, gộp một lần cuối workstream 04.
+3  AR4-b  Đếm khách thực tế có bao nhiêu tài liệu, loại gì. Cùng kiểu §8.2.
+          Quyết định khi nào Postgres FTS không đủ và cần pgvector.
+
+✅ CÔNG NGHỆ ĐÃ CHỐT 2026-08-23 → docs/06_MVP_ARCHITECTURE.md (AR1-AR5)
+   C#/.NET · PostgreSQL · blob storage · SDK chính thức + interface mỏng
+   claude-opus-5 · eval Python riêng · widget Vue3+TS · G13 hai chế độ deploy
+✅ DOMAIN MODELING KẾT THÚC 2026-08-23
+   Workstream 04 — 23 quyết định · Workstream 05 — 4 quyết định (PR1-PR4)
+   Step 3,4,5 của 04 và toàn bộ 05 KHÔNG sinh entity mới nào.
+   §6.9 (vocabulary song song) ĐÓNG → bảng khóa duy nhất ở 04 §3D.7.
+   Mốc §6.7 (~04/09) đạt sớm: cả hai model xong 23/08.
+✅ Q-E ĐÃ CHỐT → 02_SUCCESS_METRICS_V1.md (M1-M4). QM-1 (NGƯỠNG) vẫn OPEN
+   → có thước đo mà chưa có ngưỡng thì chưa có điều kiện dừng thật sự.
+✅ H-1..H-9 housekeeping ĐÃ ĐÓNG HẾT. Xem §9.
 ```
 
 ## Cách làm việc mà người dùng đã yêu cầu
@@ -71,7 +118,13 @@ CHƯA CODE. Chốt công nghệ là quyền của người dùng — AGENT.md §
 ```text
 Step 1   S1-S8, K-B9, Q-B, Q-C     11 quyết định   → 04 §1, §4
 Step 2   T1-T4                      4 quyết định   → 04 §3, §4
-Nền      D1-D6, G1-G11              → AGENT.md §3, §4, §4B
+Step 3   L1-L4                      4 quyết định   → 04 §3B, §4
+Step 4   AP1-AP4                    4 quyết định   → 04 §3C, §4
+Step 5   V1-V5                      5 quyết định   → 04 §3D, §4
+WS 05    PR1-PR4                    4 quyết định   → 05 §6
+WS 06    AR1-AR5 (+G13)             5 quyết định   → 06 §8   ← CÔNG NGHỆ
+Nền      D1-D6, G1-G12              → AGENT.md §3, §4, §4B
+Metrics  M1-M4 (Q-E)                4 quyết định   → 02_SUCCESS_METRICS_V1.md §5
 ```
 
 # 1. Đọc gì, theo thứ tự nào
@@ -81,7 +134,8 @@ Nền      D1-D6, G1-G11              → AGENT.md §3, §4, §4B
 2. AGENT.md                          ← cách agent phải làm việc trong project
 3. docs/PROJECT_CONTEXT.md           ← Discovery + Vision (consolidated 2026-08-18)
 4. docs/Canonical Case Model v0.2.md ← Domain Model đã chốt
-5. docs/04_KNOWLEDGE_MODEL_V0.1.md   ← Knowledge Boundary đã chốt (Step 1)
+5. docs/04_KNOWLEDGE_MODEL_V0.1.md   ← Knowledge Boundary + Concepts (Step 1, 2)
+6. docs/02_SUCCESS_METRICS_V1.md     ← Success Metrics đã chốt (Q-E, M1-M4)
 ```
 
 ## ⚠️ Cảnh báo về tài liệu
@@ -96,9 +150,19 @@ Nền      D1-D6, G1-G11              → AGENT.md §3, §4, §4B
 | `docs/02_PRODUCT_FOUNDATION_V1.md` | — | ❌ **MISSING** |
 | `docs/03_CANONICAL_CASE_MODEL_V0.2.md` | `docs/Canonical Case Model v0.2.md` | ✅ có, khác tên |
 
-`docs/NEXT_CONVERSATION_PROMPT (1).md` là **prompt đầu vào** của conversation 02, **không phải** output. Nó chứa phiên bản **cũ** của MVP Capability #3 → đừng đọc nó như quyết định hiện hành.
+`docs/archive/NEXT_CONVERSATION_PROMPT_02_INPUT.md` là **prompt đầu vào** của conversation 02, **không phải** output. Nó chứa phiên bản **cũ** của MVP Capability #3 → đừng đọc nó như quyết định hiện hành. Đã archive 2026-08-23 (`H-6`); tên cũ là `docs/NEXT_CONVERSATION_PROMPT (1).md`.
 
-**Hệ quả của việc mất tài liệu 02:** không có capability contract chi tiết, và đặc biệt là **không biết Success Metrics của MVP là gì**. Đây vẫn là `OPEN QUESTION` quan trọng chưa giải quyết.
+**Hệ quả của việc mất tài liệu 02 — đã đỡ một phần 2026-08-23:**
+
+```text
+Success Metrics             ✅ ĐÃ LẤY LẠI  → docs/02_SUCCESS_METRICS_V1.md
+                                              (Q-E RESOLVED, M1-M4)
+capability contract chi tiết ❌ VẪN MẤT
+non-goals                    ❌ VẪN MẤT
+lý do + evidence của 02      ❌ VẪN MẤT
+```
+
+⚠️ Success Metrics được **dựng lại**, không phải tìm lại — nó là quyết định mới ngày 2026-08-23, không phải bản gốc của tài liệu 02. Và `QM-1` (ngưỡng cụ thể) vẫn `OPEN`: **có thước đo mà chưa có ngưỡng thì vẫn chưa có điều kiện dừng, chỉ mới có cách nhìn.**
 
 ---
 
@@ -130,6 +194,9 @@ G7  Security / Tenant boundary là nền tảng
 G8  Không dùng numeric LLM confidence như truth
 G9  Không tự thêm MVP Capability #4, #5
 G10 Không tự chuyển PROPOSED → CONFIRMED, không tự đóng OPEN QUESTION
+G11 Không làm PHỒNG TO một capability đã chốt          (S1, 2026-08-21)
+G12 Tỉ trọng tri thức của khách là THAM SỐ, không phải
+    hằng số thiết kế; thứ tự bật capability là cấu hình (2026-08-22, §2.4)
 ```
 
 Canonical Case Model v0.2 đã chốt ở mức Domain Modeling — xem `docs/Canonical Case Model v0.2.md` §17 Decision Register.
@@ -243,6 +310,87 @@ Mỗi lần dùng tính năng sinh ra một cặp *(nháp, bản người sửa)
 
 **(3) D6 là điều kiện để D2 dùng được ở khách hàng đầu tiên.**
 Engine gợi ý quy trình (D2) không có gì để gợi ý nếu khách chưa có quy trình nào trong hệ thống. Với 10% (§3), engine đó gần như im lặng ngày đầu. D6 là thứ nạp đạn cho nó. Đã kiểm chứng ở cả vertical thứ hai: rule *"khách ở Negotiation im hơn 7 ngày → gửi case study cùng ngành"* cũng được suy ra từ các deal won/lost — cùng cơ chế, khác tên.
+
+---
+
+## 2.4 Chốt trong phiên 2026-08-22 — `CONFIRMED`
+
+Xuất phát từ một câu phản biện của người dùng: *"Sao phải đếm 20 case OTA nhỉ. Mình nghĩ nên làm linh hoạt để công ty tự thao tác và thấy lựa chọn tốt nhất cho công ty mình. Có thể MVP tốt do phù hợp với công ty hiện tại nhưng mang sang công ty khác thì tỉ trọng % SOP sẽ khác."*
+
+### Chỗ lẫn đã được tách ra — ghi lại vì nó sẽ lặp lại
+
+Hai con số bị gộp làm một trong cách tài liệu đang trình bày:
+
+```text
+10/30/60            tỉ trọng SOP của MỘT công ty
+                    → ĐÚNG là khác nhau giữa các công ty.  Đây là G12.
+
+"5-10 nguyên nhân"  một loại vấn đề có bao nhiêu nguyên nhân có thể?
+                    → câu hỏi về CẤU TRÚC của vấn đề, không về công ty.
+                    → đây là thứ §8.2 đo, và là thứ §3.5 của file 04 đứng trên.
+```
+
+§8.2 **không** đo tỉ trọng SOP. Nó trả lời câu: *tập nguyên nhân của một loại vấn đề là hữu hạn nhỏ hay mở?* Câu đó quyết định một thứ đắt:
+
+```text
+hữu hạn nhỏ (~10)  →  Capability 1 = bài toán PHÂN LOẠI. Không dựng vector DB/RAG.
+mở, hàng trăm      →  đúng là bài toán tìm kiếm. Phải dựng cả stack đó.
+```
+
+Chọn sai hướng này tạo ra đúng thứ `D5` gọi là **giàn giáo tạm**.
+
+### Ba quyết định
+
+**(1) `G12` — tỉ trọng tri thức là tham số của khách, không phải hằng số thiết kế.** Chốt ở **dạng rộng**: gồm cả *"thứ tự bật capability là cấu hình theo từng khách"*. Toàn văn: `AGENT.md` §3.9. Đây là đóng góp thật của câu phản biện — `D5 hệ quả 2` trước đó chỉ nói về giới hạn hạ tầng (chunk size, context limit), **chưa** nói về phân bố dữ liệu của khách.
+
+**(2) §8.2 chuyển sang phiên bản nhẹ, có luật quyết định chốt TRƯỚC.** Xem §8.2 đã viết lại.
+
+**(3) *"Công ty tự đo trạng thái tri thức của mình"* = future capability.** Ghi vào `PROJECT_CONTEXT.md` §17 (mục 21). **Không** vào MVP, **không** nhét vào Capability 3 — đó đúng là cột phải của `G11`, và §2.3 đã cảnh báo trước về dạng đề nghị này.
+
+### Hai điều đã ghi nhận, không phải quyết định
+
+**§8.2 KHÔNG chặn Step 3.** Tài liệu gọi nó là *"việc giá trị cao nhất còn lại"* — đó là nói về **giá trị**, không phải **chặn**. Theo quy tắc §6.7 (*"câu hỏi nào không chặn việc build thì ghi vào Open Questions và đi tiếp"*), Step 3 chạy được ngay. Trước phiên này cách trình bày ở TL;DR dễ bị đọc thành cổng chặn — đã sửa.
+
+**Rủi ro "MVP chỉ vừa với khách #0" nhỏ hơn vẻ ngoài.** Thứ tự vòng lặp *"gom trước, tìm sau"* ở §3 vẫn mang nhãn `PROPOSED, chưa chốt` — nó chưa bao giờ được đóng thành thiết kế. G12 giờ khoá luôn khả năng nó bị đóng thành hằng số.
+
+---
+
+## 2.5 Chốt trong phiên 2026-08-23 — `CONFIRMED` · `Q-E` ĐÃ GIẢI
+
+Toàn văn: **`docs/02_SUCCESS_METRICS_V1.md`**. Đây là bản nén.
+
+```text
+M1   Success Metric ≠ Eval metric
+     ứng viên "% chỉ đúng nguyên nhân" → chuyển sang bộ EVAL
+M2   TẦNG 0 = Success Metric CHÍNH tháng đầu
+     số nháp Path A được duyệt + mức sửa diff(A,B) + tỉ lệ bỏ giữa đường
+M3   TẦNG 1 = chuỗi 4 bước ĐẦY ĐỦ
+     hiện ra → được mở → được chấp nhận → có mặt trong KẾT LUẬN
+M4a  TẦNG 2 = "% escalate oan", vai trò LAGGING, kèm 3 cảnh báo
+M4b  "độ phủ nguyên nhân" = leading indicator NỘI BỘ TENANT (G12)
+```
+
+### Bốn phản biện dẫn tới bộ metric này — ghi lại vì chúng dễ bị quên
+
+**(1) Cả ba ứng viên gốc đều KHÔNG đo được ở tháng 1.** Ngày đầu có **0 KnowledgeRecord** (không có SOP viết + `S6`). Nên: ứng viên 1 undefined, ứng viên 3 là `0/mẫu số` chưa biết, ứng viên 2 không có baseline. Nhưng tháng đầu là lúc cần biết nhất *có nên tiếp tục hay không* → sinh ra Tầng 0.
+
+**(2) Ứng viên 1 là eval metric bị xếp nhầm chỗ.** Failure mode cụ thể: *chỉ đúng 90% nhưng không ai xem gợi ý → Eval = 0.9, giá trị = 0, và ta ship.*
+
+**(3) Không ứng viên nào dùng phân biệt đã CONFIRMED `Knowledge Retrieved ≠ Knowledge Used`** (`AGENT.md` §6). Đáng chú ý hơn: `P8` trong problem taxonomy **đã** ghi sẵn giải pháp (*AssistanceAttempt · knowledge used · accept/reject · outcome*) mà ba ứng viên không có cái nào → sinh ra Tầng 1.
+
+**(4) `G12` vừa chốt hôm trước loại ứng viên 3 khỏi vai trò thước đo sản phẩm.** Mẫu số *"tổng nguyên nhân đã biết"* là đặc điểm của một khách; khách B có thể có 200 nguyên nhân → không port được.
+
+### Hai điều đáng ghi
+
+**Q-E được làm TRƯỚC Step 3 có lý do kỹ thuật, không phải tùy hứng.** `AssistanceAttempt` là cái máy ghi lại thước đo. Thiết kế máy ghi trước khi biết cần đo gì thì phải thiết kế hai lần. `02_SUCCESS_METRICS_V1.md` §4 đã viết ra **metric đòi dữ liệu gì** — đó là đầu vào trực tiếp cho Step 3.
+
+**Tầng 2 đòi "trạng thái kho tri thức tại một thời điểm quá khứ"** — đúng guardrail `G5` (Timeline over Snapshot). Guardrail cũ trả cổ tức lần nữa, không phát sinh yêu cầu mới.
+
+### ⚠️ Q-E chưa đóng hoàn toàn
+
+`QM-1` — **ngưỡng** cụ thể của từng thước đo — vẫn `OPEN`. Đặt ngưỡng bằng cách đoán bây giờ thì tệ hơn không đặt; phải chạy thật vài tuần.
+
+> Có thước đo mà không có ngưỡng thì **chưa có điều kiện dừng** — chỉ mới có **cách nhìn**. Đó là tiến bộ thật nhưng chưa đủ.
 
 ---
 
@@ -745,8 +893,14 @@ Với D6 vừa chốt, câu đó **nặng hơn**. Vì D6 nói: sản phẩm sẽ
 
 # 6. Phát hiện / phản biện KHÔNG ĐƯỢC MẤT
 
-## 6.1 Thiếu tài liệu Product Foundation v1 — `chưa xử lý`
-Xem §1. Mất theo: capability contract, non-goals, và **Success Metrics**. Không biết "thành công" là gì thì không có điều kiện dừng cho bất kỳ workstream nào. Cần tìm lại hoặc dựng lại + chốt lại thước đo.
+## 6.1 Thiếu tài liệu Product Foundation v1 — `xử lý MỘT PHẦN 2026-08-23`
+Xem §1. Mất theo: capability contract, non-goals, và **Success Metrics**.
+
+**Success Metrics đã được dựng lại** 2026-08-23 → `docs/02_SUCCESS_METRICS_V1.md` (`Q-E` RESOLVED bởi `M1`-`M4`). Không phải tìm lại bản gốc — là quyết định mới.
+
+**Vẫn mất:** capability contract chi tiết, non-goals, và toàn bộ phần lý do/evidence của workstream 02.
+
+⚠️ Và cảnh báo gốc chỉ đúng một nửa bây giờ: đã có **thước đo**, nhưng `QM-1` (ngưỡng cụ thể — *"bao nhiêu thì gọi là thành công?"*) vẫn `OPEN`. Có thước đo mà không có ngưỡng thì vẫn **chưa có điều kiện dừng**. Ngưỡng phải đợi chạy thật vài tuần; đoán bây giờ thì tệ hơn là không đặt.
 
 ## 6.2 Bất đối xứng evidence — `cần lưu ý khi thiết kế`
 ```text
@@ -823,7 +977,7 @@ PROJECT_CONTEXT §8.3 (knowledge health): DRAFT VERIFIED ACTIVE NEEDS_REVIEW DEP
 ## 6.10 Tài liệu cũ có phần đã lỗi thời — `housekeeping`
 - `PROJECT_CONTEXT.md` §14.2 mô tả CanonicalCase root gồm `Intake`/`TriageState`/`ReproductionState`/`WaitingState` — **v0.2 đã loại bỏ có chủ đích** (guardrail R7). Nên đánh dấu §14.2 là SUPERSEDED.
 - `PROJECT_CONTEXT.md` §16 tự nói *"Exact 3 MVP capabilities chưa được formally locked"* — trái AGENT.md §4 (`CONFIRMED`). Cùng nguyên nhân: doc 02 đã lock nhưng PROJECT_CONTEXT chưa cập nhật ngược.
-- `NEXT_CONVERSATION_PROMPT (1).md` là input prompt, chứa Capability #3 bản cũ → nên archive để agent tương lai không đọc nhầm.
+- ✅ `NEXT_CONVERSATION_PROMPT (1).md` là input prompt, chứa Capability #3 bản cũ → **đã archive 2026-08-23** (`H-6`) vào `docs/archive/NEXT_CONVERSATION_PROMPT_02_INPUT.md`, có banner cảnh báo ở đầu file.
 - Tên file không khớp convention `01_`/`02_`/`03_` trong AGENT.md §1.
 
 ---
@@ -1094,6 +1248,17 @@ Với tập nguyên nhân hữu hạn, ba thước đo sau đo được:
 
 `Q-E` vẫn `OPEN` — đây là ứng viên, không phải quyết định. Nhưng trước đó ta **không có cách nào** đo, giờ có.
 
+> ✅ **Cập nhật 2026-08-23 — `Q-E` đã giải, xem §2.5 và `docs/02_SUCCESS_METRICS_V1.md`.**
+> Cả ba ứng viên trên **đều bị sửa vai trò**, không lấy nguyên cái nào:
+>
+> ```text
+> "% chỉ đúng nguyên nhân"  →  sang bộ EVAL, không phải Success Metric   (M1)
+> "% escalate oan"          →  giữ, nhưng LAGGING + 3 cảnh báo           (M4a)
+> "độ phủ nguyên nhân"      →  leading indicator NỘI BỘ TENANT           (M4b)
+> ```
+>
+> Lý do chính: **cả ba đều không đo được ở tháng 1**, vì ngày đầu có 0 KnowledgeRecord. Đoạn phân tích trên không thấy lỗ đó — giữ nguyên để biết vì sao.
+
 **(e) Nếu chỉ có 5-10 nguyên nhân thì cùng một đáp án đã bị tìm lại rất nhiều lần.**
 Khớp với `REUSE_OPPORTUNITY_MISSED` và `KNOWLEDGE_WAS_NOT_CAPTURED` (§10.7). Đây là câu nói mạnh nhất cho pitch — nhưng cần §8.2 đếm để định lượng, đừng dùng khi chưa có số.
 
@@ -1123,13 +1288,83 @@ Con số 5-10 là **ước lượng của một người có kinh nghiệm**. Ng
 
 ⚠️ **ĐÃ XÁC NHẬN: không có SOP viết.** Capability 1 ngày đầu chỉ retrieve được tài liệu hệ thống — thứ trả lời *"field này là gì"*, không trả lời *"case này bị gì"*. Đó là một sự thật về thứ tự MVP, không phải chi tiết.
 
-## 8.2 Đo thử vấn đề A — vài giờ
-Hỏi 5 bạn support mới: *"bạn có biết tài liệu X tồn tại không?"* và *"lần cuối gặp case này bạn làm gì?"*
-Đếm trong 20 case OTA gần nhất: bao nhiêu case escalate lên Technical mà SOP đáng ra đã đủ?
-→ Ra con số để bảo vệ quyết định MVP. Hiện P1 chỉ có 1 anecdote (§6.2).
+## 8.2 Đếm case OTA — PHIÊN BẢN NHẸ · `CONFIRMED 2026-08-22`
 
-## 8.3 Khôi phục Success Metrics
-Xem §6.1. Không có thước đo thì không có điều kiện dừng.
+> ⚠️ **KHÔNG chặn Step 3.** Xem §2.4. Làm được thì tốt, không làm thì Step 3 vẫn chạy.
+> Nhưng nó quyết định trước một thứ đắt ở Workstream 06: có phải dựng vector DB / RAG không.
+
+### Câu hỏi duy nhất cần trả lời
+
+> **Tập nguyên nhân của "booking OTA không về PMS" là hữu hạn nhỏ, hay mở?**
+
+Không cần con số chính xác. Cần **câu trả lời nhị phân**.
+
+### Luật quyết định — CHỐT TRƯỚC KHI ĐẾM
+
+Chốt trước để phép đếm không biến thành một vòng modeling nữa (đúng rủi ro `R-K3`):
+
+```text
+≤ 15 nhóm nguyên nhân, có lặp lại   →  §3.5 (file 04) ĐỨNG
+                                       Capability 1 ở MVP = phân loại
+                                       KHÔNG dựng vector DB / RAG / chunking
+
+≥ 40 nhóm, hoặc gần như không lặp   →  §3.5 SẬP
+                                       retrieval là bài toán thật, cần index
+                                       → đánh dấu lại §3.5, R-K4 thành hiện thực
+
+16-39, hoặc không kết luận được     →  giữ §3.5 nhãn n=1, quyết ở Workstream 06
+```
+
+`T1` / `T2` / `T4` **không** phụ thuộc kết quả này — xem `04` §6 R-K4. Chỉ §3.5 dễ vỡ.
+
+### Vì sao 20 case là đủ
+
+20 case đủ cho câu **nhị phân**, dù không đủ để chốt con số chính xác:
+
+```text
+20 case → 8 nhóm, có lặp        →  tín hiệu "hữu hạn" khá mạnh
+20 case → 19 nhóm khác nhau     →  tín hiệu "mở" rất mạnh
+```
+
+Nên không cần làm to. Việc này là của **người dùng**, ngoài thiết kế.
+
+### Hai thứ thu được kèm, gần như miễn phí
+
+**(1) 20 nhãn eval đầu tiên.** 20 case đã có outcome + tập nguyên nhân hữu hạn = bài toán phân loại **có đáp án**. `D5 hệ quả 1` đòi bộ eval là first-class và ai cũng không muốn gán nhãn tay — đây là 20 nhãn không phải xin ai. Xem §8.4.
+
+**(2) Bản spec cho future capability "công ty tự đo trạng thái tri thức".**
+
+> Không thể tự động hoá một phép đo chưa ai từng thực hiện một lần.
+
+Làm bằng tay một lần thì biết: hỏi câu gì ra câu trả lời dùng được, dữ liệu nào thật sự đếm được, đầu ra trông thế nào mới giúp quyết định. Đó chính là spec của tính năng ở `PROJECT_CONTEXT` §17 mục 21 — và tính năng đó có **giá trị tiền-bán-hàng**: một báo cáo *"công ty anh đang ở 10/30/60, nên bắt đầu từ đây"*.
+
+### Phần bản gốc §8.2 — vẫn còn giá trị, ưu tiên thấp hơn
+
+Bản gốc còn hai việc, giữ lại vì chúng phục vụ `Q-E` chứ không phục vụ §3.5:
+
+```text
+· Hỏi 5 bạn support mới: "bạn có biết tài liệu X tồn tại không?"
+· Đếm: bao nhiêu case escalate lên Technical mà SOP đáng ra đã đủ?
+  → đo trực tiếp P1, hiện P1 chỉ có 1 anecdote (§6.2)
+```
+
+## 8.3 Khôi phục Success Metrics — ✅ ĐÃ LÀM 2026-08-23
+Kết quả: `docs/02_SUCCESS_METRICS_V1.md`. `Q-E` RESOLVED bởi `M1`-`M4`.
+
+Ba tầng, tách khỏi bộ eval:
+
+```text
+M1   Success Metric ≠ Eval metric. "% chỉ đúng nguyên nhân" → sang bộ EVAL
+M2   TẦNG 0, metric CHÍNH tháng đầu: số nháp Path A được duyệt + mức sửa
+     diff(A,B) + tỉ lệ bỏ giữa đường.  Đo được ở trạng thái 0 tri thức.
+M3   TẦNG 1: chuỗi 4 bước hiện → mở → chấp nhận → có mặt trong kết luận
+M4a  TẦNG 2: "% escalate oan" — lagging, 3 cảnh báo (không baseline,
+     volume nhỏ, "đáng ra" là phán xét)
+M4b  "độ phủ nguyên nhân" → leading indicator NỘI BỘ TENANT, không phải
+     Success Metric của sản phẩm (G12)
+```
+
+⚠️ **Còn thiếu ngưỡng** (`QM-1`). Chưa có ngưỡng thì chưa có điều kiện dừng.
 
 ## 8.4 Bộ eval từ MVP — dù chỉ 20 case gán nhãn tay
 Xem D5 hệ quả 1. Đây là cơ chế biến "model mạnh lên" thành "phần mềm mạnh lên".
@@ -1168,11 +1403,28 @@ Source of truth: docs/04_KNOWLEDGE_MODEL_V0.1.md §1 + §3
 
 ## Sinh ra từ Step 1 — cần Step 2-5
 ```text
-N-1  Vocabulary: verification level vs lifecycle state (khóa riêng)  → Step 5
-N-2  Knowledge types taxonomy                                        → Step 2
-N-3  Granularity: một KnowledgeRecord to bằng nào?                   → Step 2
-N-4  Knowledge ↔ Knowledge (supersedes/refines/contradicts)          → Step 3
-N-5  Applicability biểu diễn thế nào                                 → Step 4
+N-1  ✅ RESOLVED (V1+V2+V3) — hai trục đã khóa, KHÔNG từ nào trùng.
+     VERIFIED bỏ khỏi lifecycle. Bảng khóa duy nhất: 04 §3D.7. §6.9 ĐÓNG.
+N-2  ✅ RESOLVED (T3) — hai type: DIAGNOSTIC + CONDITIONAL_RECOMMENDATION
+N-3  ✅ RESOLVED (T1) — đơn vị = MỘT NGUYÊN NHÂN, kèm cách nhận ra
+N-3b ✅ RESOLVED (AP4) — một "cách nhận ra" = MỘT ASSERTION, T4 đã giải sẵn
+N-4  ✅ RESOLVED (L4) — SUPERSEDES · REFINES · CONTRADICTS,
+     state SUPERSEDED là SUY RA từ quan hệ, không lưu riêng
+N-5  ✅ RESOLVED (AP1 + AP2) — applicability là ASSERTION, không cấu trúc.
+     tenant→visibility (S7) · thời gian→lifecycle (Step 5) ·
+     hệ thống→chưa có ca thật (AP-a) · version→assertion
+Auth ✅ RESOLVED (V5) — Authority = Actor, đã có trong Case v0.2 §7.
+     KHÔNG cần trục thứ ba. Không mô hình hóa chức danh/mức chuyên môn.
+N-6  ✅ RESOLVED (L3) — phát biểu phân biệt nằm TRONG record (T1)
+N-7  ✅ RESOLVED (L3) — Case ↔ Knowledge nhiều-nhiều, evidence riêng mỗi link
+N-8  ✅ RESOLVED (V4) — tách HAI ca đi hai trục khác nhau:
+     (a) vẫn ĐÚNG, hết ai gặp → DEPRECATED, verification KHÔNG đổi
+     (b) từng đúng, giờ SAI   → INVALIDATED → NEEDS_REVIEW
+     Ca (a) là bằng chứng việc tách hai trục kiếm được chỗ đứng.
+
+Sinh ra từ Step 3, không chặn build:
+L1-a Chọn record nào trong TẬP mà ProcessStep trỏ tới?  → Workstream 06
+L2-a Ai ghi nhận mốc USED — hệ thống tự phát hiện hay người xác nhận? → Q-H
 ```
 
 ## Housekeeping ghi ngược vào tài liệu cũ
@@ -1183,20 +1435,38 @@ H-1  ✅ ĐÃ LÀM 2026-08-21 — PROJECT_CONTEXT §13.4 đã thêm CONFLICTING
 H-2  ✅ ĐÃ LÀM 2026-08-21 — Case v0.2 §11.2 đã thêm đường
                             Evidence → Knowledge trực tiếp (K-B9)
 
-H-3  ⚪ PROJECT_CONTEXT §5.2: "senior memory" phải ghi là knowledge SOURCE (K-B7)
-H-4  ⚪ PROJECT_CONTEXT §14.2 SUPERSEDED bởi Case v0.2 (R7)
-H-5  ⚪ PROJECT_CONTEXT §16 nói "chưa formally locked" → trái AGENT.md §4
-H-6  ⚪ NEXT_CONVERSATION_PROMPT (1).md nên archive
-H-7  ⚪ MỚI — PROJECT_CONTEXT §5.3 mô tả SOP OTA CÓ NHÁNH (check booking →
-     mapping → log → rẽ nhánh). SOP thật (§8.1-KQ) TUYẾN TÍNH, không nhánh.
-     → phải đánh dấu §5.3 là VÍ DỤ MINH HOẠ, không phải SOP thật.
+H-3  ✅ ĐÃ LÀM 2026-08-23 — PROJECT_CONTEXT §5.2 "Human knowledge" đã ghi rõ
+                            là knowledge SOURCE, không phải KnowledgeRecord (K-B7)
+                            + đường vào duy nhất cho 30% là Path B (S5)
+H-4  ✅ ĐÃ LÀM 2026-08-23 — PROJECT_CONTEXT §14.2 đánh dấu SUPERSEDED,
+                            ghi root ĐÚNG của v0.2 + lý do loại 4 field (R7)
+H-5  ✅ ĐÃ LÀM 2026-08-23 — PROJECT_CONTEXT §16 đánh dấu SUPERSEDED,
+                            ghi 3 capability đã lock + bảng so sánh
+                            Capability #3 bản cũ vs bản chốt
+                            ⚠ Q-E lúc đó vẫn OPEN → ĐÃ GIẢI cùng ngày, xem §2.5
+H-6  ✅ ĐÃ LÀM 2026-08-23 — đã git mv sang
+                            docs/archive/NEXT_CONVERSATION_PROMPT_02_INPUT.md
+                            + banner cảnh báo đầu file; 5 chỗ tham chiếu đã sửa
+H-7  ✅ ĐÃ LÀM 2026-08-23 — PROJECT_CONTEXT §5.3 đánh dấu là VÍ DỤ MINH HOẠ
+                            TỰ NGHĨ + bảng đối chiếu với SOP thật (§8.1-KQ).
+                            Ví dụ được GIỮ LẠI vì vẫn đúng để minh hoạ
+                            khái niệm Process, chỉ đổi nhãn.
 ```
-H-1/H-2 làm ngay vì là **contradiction thật** do S8/K-B9 sinh ra.
-H-3..H-6 chỉ là nhãn lỗi thời, không gây sai → gộp một lần cuối workstream 04.
+H-1/H-2 làm ngay 2026-08-21 vì là **contradiction thật** do S8/K-B9 sinh ra.
+H-3..H-7 là nhãn lỗi thời, không gây sai → đã gộp làm một lần 2026-08-23.
+
+> ✅ **Toàn bộ H-1..H-7 đã đóng.** Không rewrite history: mọi chỗ đều giữ
+> nội dung cũ + thêm banner nêu rõ cái gì sai và nguồn đúng ở đâu (AGENT.md §13).
+
+**Còn một mục housekeeping CHƯA làm, chưa có số:** tên file không khớp convention
+`01_` / `02_` / `03_` ở AGENT.md §1 (xem §6.10). Đổi tên `PROJECT_CONTEXT.md` và
+`Canonical Case Model v0.2.md` sẽ kéo theo sửa tham chiếu ở nhiều file.
+→ Cân nhắc gộp vào lúc tạo `05_PROCESS_MODEL_V0.1.md`, làm một lần.
 
 ## Cần trước Step 2–3
 ```text
-Q-E  Success Metrics của MVP là gì?                          (tài liệu 02 mất)
+Q-E  ✅ RESOLVED 2026-08-23 → docs/02_SUCCESS_METRICS_V1.md (M1-M4)
+     Còn QM-1: ngưỡng cụ thể của từng thước đo — cần chạy thật mới có cơ sở
 Q-F  PARTIAL 2026-08-21 → có nguyên văn + cấu trúc 5 bước. Xem §8.1-KQ.
      Còn thiếu: có tài liệu VIẾT không, format, cập nhật lần cuối, hỏi mấy người.
 Q-G  Ai có quyền verify Knowledge? Có phải Technical/L3?      (PROJECT_CONTEXT Q7)
@@ -1243,16 +1513,45 @@ Yêu cầu làm việc:
 - Chưa code, chưa thiết kế architecture
 - Trả lời bằng ngôn ngữ dễ hiểu, tránh thuật ngữ không cần thiết
 
-Đọc thêm: docs/04_KNOWLEDGE_MODEL_V0.1.md — Step 1 + Step 2 ĐÃ CHỐT (§1 và §3).
+Đọc thêm:
+- docs/04_KNOWLEDGE_MODEL_V0.1.md — Step 1,2,3,4 ĐÃ CHỐT (§1, §3, §3B, §3C)
+  → đọc §3C.5 TRƯỚC: hình dạng đầy đủ của một KnowledgeRecord sau cả 4 Step
+- docs/02_SUCCESS_METRICS_V1.md   — Success Metrics ĐÃ CHỐT (M1-M4)
+
+Đọc thêm: docs/06_MVP_ARCHITECTURE.md — CÔNG NGHỆ ĐÃ CHỐT (AR1-AR5).
 
 Việc hôm nay:
-Workstream 04 — Knowledge Model v0.1, Step 3: Knowledge ↔ Case ↔ Process.
-Step 1 và Step 2 đã chốt — 15 quyết định. Đừng mở lại S1-S8 / K-B9 / T1-T4
-nếu không có evidence mới. Mang theo N-3b, N-6, N-7 ở file 04 §3.6.
+Workstream 07 — MVP Implementation. Điều kiện AGENT.md §10.1 đã thoả:
+tôi đã chốt công nghệ.
 
-⚠ HỎI TÔI xem §8.2 (đếm 20 case OTA) đã chạy chưa. Toàn bộ file 04 §3.5
-  đứng trên con số "5-10 nguyên nhân" với n=1 — xem R-K4 ở file 04 §6.
-  T1/T2/T4 thì độc lập với con số đó, không bị ảnh hưởng.
+Stack: C#/.NET · PostgreSQL (RLS cho tenant) · blob storage cho file ·
+package `Anthropic` + interface mỏng hai hàm · claude-opus-5 · eval bằng
+Python (script riêng) · widget nhúng Vue3+TS.
+
+⚠ ĐỌC 06 §10 TRƯỚC KHI VIẾT DÒNG ĐẦU — 6 ràng buộc dễ sai nhất. Hai chỗ
+  dễ sai IM LẶNG nhất:
+    AP3  origin/actor/evidence/verification gắn TỪNG ASSERTION. Gán sai
+         origin là lỗi provenance (G6) — không crash, không ai thấy.
+    G13  tenant từ cấu hình/ngữ cảnh request, KHÔNG từ hằng số toàn cục.
+
+32 quyết định đã chốt: S1-S8, K-B9, Q-B, Q-C, T1-T4, L1-L4, AP1-AP4,
+V1-V5 (04) · PR1-PR4 (05) · AR1-AR5 (06). Đừng mở lại nếu không có
+evidence mới. Bảng từ vựng khóa duy nhất: 04 §3D.7 — KHÔNG định nghĩa
+lại vocabulary ở tầng code.
+
+⚠ HỎI TÔI xem §8.2 (đếm case OTA, bản nhẹ) đã chạy chưa — nhưng nó KHÔNG
+  chặn việc gì, đừng dừng chờ nó. File 04 §3.5 đứng trên con số "5-10 nguyên
+  nhân" với n=1 (R-K4). T1/T2/T4 độc lập với con số đó.
+  Luật quyết định của §8.2 đã chốt TRƯỚC khi đếm — đừng mở lại.
+
+⚠ Trước khi chốt BẤT KỲ vocabulary mới nào, grep tài liệu cũ trước.
+  §6.9 đã tái phát HAI lần (M3 vs Case v0.2 §11.2/§11.3 — xem §16).
+  Đây là một hạng rủi ro, không phải sự cố một lần.
+
+⚠ G12 (AGENT.md §3.9) mới chốt 2026-08-22: tỉ trọng tri thức của một khách
+  là THAM SỐ, không phải hằng số thiết kế. Đừng hardcode 10/30/60 vào bất
+  cứ đề xuất nào. Nhưng G12 KHÔNG phải giấy phép "build cả ba đường rồi để
+  khách chọn" — xem đường biên ở §3.9 và cảnh báo cold start ở §2.4.
 
 ⛔ Không viết code. Chốt công nghệ là quyền của tôi — xem AGENT.md §10.1.
 
@@ -1340,3 +1639,441 @@ Process Model                  ⚪ sau Knowledge — nhưng xem 04 §1.4: chia n
 MVP Architecture               ⚪ later
 MVP Implementation             ⚪ later
 ```
+
+---
+
+# 13. Nhật ký phiên 2026-08-22
+
+Phiên ngắn, không thiết kế. Người dùng mới tiếp nhận lại dự án, đọc lại toàn bộ và phản biện một chỗ.
+
+Việc đã làm:
+- Người dùng phản biện §8.2: *"Sao phải đếm 20 case OTA nhỉ. Mình nghĩ nên làm linh hoạt để công ty tự thao tác... mang sang công ty khác thì tỉ trọng % SOP sẽ khác."*
+- **Tách được một chỗ lẫn** mà tài liệu đang gây ra: `10/30/60` (đặc điểm của một khách) bị đọc lẫn với `"5-10 nguyên nhân"` (cấu trúc của vấn đề). §8.2 đo cái thứ hai. Ghi ở §2.4 vì chỗ lẫn này sẽ lặp lại.
+- **Xác nhận người dùng đúng về một điểm tài liệu trình bày sai:** §8.2 **không chặn** Step 3. Tài liệu gọi nó *"việc giá trị cao nhất còn lại"* và TL;DR xếp nó ở mục 1 → dễ đọc thành cổng chặn. Theo quy tắc §6.7 của chính dự án thì Step 3 chạy được ngay. Đã sửa TL;DR và prompt §10.
+- **Chốt `G12`** ở dạng rộng → `AGENT.md` §3.9. Đây là đóng góp thật của câu phản biện: `D5 hệ quả 2` trước đó chỉ nói về giới hạn hạ tầng, chưa nói về phân bố dữ liệu của khách.
+- **Chốt §8.2 phiên bản nhẹ**, có **luật quyết định chốt trước khi đếm** (≤15 / ≥40 / ở giữa) để phép đếm không thành một vòng modeling nữa (R-K3). Ghi nhận 20 case là đủ cho câu nhị phân dù không đủ cho con số chính xác.
+- **Xếp *"công ty tự đo trạng thái tri thức"* thành future capability** → `PROJECT_CONTEXT` §17 mục 21. Không vào MVP: nhét vào Capability 3 là đúng cột phải của `G11`, và §2.3 đã cảnh báo trước về dạng đề nghị này.
+- Ghi nhận §8.2 làm bằng tay là **bản spec** của mục 21 — *không thể tự động hoá một phép đo chưa ai từng thực hiện một lần* — cộng 20 nhãn eval gần như miễn phí (D5 hệ quả 1).
+
+Ba phản biện đã nêu với người dùng, đã được chấp nhận:
+```text
+1  "Linh hoạt" không miễn phí — build cả ba đường rồi để khách chọn là 3x
+   công việc, đúng failure mode §6.7 ("không bao giờ làm ra thứ gì")
+2  "Linh hoạt" giả định đã có nội dung — khách #0 KHÔNG có SOP viết nào,
+   bày ba lựa chọn = bày ba màn hình trống. Cold start là bài toán THỨ TỰ,
+   không phải bài toán CẤU HÌNH → đó là lý do D6 tồn tại
+3  Đề nghị này nằm sát ranh giới G11 → phải vẽ ranh giới trước khi làm
+```
+
+Chưa làm:
+- Chưa làm Step 3 (Knowledge ↔ Case ↔ Process) — **giờ là việc số 1, không còn gì chặn**
+- Chưa chạy §8.2 (bản nhẹ) — chạy song song
+
+---
+
+# 14. Nhật ký phiên 2026-08-23 — Housekeeping H-3..H-7 ĐÓNG
+
+Phiên dọn tài liệu, không có quyết định thiết kế mới.
+
+## Việc đã làm
+
+```text
+H-3  PROJECT_CONTEXT §5.2   "Human knowledge" = knowledge SOURCE, không phải
+                            KnowledgeRecord (K-B7). Ghi rõ 30% chỉ vào được
+                            model qua Path B (S5).
+H-4  PROJECT_CONTEXT §14.2  SUPERSEDED. Ghi root ĐÚNG của Case v0.2 và lý do
+                            loại Intake/TriageState/ReproductionState/
+                            WaitingState khỏi root (guardrail R7, đã đối chiếu
+                            nguyên văn v0.2 §R7 và mục CONFIRMED root).
+H-5  PROJECT_CONTEXT §16    SUPERSEDED. Ghi 3 capability đã lock + bảng so sánh
+                            Capability #3 bản cũ vs bản chốt, và ghi rõ phần
+                            "gom N case" không mất mà quay lại qua D6/Path A.
+H-6  file input cũ          git mv → docs/archive/
+                            NEXT_CONVERSATION_PROMPT_02_INPUT.md
+                            + banner cảnh báo. 5 chỗ tham chiếu đã sửa.
+H-7  PROJECT_CONTEXT §5.3   VÍ DỤ MINH HOẠ TỰ NGHĨ + bảng đối chiếu SOP thật.
+                            Ví dụ GIỮ LẠI vì vẫn đúng để minh hoạ khái niệm
+                            Process — chỉ sai khi bị đọc như dữ liệu thật.
+```
+
+## Nguyên tắc đã áp
+
+Không rewrite history (`AGENT.md` §13): **không xoá** nội dung cũ ở chỗ nào. Mỗi chỗ giữ nguyên văn + thêm banner nói rõ **cái gì sai**, **vì sao**, và **nguồn đúng ở đâu**. Lý do: các mục này là bằng chứng về đường đi của dự án, và §6.1 đã cho thấy mất tài liệu thì mất luôn phần "vì sao".
+
+## Ghi nhận trong lúc dọn
+
+- **H-5 làm lộ rõ một thứ vẫn thiếu thật:** `Q-E` (Success Metrics). H-5 chỉ sửa được nhãn *"chưa formally locked"* của 3 capability; **thước đo thì vẫn không có**. Đó là Open Question, không phải housekeeping — và giờ nó là việc treo lâu nhất của dự án. → **`Q-E` đã được giải ngay buổi sau cùng ngày, xem §15.**
+- **Một mục housekeeping còn lại, chưa có số:** tên file không khớp convention `01_`/`02_`/`03_` (`AGENT.md` §1, §6.10). Không sửa trong phiên này vì kéo theo sửa tham chiếu ở nhiều file → đề nghị gộp vào lúc tạo `05_PROCESS_MODEL_V0.1.md`.
+
+## Chưa làm
+
+- Chưa làm **Step 3** (Knowledge ↔ Case ↔ Process)
+- Chưa chạy **§8.2** bản nhẹ
+
+---
+
+# 15. Nhật ký phiên 2026-08-23 (buổi 2) — `Q-E` ĐÓNG
+
+## Việc đã làm
+
+- **Chốt `Q-E`** — Success Metrics của MVP. Bốn quyết định `M1`-`M4`, người dùng chọn đúng phương án đề xuất cả 4 câu.
+- **Tạo `docs/02_SUCCESS_METRICS_V1.md`** — file riêng, vì Success Metrics đã **mất một lần** cùng tài liệu 02 và được tham chiếu từ nhiều workstream. Ghi rõ trong file: đây là **dựng lại**, không phải tìm lại bản gốc.
+- Cập nhật ngược: `AGENT.md` §1 + §13, và ở file này: §1, §2.5, §6.1, §8.3, §9, TL;DR.
+
+## Phát hiện trong lúc làm
+
+- **Ba ứng viên metric ở §8.1-KQ đều không đo được ở tháng 1** — vì ngày đầu có 0 KnowledgeRecord. Đây là lỗ mà không ai thấy khi đề xuất chúng. Sinh ra **Tầng 0**.
+- **Một ứng viên là eval metric bị xếp nhầm thành Success Metric.** Sinh ra `M1` — quyết định nền của cả bộ.
+- **`P8` trong problem taxonomy đã ghi sẵn metric cần có** (*AssistanceAttempt · knowledge used · accept/reject · outcome*) mà ba ứng viên không dùng. Taxonomy cũ trả lời trước câu hỏi mới — giống hệt trường hợp `R5` trả lời trước câu hỏi connector ở §7.
+- **`G12` chốt hôm trước có tác dụng ngay hôm sau**: nó là lý do `M4b` bị xuống hạng khỏi thước đo sản phẩm. Guardrail dùng được là guardrail chặn được một quyết định cụ thể.
+
+## Thay đổi trạng thái
+
+```text
+Q-E   OPEN (treo lâu nhất)  →  ✅ RESOLVED bởi M1-M4
+QM-1  MỚI                   →  OPEN. Ngưỡng cụ thể. Cần chạy thật.
+QM-4  MỚI                   →  OPEN. Nếu L3 là người duyệt tri thức thì
+                               Tầng 0 đang đo công của L3, không phải trải
+                               nghiệm của Primary Persona. Gắn với Q-I + Q-G.
+§8.2  thêm một công dụng    →  còn là cách duy nhất lấy BASELINE cho M4a
+```
+
+## Chưa làm
+
+- Chưa chạy **§8.2**
+- Chưa chốt **`QM-1`** (ngưỡng) — cố ý hoãn, không phải bỏ sót
+
+---
+
+# 16. Nhật ký phiên 2026-08-23 (buổi 3) — Step 3 ĐÓNG
+
+Bốn quyết định `L1`-`L4` (`L` = **liên kết**). Toàn văn: `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3B.
+
+## Kết quả
+
+```text
+L1   ProcessStep trỏ tới Knowledge THEO CHỦ ĐỀ, không trỏ từng record
+L2   Thang 5 mốc, từ vựng DUY NHẤT: RETRIEVED → SHOWN → OPENED → ACCEPTED → USED
+L3   N-6 + N-7 giải, KHÔNG thêm entity
+L4   SUPERSEDES · REFINES · CONTRADICTS; state SUPERSEDED là SUY RA từ quan hệ
+H-8  Contradiction đã giải: Case KHÔNG invalidate Official Knowledge
+```
+
+**Step 3 không sinh entity mới nào.** Đúng điều kiện dừng ở `04` §0.
+
+## Bốn phát hiện
+
+**(1) Lỗ chặn build: không có đường từ bước Process → Knowledge.** Chiều `Knowledge → ProcessDefinition` đã có (`T2`), chiều ngược thì không. Nhưng `B5 "đưa ra kết luận"` của quy trình thật là **bước của quy trình** cần nội dung **Knowledge**. Không có `L1` thì quy trình thật không biểu diễn được trong model — và B5 là chỗ chứa toàn bộ giá trị.
+
+**(2) Ba bộ từ vựng song song, và bộ thứ ba do chính tôi tạo ra hôm qua.** `M3` chốt chuỗi 4 mốc mà **không đối chiếu** Case v0.2 §11.2/§11.3. Đây là bệnh §6.9 tái phát ở chỗ mới. `L2` gộp cả ba. Ghi lại để thấy: **§6.9 không phải sự cố một lần, nó là một hạng rủi ro** — mỗi lần chốt vocabulary mới đều phải grep tài liệu cũ trước.
+
+**(3) Contradiction thật giữa hai tài liệu (`H-8`).** PROJECT_CONTEXT §13.6 cho Case `invalidates` Knowledge; Case v0.2 §11.2 cấm. Điều đáng ngại không phải sai từ ngữ, mà là: nếu Case invalidate được thì **`D4` hở một đường sau** — một Case do AI xử lý có thể âm thầm hạ cấp tri thức đã được người duyệt. Guardrail phải kín cả hai chiều: không tự **thêm**, cũng không tự **bỏ**. Đã sửa ngay, cùng loại H-1/H-2.
+
+**(4) `N-6`/`N-7` giải được mà không cần chờ §8.2** — trái với nhãn *"chưa có ca thật"* ở `04` §3.6. Vì cả hai không đòi thiết kế mới: `N-7` là cardinality mà v0.2 đã hỗ trợ; `N-6` là một phát biểu về *cách nhận ra*, mà `T1` đã đặt nằm trong record. Trả lời *"không cần entity nào"* là kết luận rẻ và **sai an toàn** — nếu §8.2 tìm ra ca phức tạp hơn thì thêm sau vẫn được.
+
+## Case v0.2 trả cổ tức lần thứ ba
+
+Phần lớn quan hệ cross-domain của Step 3 **đã có sẵn** ở v0.2 §11 (xem `04` §3B.5). Step 3 chỉ vá ba lỗ. Hai lần trước: vertical CRM (§6.6) và `K-B9`.
+
+## Nguyên tắc rút ra, dùng lại được ở Step 5
+
+> **Nếu một state chỉ đúng khi tồn tại một quan hệ, thì state đó là phép chiếu của quan hệ, không phải dữ liệu độc lập.**
+
+Rút ra từ `L4` (`SUPERSEDED` vs `SUPERSEDES`). Step 5 khóa vocabulary lifecycle + verification — áp nguyên tắc này vào đó thì tránh được §6.9 lần thứ ba.
+
+## Đã ghi ngược vào tài liệu
+
+```text
+Case v0.2 §11.1   + L1 (ProcessStep → CONSULTS → tập Knowledge theo chủ đề)
+Case v0.2 §11.2   + L2 (thang 5 mốc, bỏ Referenced) + L3 (nhiều-nhiều)
+Case v0.2 §11.3   + AssistanceAttempt phải ghi 5 mốc riêng biệt
+PROJECT_CONTEXT §13.6  + H-8 (invalidates là sai)
+02_SUCCESS_METRICS §2.2  + L2 tinh chỉnh M3 từ 4 mốc lên 5
+AGENT.md §7, §8   + Step 3 chốt, Step 4 tiếp theo
+```
+
+## Chưa làm
+
+- Chưa chạy **§8.2**
+- Chưa chốt **`QM-1`** (ngưỡng)
+- Xem tiếp §18 — cùng ngày, Step 5 đã đóng và workstream 04 kết thúc
+
+---
+
+# 17. Nhật ký phiên 2026-08-23 (buổi 4) — Step 4 ĐÓNG
+
+Bốn quyết định `AP1`-`AP4`. Toàn văn: `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3C.
+
+## Kết quả
+
+```text
+AP1  Applicability là ASSERTION, kể cả version. KHÔNG field có cấu trúc.
+AP2  N-5 co từ 4 chiều xuống 1: tenant→visibility · thời gian→lifecycle
+     · hệ thống→chưa có ca thật · version→assertion
+AP3  Provenance (origin) gắn ở TỪNG ASSERTION, khớp T4 + S8
+AP4  N-3b: một "cách nhận ra" = MỘT ASSERTION — T4 đã giải sẵn
+```
+
+**Step 4 không sinh entity mới nào**, và **ba trong bốn câu trả lời là "không cần thêm gì"**. Đó là kết quả, không phải thất bại — đúng điều kiện dừng ở `04` §0.
+
+## Ba phát hiện
+
+**(1) `N-5` có một lỗi phân loại: tenant không phải applicability.** Hai trục khác nhau — *"có áp dụng không"* vs *"có được thấy không"*. Quan trọng vì `AP1` vừa quyết applicability là **chữ**, dựa vào model đọc; nếu tenant nằm trong đó thì **ranh giới tenant thành thứ do model suy luận**, trái `G7`. Ranh giới tenant không được phép mềm; applicability thì được.
+
+**(2) Ngay cả `version` cũng không nên thành field có cấu trúc — vì `G12`.** Đây là điểm ít ngờ nhất. Một field `versionRange` nghe vô hại nhưng **giả định mọi khách đều có một hệ thống được đánh version**. `G12` (chốt 22/08) cấm đúng điều đó. Guardrail hai ngày tuổi chặn được một quyết định cụ thể ở Step 4 — lần thứ hai `G12` có tác dụng.
+
+**(3) `AP3` là thứ làm `M2` tính được.** `M2` định nghĩa mức sửa của người duyệt là *"% assertion bị sửa/xoá/thêm"*. Nếu origin gắn ở mức record thì con số đó không tính được. `AP3` gắn origin ở từng assertion → `diff(A,B)` đọc được ở mức assertion, và `K-B5` được giữ đúng (origin `AI_INFERENCE` không mất sau khi người verify).
+
+## Lần đầu vẽ được trọn vẹn KnowledgeRecord
+
+`04` §3C.5 — hình dạng đầy đủ sau bốn Step. Mọi dòng trỏ về một quyết định đã chốt, không có gì mới. Đây là chỗ nên đọc đầu tiên khi cần hiểu nhanh Knowledge Model.
+
+Có một **bất đối xứng có ý thức** được ghi rõ ở đó:
+
+```text
+origin · evidence · verification   →  gắn ở TỪNG ASSERTION
+visibility                          →  gắn ở MỨC RECORD
+```
+
+Không phải bỏ sót — `Q-D` (visibility mức từng câu) đã được hoãn sang v2 ngay từ `S7`.
+
+## Nguyên tắc `L4` được dùng lại ngay
+
+> *Nếu một thông tin chỉ đúng khi suy từ các thành phần, thì nó là phép chiếu, không phải dữ liệu độc lập.*
+
+Rút ra ở `L4` (Step 3) cho `SUPERSEDED`. `AP3` dùng lại nó để **từ chối** lưu origin ở cả hai mức. Một nguyên tắc dùng được hai lần trong hai Step liền — đáng mang sang Step 5.
+
+## Chưa làm
+
+- Chưa chạy **§8.2**
+- Chưa chốt **`QM-1`** (ngưỡng)
+
+---
+
+# 18. Nhật ký phiên 2026-08-23 (buổi 5) — Step 5 ĐÓNG · WORKSTREAM 04 KẾT THÚC
+
+Năm quyết định `V1`-`V5`. Toàn văn: `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3D.
+
+## Kết quả
+
+```text
+V1  Hai trục, KHÔNG từ nào trùng. VERIFIED bỏ khỏi trục LIFECYCLE.
+    Thang verification KHÔNG phải đường thẳng: 4 mức + CONFLICTING +
+    INVALIDATED nằm NGOÀI thang.
+V2  verification/origin/actor/evidence → ASSERTION; lifecycle+visibility → RECORD
+V3  LƯU DRAFT/ACTIVE/DEPRECATED · SUY RA NEEDS_REVIEW/SUPERSEDED
+V4  N-8 tách HAI ca, đi hai trục khác nhau
+V5  Authority = Actor, đã có trong v0.2 §7. Không cần trục thứ ba.
+H-9 PROJECT_CONTEXT §8.3 đã sửa. §6.9 ĐÓNG.
+```
+
+## Kỷ luật grep có tác dụng ngay trong phiên đầu áp dụng
+
+Tôi tự đặt luật *"grep toàn bộ tài liệu trước khi chốt vocabulary"* ở cuối buổi 3. Buổi 5 áp dụng, và nó bắt được **ba** thứ:
+
+**(1) `Provenance` của v0.2 §7 có SÁU thành phần**, không phải hai như tôi tưởng: `Origin · Actor · Source · Evidence · Time · Verification`. Chính `Actor` là nhà của `Authority` — nếu không grep thì `V5` đã tạo một trục thứ ba không cần thiết.
+
+**(2) `VERIFIED` đã bị lặng lẽ bỏ khỏi lifecycle khi viết file 04**, ở §1.4, mà không ai ghi lại. Nên §6.9 thực ra đã tái phát **BA** lần, không phải hai.
+
+**(3) Lỗi của chính tôi ở buổi 4.** `AP3`/§3C.5 ghi `origin = AI_INFERENCE | HUMAN | SYSTEM_FACT`. Sai — v0.2 §7.1 có **5** giá trị, và `HUMAN` **gộp mất** phân biệt mà v0.2 §7.5 dựng riêng một mục để bảo vệ: `USER_CONFIRMED` ≠ sự thật khách quan. Đã sửa.
+
+> Lần thứ ba của §6.9 là lần đầu bị bắt **TRƯỚC** khi thành quyết định. Đó là toàn bộ giá trị của kỷ luật grep, và nó trả tiền ngay lần đầu dùng.
+
+## Ca chứng minh việc tách hai trục kiếm được chỗ đứng
+
+`V4` là chỗ `N-1` trả tiền, không phải chỗ nó gọn gàng từ ngữ:
+
+```text
+"parser < 2.3 drop payload dạng X"  →  không còn khách nào chạy < 2.3
+   verification  VẪN VERIFIED   ← nó VẪN ĐÚNG
+   lifecycle     DEPRECATED     ← chỉ là không còn ai gặp
+```
+
+Nếu chỉ có **một** trục thì buộc phải gắn `INVALIDATED` cho một phát biểu **vẫn đúng** → một lời nói sai nằm trong dữ liệu (`G3`), bộ eval nhận nhãn sai (`D5 hệ quả 1`), và nếu sau này có khách chạy bản cũ thì tri thức đúng đã bị đánh dấu là sai.
+
+## Nguyên tắc `L4` dùng lần thứ ba
+
+> *Nếu một thông tin chỉ đúng khi suy từ thứ khác, thì nó là phép chiếu, không phải dữ liệu độc lập.*
+
+`L4` (SUPERSEDED) → `AP3` (từ chối origin ở hai mức) → `V3` (NEEDS_REVIEW + SUPERSEDED là suy ra). Ba step liền. Đáng mang sang Workstream 05.
+
+Hệ quả cụ thể của `V3`: **`NEEDS_REVIEW` được KÍCH HOẠT, không phải ai đó tự chọn** — tri thức có assertion vừa bị bác bỏ không nằm im ở `ACTIVE` chờ người để ý. Và nó **không rút tri thức khỏi retrieval**, chỉ gắn cờ — cùng triết lý `S8`: bày chỗ xung đột ra, đó là chỗ người ta cần nhìn.
+
+## `V2` giải thích một bất đối xứng, không chỉ ghi nhận nó
+
+§3C.5 (buổi 4) ghi nhận *ba thứ per-assertion, visibility per-record* và gọi là "có ý thức vì Q-D hoãn sang v2". `V2` cho lý do sâu hơn:
+
+> Visibility ở mức record **vì duyệt ở mức record**. Và duyệt ở mức record **vì `S7` đã gộp duyệt-nội-dung với mở-quyền-xem thành một hành động.**
+
+Không phải hai quyết định tình cờ khớp nhau — là **một** quyết định (`S7`) nhìn từ hai phía.
+
+## Workstream 04 đóng
+
+```text
+23 quyết định CONFIRMED:
+  S1-S8 · K-B9 · Q-B · Q-C · T1-T4 · L1-L4 · AP1-AP4 · V1-V5
+
+Điều kiện dừng §0 đã kiểm bằng quy trình thật → 04 §3D.8: ĐỦ ĐỂ BUILD.
+Step 3, 4, 5 KHÔNG sinh entity mới nào — chỉ gộp, vá, loại bỏ.
+```
+
+Ba step cuối không thêm entity là **dấu hiệu model đã hội tụ**, không phải dấu hiệu làm ít. Và nó là bằng chứng ngược cho `R-K3` (chết vì modeling): workstream này dừng đúng lúc thay vì đào tiếp.
+
+## Chưa làm
+
+- Chưa chạy **§8.2**
+- Chưa chốt **`QM-1`** (ngưỡng)
+- Xem tiếp §19 — cùng ngày, Workstream 05 đóng và Domain Modeling kết thúc
+
+---
+
+# 19. Nhật ký phiên 2026-08-23 (buổi 6) — WORKSTREAM 05 ĐÓNG · DOMAIN MODELING KẾT THÚC
+
+Người dùng nêu một lo ngại đúng lúc: *"Bao giờ mới tới bước chốt công nghệ nhỉ. Mình không muốn lún sâu quá vào các phỏng đoán trên lý thuyết."*
+
+Đó là gọi đúng `R-K3` — guardrail của chính dự án. Nó **đổi cách làm** Workstream 05.
+
+## Quyết định phạm vi: Workstream 05 làm NHỎ, một phiên
+
+Ba căn cứ, đều từ tài liệu, không phải nhượng bộ cho nhanh:
+
+```text
+1  §6.7   "Process v0.1 chốt ở mức vừa đủ để build. KHÔNG cần sâu bằng Case v0.2."
+2  §8.1-KQ  SOP THẬT tuyến tính, không nhánh (H-7). Phần lớn độ phức tạp của một
+            process model là nhánh/điều kiện/ngoại lệ — đúng cái dữ liệu thật
+            nói KHÔNG tồn tại.
+3  v0.2 §11.1 + L1 + T2 + S4 + §5.4   phần lớn Process ĐÃ được quyết ở nơi khác.
+```
+
+Kết quả: **bốn quyết định**, `PR1`-`PR4`, và `docs/05_PROCESS_MODEL_V0.1.md` ngắn hơn `04` khoảng mười lần.
+
+## Bốn quyết định
+
+```text
+PR1  Trạng thái bước SUY RA từ evidence, không lưu cờ
+PR2  ProcessDefinition v0.1 = danh sách bước TUYẾN TÍNH, không nhánh
+PR3  Escalation thuộc KNOWLEDGE (một kết luận của B5), không phải nhánh Process
+PR4  Chờ/bị chặn ở lại mức Case (WaitingSegment v0.2), không làm bản thứ hai
+```
+
+**Không entity mới.** `ProcessDefinition` và `ProcessRun` đều đã được v0.2 §11.1 công nhận từ trước.
+
+## Hai phát hiện
+
+**(1) `v0.2 §11.1` đã nói `PR1` từ trước, chỉ chưa ai đọc kỹ.** Câu *"CaseAction, CaseClaim và Evidence cung cấp observations để ProcessRun **xác định** process state"* đã hàm ý state là kết quả của một phép suy, không phải một cờ ai bật. Lần thứ tư một guardrail/câu cũ trả lời trước câu hỏi mới (trước đó: `R5`→connector, `P8`→metric, `Actor`→Authority).
+
+**(2) `PR1` giải một chỗ mà `G3` đòi mà chưa ai chỉ ra cách làm.** Ba nguồn xác định state ở §5.4 khớp luôn qua `origin`:
+
+```text
+SYSTEM FACT       → EvidenceItem, origin = SYSTEM_FACT
+USER CONFIRMATION → "tôi check rồi" LÀ evidence, origin = USER_CONFIRMED
+AI INFERENCE      → evidence, origin = AI_INFERENCE
+```
+
+Nghĩa là **AI suy luận một bước đã xong thì bị đánh dấu TỰ ĐỘNG** — không cần cờ riêng, nên không có chỗ để quên đánh dấu.
+
+## Nguyên tắc `L4` dùng lần thứ tư
+
+```text
+L4  (SUPERSEDED)  →  AP3 (origin không hai mức)  →  V3 (NEEDS_REVIEW)  →  PR1 (bước)
+```
+
+Bốn step liên tiếp. Nên coi là **nguyên tắc thiết kế của dự án**, không phải mẹo cục bộ:
+
+> *Nếu một thông tin chỉ đúng khi suy từ thứ khác, thì nó là phép chiếu, không phải dữ liệu độc lập.*
+
+## §8.2 chuyển từ "song song" sang "CHẶN"
+
+Trước phiên này tôi vẫn nói §8.2 không chặn gì. Với Workstream 06 sắp tới thì điều đó **đổi**:
+
+```text
+§8.2  → tập nguyên nhân hữu hạn hay mở?
+      → 04 §3.5 và AP1 đúng hay sai
+      → CÓ DỰNG vector DB / RAG hay không
+      → quyết định công nghệ ĐẮT NHẤT và KHÓ ĐẢO NHẤT của Workstream 06
+```
+
+→ Chạy §8.2 trước khi vào 06 thì quyết bằng **số**, không quyết bằng ước lượng n=1.
+
+## Trả lời câu hỏi về mốc thời gian
+
+```text
+Workstream 04, 05   Domain Modeling     ✅ XONG 2026-08-23
+Workstream 06       MVP Architecture    🔵 ĐÂY là lúc chốt công nghệ
+Workstream 07       MVP Implementation  ⚪ chỉ sau khi người dùng đã chốt
+```
+
+Mốc §6.7 (~04/09 cho cả hai model) **đạt sớm hơn dự kiến 12 ngày**.
+
+## Chưa làm
+
+- Chưa chạy **§8.2**
+- Chưa chốt **`QM-1`** (ngưỡng Success Metrics)
+- Xem tiếp §20 — cùng ngày, Workstream 06 đóng và **công nghệ đã chốt**
+
+---
+
+# 20. Nhật ký phiên 2026-08-23 (buổi 7) — WORKSTREAM 06 ĐÓNG · CÔNG NGHỆ ĐÃ CHỐT
+
+Năm quyết định `AR1`-`AR5` + guardrail `G13`. Toàn văn: **`docs/06_MVP_ARCHITECTURE.md`**.
+
+## Thông tin mới quan trọng nhất: mô hình tích hợp
+
+Người dùng mô tả: sản phẩm là **service phản ứng theo SỰ KIỆN** — phần mềm có sẵn của khách phát tín hiệu (issue mới / đổi trạng thái / user hỏi tài liệu) thì sản phẩm này mới thức tỉnh và xử lý.
+
+Đây là mô tả rõ ràng nhất về hình dạng sản phẩm từ đầu dự án. Nó xác nhận `D2` + `D3`, và ở MVP nó đơn giản hoá kha khá: **không cần quản lý phiên đăng nhập, không cần frontend riêng.**
+
+## Năm quyết định
+
+```text
+AR1  C#/.NET + PostgreSQL + blob storage. Eval = Python riêng. Widget Vue3+TS.
+AR2  tenant → DB (RLS) · visibility → ứng dụng. Kèm G13.
+AR3  SDK chính thức + interface MỎNG hai hàm. Không framework, không gateway.
+AR4  Tài liệu: blob storage + model đọc PDF nguyên bản + Postgres FTS trước.
+AR5  "Quét dữ liệu": nghĩa NẠP thuộc MVP · nghĩa TỰ TÌM CHỦ ĐỀ để v2 (G11).
+```
+
+## Bốn phát hiện
+
+**(1) Agent định nói sai, và kỷ luật đọc tài liệu bắt được.** Tôi định lập luận *"Python/TS có ecosystem LLM tốt hơn nên chọn ngôn ngữ theo đó"*. Đọc tài liệu tham chiếu ra: Anthropic có **SDK chính thức cho cả 7 ngôn ngữ** kể cả C#. Nghĩa là LLM **không phải** yếu tố chọn ngôn ngữ — team biết gì mới là yếu tố áp đảo. Đây là lần thứ hai kỷ luật "đọc trước khi nói" cứu một quyết định (lần đầu: grep bắt lỗi Origin ở buổi 5).
+
+**(2) Lo ngại "khách đòi server riêng" tự tan — và RLS chính là thứ làm được điều đó.** Một bản deploy riêng là *cùng code, cùng schema*, chỉ khác cấu hình. Thứ **sẽ** chặn không phải cơ chế cô lập mà là hardcode giả định "một DB dùng chung" → sinh ra `G13`.
+
+**(3) `§3.5` chỉ phân tích MỘT trong HAI bài toán tìm kiếm.** Câu hỏi của người dùng về việc khách nạp nhiều PDF/Word làm lộ ra điều này:
+
+```text
+Bài toán 1  khớp bằng chứng với ~10 nguyên nhân   §3.5 xét, §8.2 quyết
+Bài toán 2  tìm đúng tài liệu trong N tài liệu    §3.5 KHÔNG xét, §8.2 KHÔNG quyết
+```
+
+§3.5 **không sai** — đúng trong phạm vi nó xét. Nhưng câu *"MVP không cần vector DB"* dễ bị đọc rộng hơn phạm vi đó. Ghi thành rủi ro `R-A1` ở `04` §3.5, không rewrite §3.5.
+
+Câu trả lời cho bài toán 2 (`AR4`): vẫn chưa cần vector, nhưng vì **lý do khác** — tài liệu hệ thống đầy tên field/API/mã lỗi, nên **từ khoá thắng ngữ nghĩa**. Postgres FTS trước, `pgvector` khi đo được là không đủ.
+
+**(4) `S5` cắt đúng khớp tự nhiên — lần thứ hai.** `S5` chia Path A/Path B theo *ngân sách chú ý của người dùng* (phút vs giây). Hoá ra nó chia đúng theo **ranh giới hạ tầng**: Path A → Batches API (nửa giá, chậm); Path B → realtime. Một phân chia domain trùng khít một phân chia kỹ thuật, không phải do ai thiết kế ra.
+
+## Năm tính năng API map 1:1 vào quyết định domain
+
+Cổ tức của domain-first, ghi ở `06` §7:
+
+```text
+structured outputs  →  §3.5 bài toán phân loại, shape đã validate
+prompt caching      →  ~10 record là prefix ổn định (~0.1× giá input)
+1M context          →  Path A: 20 case trong MỘT request, §3.5 thành số đo
+Batches API 50%     →  Path A không nhạy latency (S5)
+inference_geo       →  D1 bán cho doanh nghiệp đòi data residency
+```
+
+Điểm đáng chú ý: **kho tri thức nhỏ (~10 record) hoá ra là LỢI THẾ chi phí**, không phải điểm yếu — nó là một prefix ổn định để cache.
+
+## Cảnh báo §2.3 được dùng đúng mục đích, 2 ngày sau khi viết
+
+§2.3 ghi: *"Sẽ có lúc ai đó đề nghị 'hay là mình tự động phát hiện chủ đề nào cần SOP luôn'. Câu đó nghe rất hợp lý và nó là cột phải. Ghi xuống đây để lần sau có chỗ đối chiếu."*
+
+Người dùng nêu *"cấu hình để quét dữ liệu riêng"*. Nhờ có §2.3 mà tách được hai nghĩa ngay: **nạp dữ liệu** (được, §7 đã lên kế hoạch) vs **tự tìm chủ đề cần SOP** (đúng cột phải G11 → v2). Người dùng chọn *"cả hai, nhưng nghĩa 2 để v2"* → `G11` nguyên vẹn.
+
+## Chưa làm
+
+- Chưa vào **Workstream 07** — đọc `06` §10 trước khi viết dòng đầu
+- Chưa chạy **§8.2** · chưa chạy **AR4-b** (đếm tài liệu thật)
+- Chưa chốt **`QM-1`** (ngưỡng Success Metrics)

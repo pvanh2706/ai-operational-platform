@@ -18,20 +18,27 @@ Trước khi phân tích, thiết kế hoặc code, hãy đọc theo thứ tự:
 2. `docs/PROJECT_CONTEXT.md`
 3. `docs/Canonical Case Model v0.2.md`
 4. `docs/04_KNOWLEDGE_MODEL_V0.1.md` — **Knowledge Boundary đã chốt 2026-08-21.** Đọc trước khi bàn bất cứ gì về Knowledge.
+5. `docs/05_PROCESS_MODEL_V0.1.md` — **Process Model đã chốt 2026-08-23** (`PR1`-`PR4`). Ngắn, đọc hết được.
+6. `docs/06_MVP_ARCHITECTURE.md` — **Công nghệ đã chốt 2026-08-23** (`AR1`-`AR5`). Đọc trước khi viết bất cứ dòng code nào.
+7. `docs/02_SUCCESS_METRICS_V1.md` — **Success Metrics đã chốt 2026-08-23** (`Q-E`). Đọc trước khi bàn về đo lường, eval, hoặc `AssistanceAttempt`.
 
-## ⚠️ Lưu ý về tài liệu (cập nhật 2026-08-21)
+**Năm chỗ tóm gọn nhất, đọc trước nếu gấp:** `04` §3C.5 (hình dạng `KnowledgeRecord`) · `04` §3D.7 (**bảng từ vựng đã khóa**) · `05` §5 (hình dạng Process) · `06` §8 (stack + 5 quyết định kiến trúc) · `06` §10 (ràng buộc cho Workstream 07).
 
-`docs/02_PRODUCT_FOUNDATION_V1.md` **không tồn tại**. Các quyết định của workstream 02 chỉ còn tồn tại dưới dạng kết luận nén trong §4 dưới đây — mất phần lý do, evidence và **Success Metrics**. Xem `docs/00_CURRENT_STATE.md` §1 và §6.1.
+## ⚠️ Lưu ý về tài liệu (cập nhật 2026-08-23)
+
+`docs/02_PRODUCT_FOUNDATION_V1.md` **không tồn tại**. Các quyết định của workstream 02 chỉ còn tồn tại dưới dạng kết luận nén trong §4 dưới đây — mất phần lý do và evidence.
+
+**Phần đã lấy lại được:** Success Metrics → `docs/02_SUCCESS_METRICS_V1.md` (chốt 2026-08-23, `M1`-`M4`). **Phần vẫn mất:** capability contract chi tiết và non-goals. Xem `docs/00_CURRENT_STATE.md` §1 và §6.1.
 
 Tên file thực tế không khớp convention `01_`/`02_`/`03_`:
 
 | Tên trong convention | File thật |
 |---|---|
 | `01_PROJECT_CONTEXT.md` | `docs/PROJECT_CONTEXT.md` |
-| `02_PRODUCT_FOUNDATION_V1.md` | ❌ MISSING |
+| `02_PRODUCT_FOUNDATION_V1.md` | ❌ MISSING — chỉ Success Metrics được lấy lại, ở `docs/02_SUCCESS_METRICS_V1.md` |
 | `03_CANONICAL_CASE_MODEL_V0.2.md` | `docs/Canonical Case Model v0.2.md` |
 
-`docs/NEXT_CONVERSATION_PROMPT (1).md` là **prompt đầu vào** của conversation 02, không phải output. Nó chứa phiên bản **cũ** của MVP Capability #3 — không đọc như quyết định hiện hành.
+`docs/archive/NEXT_CONVERSATION_PROMPT_02_INPUT.md` là **prompt đầu vào** của conversation 02, không phải output. Nó chứa phiên bản **cũ** của MVP Capability #3 — không đọc như quyết định hiện hành. Đã chuyển vào `docs/archive/` ngày 2026-08-23 (`H-6`) để không bị đọc lẫn với source of truth; tên cũ là `docs/NEXT_CONVERSATION_PROMPT (1).md`.
 
 Nếu có khác biệt giữa các tài liệu:
 
@@ -245,6 +252,63 @@ Cùng nguyên tắc áp cho Capability #1 và #2 khi có quyết định phạm 
 
 ---
 
+## 3.9 Tỉ trọng tri thức của một khách là THAM SỐ, không phải hằng số thiết kế (G12)
+
+`CONFIRMED 2026-08-22` — người dùng nêu và chốt ở dạng rộng. Lập luận đầy đủ: `docs/00_CURRENT_STATE.md` §2.4.
+
+Mở rộng `D5 hệ quả 2` (*"không đưa giới hạn hôm nay vào domain model"*) từ **giới hạn hạ tầng** sang **phân bố dữ liệu của khách hàng**.
+
+```text
+(a) Tỉ trọng 10/30/60 là ĐẶC ĐIỂM CỦA MỘT KHÁCH, không phải sự thật về thế giới.
+    Cấm hardcode nó vào thiết kế, vào giả định của capability,
+    hoặc vào bất cứ chỗ nào mà sang khách thứ hai phải sửa code.
+
+(b) Thứ tự bật capability là CẤU HÌNH THEO TỪNG KHÁCH,
+    không phải một quyết định chốt một lần cho cả sản phẩm.
+```
+
+Vì sao cần: MVP có thể vừa khít với khách #0 (`D3` — công ty của người dùng, 10/30/60) và lệch hẳn ở khách thứ hai. Một công ty có 80% SOP đã viết và tìm được thì **điểm vào là Capability 1**, không phải Capability 3. Đó là `D1` (sản phẩm để bán) áp vào thực tế.
+
+Nhất quán với `D5`: *"nâng năng lực bằng policy, không bằng rewrite."*
+
+**Đường biên phải giữ — G12 không phải giấy phép cho "làm mọi thứ linh hoạt":**
+
+```text
+ĐƯỢC KHÁC giữa các khách              KHÔNG ĐƯỢC KHÁC — khác là làm lại
+tỉ trọng tri thức 10/30/60            domain model Case / Knowledge / Process
+capability nào bật trước              provenance · verification · visibility
+nguồn nào kết nối trước               cơ chế Path A: gom → nháp → người duyệt
+câu chuyện bán hàng, onboarding       D4: AI đề xuất, người công nhận
+```
+
+⚠️ **G12 không có nghĩa "build cả ba đường rồi để khách chọn".** Đó là 3x công việc và là đúng failure mode ở `docs/00_CURRENT_STATE.md` §6.7 (*"không bao giờ làm ra thứ gì"*). Linh hoạt ở lớp **cấu hình**; không linh hoạt ở lớp **mô hình**.
+
+⚠️ **G12 cũng không giải được cold start.** Ở khách chưa nạp gì, bày ba lựa chọn = bày ba màn hình trống. Cold start là bài toán **thứ tự**, không phải bài toán **cấu hình** — `D6` tồn tại chính vì thế.
+
+---
+
+## 3.10 Hai chế độ deploy trên MỘT codebase (G13)
+
+`CONFIRMED 2026-08-23` — quyết định `AR2`. Toàn văn và lý do: `docs/06_MVP_ARCHITECTURE.md` §3.
+
+> **Sản phẩm phải deploy được ở CẢ HAI chế độ — shared multi-tenant và dedicated single-tenant — trên cùng một codebase. Tenant luôn được xác định từ cấu hình hoặc ngữ cảnh request, KHÔNG BAO GIỜ từ hằng số toàn cục.**
+
+**Vì sao cần:** khách doanh nghiệp sẽ đòi server riêng (người dùng nêu 2026-08-23). Điều đáng mừng là lựa chọn row-level security **không chặn** điều đó — một bản deploy riêng là *cùng code, cùng schema*, chỉ khác cấu hình trỏ vào database chỉ chứa một tenant.
+
+Thứ **sẽ** chặn không phải cơ chế cô lập, mà là:
+
+```text
+⛔ hardcode giả định "chỉ có một database dùng chung"
+⛔ một control plane bắt buộc phải dùng chung
+⛔ tenant được xác định từ biến toàn cục thay vì từ ngữ cảnh request
+```
+
+Nhất quán với `D3` (*"nhồi vào sau rất đắt"*) và `G12` (đặc điểm của khách là **tham số**, không phải hằng số thiết kế). `G13` là `G12` áp cho **hình dạng deploy** thay vì cho tỉ trọng dữ liệu.
+
+⚠️ **Kiểm tra ở review, không để phát hiện sau.** Một giả định "một DB dùng chung" lọt vào code thì rẻ để sửa hôm nay và rất đắt để sửa khi đã có ba khách hàng.
+
+---
+
 # 4. Current Product Decisions
 
 ## Primary Persona
@@ -440,17 +504,38 @@ Current stage (cập nhật 2026-08-21):
 Product Foundation             ✅  (artifact bị mất — xem 00_CURRENT_STATE.md §6.1)
 Canonical Case Model v0.2      ✅
 
-Knowledge Model v0.1           🔵 ĐANG LÀM
-                                  Step 1 Knowledge Boundary        ✅ CONFIRMED 2026-08-21
-                                  Step 2 Concepts & Granularity    ✅ CONFIRMED 2026-08-21
-                                     → docs/04_KNOWLEDGE_MODEL_V0.1.md §1 và §3
-                                  Step 3 Knowledge ↔ Case ↔ Process 🔵 TIẾP THEO
+Success Metrics (Q-E)          ✅ CONFIRMED 2026-08-23
+                                  → docs/02_SUCCESS_METRICS_V1.md (M1-M4)
+                                  ⚠ QM-1 (ngưỡng) vẫn OPEN
 
-Process Model                  ⚪ AFTER KNOWLEDGE
-                                  ⚠ nhưng xem 04 §1.4: Knowledge và Process
-                                    chia nhau một KERNEL, không tách rời hoàn toàn.
-MVP Architecture               ⚪ LATER
-MVP Implementation             ⚪ LATER
+Knowledge Model v0.1           ✅ ĐÓNG 2026-08-23 — 23 quyết định CONFIRMED
+                                  Step 1 Knowledge Boundary        ✅ → 04 §1
+                                  Step 2 Concepts & Granularity    ✅ → 04 §3
+                                  Step 3 Knowledge ↔ Case ↔ Process ✅ → 04 §3B
+                                  Step 4 Applicability & Provenance ✅ → 04 §3C
+                                  Step 5 Lifecycle & Verification   ✅ → 04 §3D
+                                  ★ 04 §3C.5  hình dạng đầy đủ KnowledgeRecord
+                                  ★ 04 §3D.7  bảng từ vựng ĐÃ KHÓA (duy nhất)
+
+Process Model v0.1             ✅ ĐÓNG 2026-08-23 — 4 quyết định PR1-PR4
+                                  → docs/05_PROCESS_MODEL_V0.1.md
+                                  Phạm vi cố ý NHỎ, một phiên. Không entity mới.
+                                  ★ 05 §5  hình dạng đầy đủ Definition/Run
+                                  ★ 05 §9  ràng buộc mang sang Workstream 06
+
+═══ DOMAIN MODELING KẾT THÚC ═══
+
+MVP Architecture               ✅ ĐÓNG 2026-08-23 — CÔNG NGHỆ ĐÃ CHỐT
+                                  → docs/06_MVP_ARCHITECTURE.md (AR1-AR5)
+                                  Stack: C#/.NET + PostgreSQL + blob storage
+                                  Eval: Python (script riêng) · Widget: Vue3+TS
+                                  LLM: SDK chính thức + interface mỏng 2 hàm
+                                  Tenant: RLS ở DB · visibility ở ứng dụng (G13)
+                                  ★ 06 §8   decision register
+                                  ★ 06 §10  ràng buộc mang sang Workstream 07
+
+MVP Implementation             🔵 TIẾP THEO — điều kiện §10.1 đã thoả
+                                  ⚠ nhưng ĐỌC 06 §10 trước khi viết dòng đầu
 ```
 
 Agent không được tự nhảy sang production architecture hoặc implementation nếu task hiện tại vẫn đang làm Domain Modeling.
@@ -461,41 +546,51 @@ Agent không được tự nhảy sang production architecture hoặc implementa
 
 Workstream tiếp theo:
 
-## `04 — Knowledge Model v0.1`
+## `07 — MVP Implementation` · **BÂY GIỜ MỚI ĐƯỢC VIẾT CODE**
 
-> **Đang làm Step 1 — Define Knowledge Boundary.**
-> Nội dung đã chuẩn bị đầy đủ ở `docs/00_CURRENT_STATE.md` §5 (định nghĩa ứng viên, discriminator test 4 câu, 4 chiều của Knowledge, bảng ranh giới 8 concept, 7 boundary claim, trình tự chạy).
-> **Step 1 và Step 2 đã CHỐT** — `docs/04_KNOWLEDGE_MODEL_V0.1.md` §1 (Boundary) và §3 (Concepts).
-> Đọc file đó trước khi làm bất cứ gì trong workstream này. Nó chứa 15 quyết định `CONFIRMED`
-> (S1-S8, K-B9, Q-B, Q-C, T1-T4), 9 boundary claim K-B1..K-B9, và điều kiện dừng.
-> **Đang làm: Step 3 — Knowledge ↔ Case ↔ Process relationships.**
-> Không thiết kế toàn bộ Knowledge Model trong một lượt.
+> ✅ **CÔNG NGHỆ ĐÃ CHỐT 2026-08-23** — `docs/06_MVP_ARCHITECTURE.md` (`AR1`-`AR5`).
+> Điều kiện của §10.1 đã thoả: người dùng đã chốt ngôn ngữ, database, ranh giới LLM, cách xử lý tài liệu, và cơ chế tenant.
+>
+> **Năm chỗ đọc trước khi viết dòng đầu tiên:**
+> - `04` §3C.5 — hình dạng đầy đủ của một `KnowledgeRecord`
+> - `04` §3D.7 — **bảng từ vựng ĐÃ KHÓA, tham chiếu duy nhất**
+> - `05` §5 — hình dạng đầy đủ `ProcessDefinition` / `ProcessRun`
+> - `06` §8 — decision register (stack + 5 quyết định kiến trúc)
+> - `06` §10 — ràng buộc mang sang, và việc nên làm song song
 
-Cần làm rõ:
+### Stack đã chốt
 
-- Knowledge là gì / không phải gì;
-- KnowledgeRecord;
-- Knowledge types;
-- lifecycle;
-- verification;
-- provenance;
-- applicability;
-- version compatibility;
-- Knowledge ↔ Evidence;
-- Knowledge ↔ Case;
-- Knowledge ↔ Process;
-- Knowledge Draft → Human Review → Verified Knowledge;
-- unknown / conflicting knowledge.
+```text
+Backend        C# / .NET
+Database       PostgreSQL          (row-level security cho tenant)
+File storage   blob storage        (file gốc; DB chỉ giữ metadata)
+LLM            package `Anthropic` + interface MỎNG hai hàm
+Model          claude-opus-5 mặc định
+Eval           Python, script offline RIÊNG
+Widget nhúng   Vue3 + TypeScript
+```
 
-Chưa thiết kế trong bước này:
+### Sáu ràng buộc dễ sai nhất — kiểm ở review
 
-- database schema;
-- vector database;
-- embedding strategy;
-- RAG framework;
-- REST API;
-- frontend;
-- microservices.
+```text
+1  Bảng từ vựng khóa ở 04 §3D.7 — dùng CHUNG, KHÔNG định nghĩa lại
+2  G13 (§3.10) — tenant từ cấu hình/ngữ cảnh request, KHÔNG từ hằng số
+       toàn cục. Một giả định "một DB dùng chung" lọt vào code thì rẻ để
+       sửa hôm nay, rất đắt khi đã có ba khách hàng.
+3  AP3 — origin/actor/evidence/verification gắn ở TỪNG ASSERTION.
+       Đây là chỗ dễ sai IM LẶNG nhất: gán sai origin là lỗi provenance
+       (vi phạm G6), không crash, không ai thấy tới khi eval phát hiện.
+4  V3, PR1 — NEEDS_REVIEW · SUPERSEDED · "bước xong" · "bước hiện tại"
+       là SUY RA, KHÔNG lưu. Đừng thêm cột cờ.
+5  M2 — giữ CẢ HAI bản nháp Path A (trước và sau khi người sửa).
+       diff(A,B) vừa là thước đo tháng đầu vừa là nhãn eval.
+6  D5 — mọi thứ build ra phải trả lời được: "model mạnh gấp 10 thì cái
+       này thành giá trị hơn hay thành rác?"
+```
+
+⚠️ **Kỷ luật grep vẫn bắt buộc.** §6.9 (vocabulary song song) đã tái phát **ba lần** trong workstream 04. Bảng khóa duy nhất là `04` §3D.7 — **không định nghĩa lại vocabulary ở tầng code**.
+
+⚠️ **Domain model có thể bắt implementation dừng lại và hỏi.** Nếu hiện thực đòi bẻ một quyết định `CONFIRMED`, phải nêu rõ chứ không âm thầm bẻ (§2, §11).
 
 ---
 
@@ -644,10 +739,13 @@ Khi một workstream được chốt:
 Tên tài liệu dự kiến tiếp theo:
 
 ```text
-04_KNOWLEDGE_MODEL_V0.1.md
+04_KNOWLEDGE_MODEL_V0.1.md   ✅ đã tạo — Step 1 + 2 chốt
+02_SUCCESS_METRICS_V1.md     ✅ đã tạo 2026-08-23 — Q-E chốt (M1-M4)
 05_PROCESS_MODEL_V0.1.md
 06_MVP_ARCHITECTURE.md
 ```
+
+⚠️ `02_SUCCESS_METRICS_V1.md` là **ngoại lệ có ý thức** với cảnh báo chống phình tài liệu ở `docs/00_CURRENT_STATE.md` §6.7: Success Metrics đã **mất một lần** vì nằm trong tài liệu bị mất, nên nó có file riêng với tên nói rõ nội dung. File đó phải **ngắn**.
 
 Chỉ tạo khi workstream thực sự bắt đầu hoặc hoàn thành.
 

@@ -1,0 +1,16 @@
+# .NET build output
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+
+# Bí mật — KHÔNG commit. Anthropic API key đọc từ biến môi trường
+# ANTHROPIC_API_KEY, không từ file trong repo.
+appsettings.*.local.json
+.env
+*.pfx
+
+# IDE
+.vs/
+.idea/
+*.swp

@@ -1,3 +1,27 @@
+> # ⛔ ARCHIVED — KHÔNG ĐỌC NHƯ QUYẾT ĐỊNH HIỆN HÀNH
+>
+> **Housekeeping `H-6` — archived 2026-08-23.** Trước đó file này tên `docs/NEXT_CONVERSATION_PROMPT (1).md` và nằm ngay trong `docs/`, nên bị đọc lẫn với tài liệu source of truth.
+>
+> **File này là PROMPT ĐẦU VÀO** của conversation `02 — Product Foundation`, viết *trước khi* workstream đó chạy. Nó **không phải** output, không phải quyết định.
+>
+> ⚠️ **Nội dung sai so với hiện tại:** nó chứa **phiên bản cũ của MVP Capability #3**. Bản đã chốt là `Assistance Outcome & Knowledge Capture` (`AGENT.md` §4), khác bản chất với bản cũ — so sánh ở `PROJECT_CONTEXT.md` §16 và `00_CURRENT_STATE.md` §4.
+>
+> **Giữ lại vì:** `AGENT.md` §13 cấm rewrite history, và file này là bằng chứng duy nhất còn lại về ý định đầu vào của workstream 02 — tài liệu **output** `02_PRODUCT_FOUNDATION_V1.md` đã bị mất (`00_CURRENT_STATE.md` §6.1).
+>
+> **Nguồn đúng để đọc:**
+>
+> ```text
+> docs/00_CURRENT_STATE.md          trạng thái hiện tại — đọc TRƯỚC
+> AGENT.md                          cách làm việc + quyết định đã chốt
+> docs/PROJECT_CONTEXT.md           Discovery + Vision
+> docs/Canonical Case Model v0.2.md domain model đã chốt
+> docs/04_KNOWLEDGE_MODEL_V0.1.md   Knowledge Model, Step 1 + 2 đã chốt
+> ```
+>
+> Prompt để mở phiên làm việc mới nằm ở `docs/00_CURRENT_STATE.md` §10, **không phải file này.**
+
+---
+
 # NEXT_CONVERSATION_PROMPT.md
 
 ## Suggested title

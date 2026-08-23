@@ -293,10 +293,18 @@ Jira Issue chỉ là external/source representation của Case.
 - API response
 - Source code
 
-### Human knowledge
+### Human knowledge — ⚠️ là knowledge SOURCE, không phải KnowledgeRecord
 - Senior engineer memory
 - Support experience
 - Tribal knowledge
+
+> **Housekeeping `H-3` — làm 2026-08-23. Hiệu lực: `CONFIRMED` (K-B7).**
+>
+> Mục này nằm dưới tiêu đề "KNOWLEDGE" nên dễ bị đọc thành *"tri thức trong đầu người đã là Knowledge của hệ thống"*. **Không.** Boundary claim `K-B7` (`docs/04_KNOWLEDGE_MODEL_V0.1.md` §1.6) đã chốt: tri thức trong đầu người là **nguồn** tri thức; nó chỉ vào model **sau khi được externalize**.
+>
+> Đặc biệt quan trọng vì **30%** SOP của khách #0 nằm đúng ở dạng này (§3 của `00_CURRENT_STATE.md`). Đường vào **duy nhất** khả thi cho 30% là **Path B** (`S5` / `K-B8`) — hỏi lúc đóng case, chi phí gần bằng 0.
+>
+> Cùng cách đọc áp cho cả bốn mục `5.2`: chúng là **danh sách nguồn**, không phải danh sách KnowledgeRecord. Xem thêm `S6`: nạp tài liệu cũng **không** tự sinh KnowledgeRecord.
 
 ### Derived knowledge
 AI tổng hợp từ evidence, nhưng phải giữ:
@@ -311,7 +319,35 @@ AI tổng hợp từ evidence, nhưng phải giữ:
 
 Process mô tả cách xử lý một loại công việc.
 
-Ví dụ:
+> ## ⚠️ Ví dụ dưới đây là VÍ DỤ MINH HOẠ TỰ NGHĨ, không phải SOP thật
+>
+> **Housekeeping `H-7` — làm 2026-08-23. Hiệu lực: `EVIDENCE-SUPPORTED`.**
+>
+> Ngày 2026-08-21 dự án đi hỏi quy trình thật (§8.1 của `00_CURRENT_STATE.md`). Kết quả **khác hẳn** ví dụ dưới đây:
+>
+> ```text
+> VÍ DỤ TỰ NGHĨ (dưới đây)            SOP THẬT (§8.1-KQ, nguyên văn người dùng)
+> ────────────────────────────────    ─────────────────────────────────────────
+> Check booking exists                B1  lấy dữ liệu ở Kibana
+> → Check room mapping                B2  xem response trả về
+> → Check rate mapping                B3  xem tài liệu
+> → Check incoming log                B4  xem issue xử lý trước đó
+> → No log      → contact OTA         B5  ĐƯA RA KẾT LUẬN
+> → Has log fail → Technical
+>
+> CÓ ĐIỀU KIỆN, CÓ NHÁNH              TUYẾN TÍNH, KHÔNG NHÁNH
+> = decision procedure                = evidence checklist + phán xét
+> ```
+>
+> Hai hình dạng **khác nhau về bản chất**, và hệ quả không nhỏ:
+>
+> - toàn bộ giá trị của SOP thật dồn vào **B5** — bước duy nhất **không ai ghi lại**. Cái tổ chức thiếu không phải *quy trình*, mà là *luật kết luận*;
+> - vì thế **Process Guidance đơn thuần gần như rỗng ở first use case**: dẫn người ta qua 4 bước hiển nhiên không giải được vấn đề. Xem phản biện với §6.5 ở `00_CURRENT_STATE.md` §8.1-KQ mục (B);
+> - ví dụ có nhánh ở dưới lại **đúng** cho mục đích minh hoạ khái niệm Process (steps · branches · conditions) — nên nó được **giữ lại**, chỉ đổi nhãn.
+>
+> ⚠️ Đừng dùng ví dụ dưới đây làm dữ liệu đầu vào cho bất kỳ quyết định thiết kế nào. Dùng §8.1-KQ.
+
+Ví dụ minh hoạ khái niệm (tự nghĩ — xem cảnh báo trên):
 
 ```text
 Booking OTA not received
@@ -629,15 +665,43 @@ Frequency
 
 ## 8.3 Knowledge Health
 
-Lifecycle:
+> ## ⚠️ `VERIFIED` ĐÃ BỊ BỎ khỏi trục này — từ vựng đã khóa ở nơi khác
+>
+> **Housekeeping `H-9` — làm 2026-08-23 (Step 5). Hiệu lực: `CONFIRMED` (V1).**
+>
+> `VERIFIED` xuất hiện ở **cả hai** trục với hai nghĩa khác nhau — đó là contradiction §6.9 mà `00_CURRENT_STATE.md` §6.9 đã cảnh báo:
+>
+> ```text
+> verification level  "nhận định này được xác minh tới mức nào?"
+> lifecycle state     "tổ chức đã công bố tri thức này chưa?"
+> ```
+>
+> Step 5 giải: **bỏ `VERIFIED` khỏi trục lifecycle.** Nó vốn đang cố nói *"đã được duyệt"* — mà `ACTIVE` đã nói điều đó. Trục verification giữ nguyên, vì nó là **kernel dùng chung** cho `CaseClaim` và `ProcessDefinition` (`S4`), nặng hơn nhiều.
+>
+> **Lifecycle đúng, đang có hiệu lực:**
+>
+> ```text
+> LƯU      DRAFT · ACTIVE · DEPRECATED
+> SUY RA   NEEDS_REVIEW  ⟸ trigger (assertion mới chưa duyệt · INVALIDATED ·
+>                            CONFLICTING · CONTRADICTS · nguồn bị đổi/xoá)
+>          SUPERSEDED    ⟸ tồn tại quan hệ  A SUPERSEDES nó
+> ```
+>
+> `NEEDS_REVIEW` được **kích hoạt**, không phải ai đó tự chọn — và nó **không rút tri thức khỏi retrieval**, chỉ gắn cờ.
+>
+> ⚠️ **Bảng từ vựng đã khóa nằm ở `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3D.7.** Đó là tham chiếu duy nhất. Không định nghĩa lại vocabulary ở bất cứ file nào khác.
+>
+> Ghi chú: khi file `04` được viết, `VERIFIED` **đã bị lặng lẽ bỏ** khỏi danh sách này ở §1.4 mà không ai ghi lại. `H-9` chính thức hoá việc đó.
+
+Lifecycle *(bản cũ — `VERIFIED` đã bị bỏ, xem cảnh báo trên)*:
 
 ```text
 DRAFT
-VERIFIED
+VERIFIED      ← ĐÃ BỎ (V1). Trùng nghĩa ACTIVE + xung đột với trục verification.
 ACTIVE
-NEEDS_REVIEW
+NEEDS_REVIEW  ← giờ là state SUY RA, không lưu
 DEPRECATED
-SUPERSEDED
+SUPERSEDED    ← giờ là state SUY RA, không lưu (L4)
 ```
 
 ## 8.4 Decision Knowledge
@@ -1093,9 +1157,37 @@ Need temporal entities:
 
 ## 13.6 Knowledge != Case
 
+> ## ⚠️ `invalidates` là SAI — Case KHÔNG có quyền đó
+>
+> **Housekeeping `H-8` — làm 2026-08-23 (Step 3 của Knowledge Model). Hiệu lực: `CONFIRMED`.**
+>
+> Sơ đồ dưới đây ghi `Case → invalidates KnowledgeRecord`. Điều đó **trái** `Canonical Case Model v0.2` §11.2, nơi viết rõ:
+>
+> > *"Case không có authority trực tiếp: `Case → INVALIDATE Official Knowledge`."*
+>
+> **v0.2 thắng** (luật recency + tính cụ thể, `AGENT.md` §1). Đường đúng:
+>
+> ```text
+> Case evidence  →  Knowledge review process  →  Knowledge lifecycle decision
+> ```
+>
+> **Vì sao không phải chi tiết từ ngữ:** nếu Case invalidate được Knowledge trực tiếp thì `D4` (*AI/hệ thống không tự công nhận tri thức*) **hở một đường sau** — một Case do AI xử lý có thể âm thầm hạ cấp tri thức đã được người duyệt. Guardrail phải kín ở cả hai chiều: không tự **thêm**, cũng không tự **bỏ**.
+>
+> Quan hệ đúng của `Case ↔ Knowledge`, theo v0.2 §11.2 + `L3`:
+>
+> ```text
+> Case  →  reference · use · contribute evidence toward ·
+>          support applicability · challenge      →  Knowledge
+>          (NHIỀU-NHIỀU, evidence + verification RIÊNG mỗi link — L3)
+>
+> Knowledge  →  assists  →  Future Case          ✓ dòng này ĐÚNG, giữ nguyên
+> ```
+>
+> Xem `docs/04_KNOWLEDGE_MODEL_V0.1.md` §3B.0 và §3B.3.
+
 ```text
 Case
-→ produces / validates / invalidates
+→ produces / validates / invalidates      ← "invalidates" SAI, xem cảnh báo trên
 KnowledgeRecord
 
 KnowledgeRecord
@@ -1178,19 +1270,47 @@ Problems:
 
 ## 14.2 v0.2 direction
 
-Status: **PROPOSED — NOT FINALIZED**
+> ## ⛔ SUPERSEDED bởi `docs/Canonical Case Model v0.2.md`
+>
+> **Housekeeping `H-4` — làm 2026-08-23. Hiệu lực: `CONFIRMED`.**
+>
+> Mục này viết khi v0.2 còn là **hướng đi đề xuất**. v0.2 sau đó đã chốt, và **root khác hẳn** cái ghi dưới đây. Root đúng, đang có hiệu lực:
+>
+> ```text
+> CanonicalCase
+> ├── Identity
+> ├── OrganizationalScope
+> ├── Origination
+> ├── Subject
+> ├── Context        // projection
+> └── CurrentState   // projection
+> ```
+>
+> **Bốn field dưới đây đã bị loại khỏi root một cách CÓ CHỦ ĐÍCH** — không phải bỏ sót:
+>
+> ```text
+> Intake · TriageState · ReproductionState · WaitingState
+> ```
+>
+> Lý do là guardrail `R7` của v0.2 (*"Over-modeling software support"*): *"OTA Booking là first use case, nhưng Canonical Case không được phát triển lại thành software-ticket ontology. Việc loại `ReproductionState` khỏi root là guardrail quan trọng."* v0.2 ghi rõ: `TriageState`, `ReproductionState` và `WaitingState` **không phải generic root field**.
+>
+> Bằng chứng guardrail này đúng: model đã chịu được vertical thứ hai (CRM deal) mà không phải bẻ gì — xem `00_CURRENT_STATE.md` §6.6. Một `Deal` không có `ReproductionState`.
+>
+> ⚠️ Đọc `docs/Canonical Case Model v0.2.md` để lấy cấu trúc thật. Mục 14.2 giữ lại **chỉ để không rewrite history** (AGENT.md §13), không phải để tham chiếu.
 
-Potential root:
+Status: ~~**PROPOSED — NOT FINALIZED**~~ → **SUPERSEDED 2026-08-23**
+
+Potential root *(bản cũ, KHÔNG còn hiệu lực — xem cảnh báo trên)*:
 
 ```text
 CanonicalCase
 ├── Identity
 ├── CurrentState
-├── Intake
+├── Intake              ← đã loại khỏi root (R7)
 ├── Context
-├── TriageState
-├── ReproductionState
-├── WaitingState
+├── TriageState         ← đã loại khỏi root (R7)
+├── ReproductionState   ← đã loại khỏi root (R7)
+├── WaitingState        ← đã loại khỏi root (R7)
 ├── SourceReferences
 └── Relations
 ```
@@ -1275,9 +1395,43 @@ User muốn:
 > **MVP nhỏ, khoảng 3 core features, nhưng Product Vision phải giữ đầy đủ future capabilities.**
 
 Important:
-**Exact 3 MVP capabilities chưa được formally locked.**
+~~**Exact 3 MVP capabilities chưa được formally locked.**~~ → **ĐÃ LOCK. Xem cảnh báo dưới.**
 
-## Current leading MVP candidate set — PROPOSED
+> ## ⛔ Toàn bộ §16 là SUPERSEDED — 3 MVP capability ĐÃ được lock
+>
+> **Housekeeping `H-5` — làm 2026-08-23. Hiệu lực: `CONFIRMED`.**
+>
+> §16 nói *"chưa được formally locked"* và gắn nhãn `PROPOSED` cho ba ứng viên. Điều đó **trái** `AGENT.md` §4, nơi ba capability đã mang nhãn `CONFIRMED`. Nguyên nhân: workstream 02 đã lock chúng, nhưng tài liệu 02 bị mất và không ai cập nhật ngược vào đây (xem `00_CURRENT_STATE.md` §6.1).
+>
+> **Ba capability đang có hiệu lực** — `CONFIRMED`, không được tự đổi:
+>
+> ```text
+> 1. Contextual Knowledge Retrieval
+> 2. Process Guidance
+> 3. Assistance Outcome & Knowledge Capture
+> ```
+>
+> **Chú ý Capability #3 — đây là chỗ dễ sai nhất.** Ứng viên 3 ở dưới (*"Knowledge/Process Draft from Operational Data"*) **không** phải bản đã chốt. Hai thứ khác bản chất:
+>
+> ```text
+> ỨNG VIÊN 3 (bản cũ, dưới đây)    CAPABILITY #3 (bản đã chốt)
+> corpus lịch sử, N cases          case đang xử lý, 1 case
+> offline / retrospective          inline / lúc đóng case
+> pattern mining, clustering       hỏi + draft + confirm
+> giải P4 + P2                     giải P2 + P8
+> ```
+>
+> Nhưng phần *"gom N case cũ thành SOP"* **không mất** — nó quay lại qua `D6` (2026-08-21) ở **phiên bản nhẹ "gom theo yêu cầu"**, và trở thành **Path A** của Capability #3. Xem `00_CURRENT_STATE.md` §2.3 + §4, và guardrail `G11` (`AGENT.md` §3.8) chặn nó phình lại thành *"tự đào quy luật từ 500 case"*.
+>
+> Ba proof statement ở dưới **vẫn đúng và vẫn đáng giữ** — chỉ nhãn `PROPOSED` là sai.
+>
+> ⚠️ Nguồn đúng cho MVP scope: `AGENT.md` §4 + §4B, và `00_CURRENT_STATE.md` §2. Không dùng §16.
+>
+> ✅ **Cập nhật 2026-08-23 — `Q-E` đã giải.** Success Metrics của MVP giờ nằm ở **`docs/02_SUCCESS_METRICS_V1.md`** (`M1`-`M4`). Đó là **dựng lại**, không phải tìm lại bản gốc của tài liệu 02.
+>
+> ⚠️ **Vẫn còn thiếu thật:** capability contract chi tiết và non-goals của workstream 02. Và `QM-1` (ngưỡng cụ thể của từng thước đo) vẫn `OPEN` — có thước đo mà chưa có ngưỡng thì chưa có điều kiện dừng.
+
+## Current leading MVP candidate set — ~~PROPOSED~~ SUPERSEDED, xem cảnh báo trên
 
 ### Candidate 1 — Contextual Knowledge Retrieval
 When a Case appears:
@@ -1349,6 +1503,17 @@ Không được bỏ chỉ vì ngoài MVP:
 18. Organizational expertise mapping
 19. Onboarding mode
 20. Process bottleneck analytics
+21. **Knowledge State Assessment** — khách tự đo trạng thái tri thức của chính mình (tỉ trọng kiểu 10/30/60) rồi thấy nên bật capability nào trước
+
+> **Về mục 21** — thêm 2026-08-22, `CONFIRMED` là *future capability*, xem `docs/00_CURRENT_STATE.md` §2.4.
+>
+> Người dùng đề nghị: *"nên làm linh hoạt để công ty tự thao tác và thấy lựa chọn tốt nhất cho công ty mình"* — vì tỉ trọng SOP khác nhau giữa các công ty. Nguyên tắc đó đã được chốt thành guardrail `G12` (`AGENT.md` §3.9). Còn **tính năng** để khách tự đo thì xếp vào đây, **không** vào MVP:
+>
+> - nhét vào Capability 3 là đúng cột phải của `G11` (capability phình tới mức khác bản chất);
+> - §7.2 và §8.2 ở trên đã là future capability cùng họ — mục 21 đứng cạnh chúng, không phải ngoại lệ;
+> - `§8.2` của `00_CURRENT_STATE` làm bằng tay một lần chính là **bản spec** của mục 21. Không thể tự động hoá một phép đo chưa ai từng thực hiện một lần.
+>
+> Giá trị kỳ vọng: tiền-bán-hàng (báo cáo *"công ty anh đang ở 10/30/60, nên bắt đầu từ đây"*) + onboarding khách mới. Đúng tinh thần `D1` (sản phẩm để bán).
 
 ---
 
