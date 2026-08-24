@@ -1,5 +1,7 @@
 ﻿<Solution>
   <Project Path="KnowledgePlatform.Domain/KnowledgePlatform.Domain.csproj" />
   <Project Path="KnowledgePlatform.Infrastructure/KnowledgePlatform.Infrastructure.csproj" />
+  <Project Path="KnowledgePlatform.Api/KnowledgePlatform.Api.csproj" />
   <Project Path="../tests/KnowledgePlatform.Infrastructure.Tests/KnowledgePlatform.Infrastructure.Tests.csproj" />
+  <Project Path="../tests/KnowledgePlatform.Api.Tests/KnowledgePlatform.Api.Tests.csproj" />
 </Solution>

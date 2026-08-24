@@ -27,5 +27,10 @@ END $$;
 -- `kp_app` là CHỦ SỞ HỮU database và các bảng — cố ý. FORCE ROW LEVEL SECURITY
 -- trong migration đầu tiên (`IM-5`) tồn tại chính để chủ sở hữu KHÔNG được miễn
 -- policy. Test chạy bằng chủ sở hữu nên nó kiểm đúng ca khó nhất.
-CREATE DATABASE kp_dev  OWNER kp_app;
-CREATE DATABASE kp_test OWNER kp_app;
+CREATE DATABASE kp_dev      OWNER kp_app;   -- chạy app lúc phát triển
+CREATE DATABASE kp_test     OWNER kp_app;   -- test tầng Infrastructure
+CREATE DATABASE kp_api_test OWNER kp_app;   -- test tích hợp tầng API
+
+-- Ba database riêng, không dùng chung: một test trong bộ Infrastructure TẮT RLS
+-- tạm thời để kiểm RlsGuard biết ném. Dùng chung DB thì test đó làm test khác
+-- đỏ ngẫu nhiên khi hai bộ chạy song song.

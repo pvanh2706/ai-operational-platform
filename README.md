@@ -17,9 +17,9 @@ trong sơ đồ dưới.
 ## ⚠ Đọc mục này trước khi đọc bất cứ thứ gì khác
 
 ```
-Tài liệu thiết kế   ~10.300 dòng     27 quyết định domain + 11 quyết định khi code
-Code                  ~1.300 dòng     slice nền móng đầu tiên
-Test                    ~380 dòng     9 test, chạy trên PostgreSQL THẬT
+Tài liệu thiết kế   ~10.500 dòng     27 quyết định domain + 14 quyết định khi code
+Code                  ~1.800 dòng     nền móng + project host
+Test                    ~760 dòng     20 test, chạy trên PostgreSQL THẬT
 ```
 
 **Tài liệu mô tả toàn bộ tầm nhìn. Code hiện có là phần nền móng của slice đầu tiên.**
@@ -31,26 +31,46 @@ Test                    ~380 dòng     9 test, chạy trên PostgreSQL THẬT
 (gom nhiều case cũ thành một bản nháp quy trình, người sửa và duyệt).
 
 **Mốc mới nhất — 2026-08-24:** ranh giới giữa các công ty khách hàng đã đóng hết một
-vòng trên database thật, và có test giữ. Trước ngày này nó là thiết kế; giờ nó là thứ
-đã đo được. Chi tiết: [Ranh giới tenant](#ranh-giới-tenant--đã-đo-trên-database-thật).
+vòng — **từ một request HTTP thật xuống tới luật của database** — và có 20 test giữ.
+Trước ngày này nó là thiết kế; giờ nó là thứ đo được bằng một lệnh `curl`.
+Chi tiết: [Ranh giới tenant](#ranh-giới-tenant--đã-đo-trên-database-thật).
 
 ---
 
 ## Chạy thử
 
 ```bash
-dotnet build src/KnowledgePlatform.slnx    # 0 lỗi 0 cảnh báo
-```
-
-**Chưa có gì khởi động được** — đây là hai thư viện + một bộ test, chưa có app.
-
-### Chạy test (cần PostgreSQL)
-
-```bash
-# Một lần: dựng role + hai database. Cần superuser.
+# 1. Một lần cho mỗi máy: role kp_app + 3 database. Cần superuser.
 psql -U postgres -h localhost -f scripts/dev-db-setup.sql
 
-dotnet test src/KnowledgePlatform.slnx     # 9 test, tự apply migration
+# 2. Build + tạo schema
+dotnet build src/KnowledgePlatform.slnx
+dotnet ef database update --project src/KnowledgePlatform.Infrastructure --connection "Host=localhost;Database=kp_dev;Username=kp_app;Password=123456"
+
+# 3. Tạo công ty khách hàng cho máy dev
+psql -U kp_app -h localhost -d kp_dev -f scripts/dev-seed-tenant.sql
+
+# 4. Chạy
+dotnet run --project src/KnowledgePlatform.Api
+```
+
+Bỏ bước 3 thì app **từ chối khởi động** — cố ý. Một bản deploy riêng không tìm thấy
+khách hàng của mình thì thà không chạy, còn hơn chạy bình thường mà không thấy dữ
+liệu nào và không ai biết vì sao.
+
+```bash
+curl localhost:5119/health                     # tiến trình còn sống
+curl localhost:5119/health/ready               # DB sống + ranh giới tenant còn nguyên
+curl localhost:5119/internal/tenant-boundary   # ranh giới tenant, đo từ trong request
+```
+
+Cái thứ ba là cái đáng xem. Nó đếm bằng **SQL thô cố ý không có điều kiện tenant** —
+nếu con số nhỏ hơn tổng số dòng thật trong bảng, nghĩa là database đang chặn hộ.
+
+### Chạy test
+
+```bash
+dotnet test src/KnowledgePlatform.slnx     # 20 test, tự apply migration
 ```
 
 Test chạy trên **PostgreSQL thật**, cố ý. Row-level security là tính năng của database;
@@ -94,7 +114,7 @@ Thông tin ở đây rải trong ba tài liệu khác nhau (`06` §1, `05` §5, 
 flowchart TD
     A["📥 KÊNH 1 — TÍN HIỆU SỰ KIỆN<br/>phần mềm của khách phát<br/>deal đổi stage · issue mới · người dùng hỏi"]
     A2["📄 KÊNH 2 — NẠP / ĐỒNG BỘ DỮ LIỆU<br/>khách tải tài liệu lên · job quét Jira, Drive<br/>AR5 · 00 §7 — thuộc MVP"]
-    B["◐ Xác định tenant từ ngữ cảnh request<br/>KHÔNG từ hằng số toàn cục<br/>áp cho CẢ HAI kênh"]
+    B["✅ Xác định tenant từ ngữ cảnh request<br/>KHÔNG từ hằng số toàn cục<br/>áp cho CẢ HAI kênh"]
     K["○ Tạo Document — vật chứa + nội dung đọc được"]
     S6["🛑 S6 — ĐƯỜNG NÀY DỪNG Ở ĐÂY, CỐ Ý<br/>nạp tài liệu KHÔNG tự sinh tri thức<br/>Document = thứ tổ chức CÓ<br/>KnowledgeRecord = thứ tổ chức đã KHẲNG ĐỊNH<br/>→ tri thức chỉ đến từ Path A, sơ đồ bên dưới"]
     C["○ Tìm hoặc tạo Case<br/>bảng canonical_case đã có, luồng nhận tín hiệu chưa"]
@@ -113,17 +133,20 @@ flowchart TD
     J -.->|"nạp lại cho thước đo tháng đầu<br/>và cho bộ eval"| G
 ```
 
-**Về ô tenant (`◐`)** — đường ống đã nối xong, chỉ còn thiếu đầu vào:
+**Về ô tenant (`✅`)** — đây là ô duy nhất trong sơ đồ đã đi hết một vòng:
 
 ```
 ✅ ITenantContext là interface phải tiêm vào, không phải static
 ✅ RLS ở tầng DB + RlsGuard kiểm lúc khởi động — ĐÃ CHẠY THẬT, PASS
 ✅ app.current_tenant được đặt tự động trên MỌI connection mở ra
-   → C# và Postgres giờ biết cùng một TenantId. Có 9 test giữ.
-❌ chưa có cài đặt nào đọc tenant từ request thật
-   → vì chưa có project host, nên chưa có "request" nào tồn tại.
-     Đây là mảnh cuối, và nó chặn mọi việc còn lại của slice.
+✅ tenant đọc được từ một request HTTP thật, ở CẢ HAI chế độ deploy
+✅ cấu hình tenant sai = KHÔNG START ĐƯỢC, không phải chạy im lặng
+   → 20 test giữ, ở hai tầng. Chi tiết bên dưới.
 ```
+
+⚠ Còn một mảnh chưa xong, nhưng nó là câu hỏi **sản phẩm**, không phải code: ở chế
+độ nhiều khách hàng dùng chung, **chưa quyết được cách xác thực người gọi**. Xem
+[Rủi ro](#rủi-ro-đang-mở).
 
 **Về `S6`** — đây là chỗ dễ hiểu nhầm nhất của sơ đồ. Tải tài liệu lên **không** làm hệ
 thống có tri thức; nó chỉ làm hệ thống có *vật chứa*. Chi tiết: `04` §1.9.
@@ -243,13 +266,31 @@ Giờ đường đi đã liền một mạch, và mỗi mắt được một tes
 
 ```mermaid
 flowchart LR
+    R["✅ Request HTTP<br/>từ phần mềm của khách"]
+    M["✅ Xác định tenant<br/>dedicated: từ cấu hình<br/>shared: từ header"]
     A["✅ ITenantContext<br/>tenant của request này"]
     B["✅ TenantConnectionInterceptor<br/>đặt app.current_tenant<br/>lên MỌI connection"]
     C["✅ Policy của Postgres<br/>tenant_isolation<br/>ENABLE + FORCE"]
-    D["✅ 9 test<br/>chạy trên PostgreSQL thật<br/>bằng role KHÔNG superuser"]
-    A --> B --> C
-    D -.->|giữ cả ba| B
+    D["✅ 20 test<br/>trên PostgreSQL thật<br/>role KHÔNG superuser"]
+    R --> M --> A --> B --> C
+    D -.->|giữ cả chuỗi| A
 ```
+
+**Một codebase, hai chế độ deploy** (`G13`) — khác nhau đúng một dòng cấu hình:
+
+```
+DedicatedSingleTenant   một bản deploy cho một khách hàng.
+                        Tenant từ cấu hình. Database TÌNH CỜ chỉ chứa một khách.
+                        → chế độ của khách hàng #0.
+SharedMultiTenant       một bản deploy nhiều khách hàng.
+                        Tenant từ header của request.
+                        → chưa có xác thực, nên nó TỪ CHỐI KHỞI ĐỘNG trừ khi
+                          được thừa nhận tường minh. Xem Rủi ro.
+```
+
+Không có đường code nào biết mình đang chạy chế độ nào — cả hai đi qua cùng một
+`ITenantContext`. Đó là điều `G13` đòi, và nó chỉ giữ được nếu **không** rẽ nhánh
+lúc đăng ký dịch vụ.
 
 **Đo được gì:**
 
@@ -260,6 +301,9 @@ flowchart LR
 | Chưa xác định được khách hàng nào | Thấy **0 dòng**, không phải thấy hết |
 | Connection lấy lại từ pool | Không thừa hưởng khách hàng của lượt trước |
 | Thêm bảng mà quên bật bảo mật | `RlsGuard` ném, và chỉ rõ **tên bảng** |
+| Hai khách hàng gọi cùng một API, cùng một tiến trình | Thấy hai bộ dữ liệu khác nhau |
+| Gọi xen kẽ hai khách hàng nhiều lượt | Không lượt nào lẫn dữ liệu sang lượt khác |
+| Cấu hình tenant sai hoặc thiếu | **Không start được**, kèm lời giải thích |
 
 **Và quan trọng hơn: bộ test đã được chứng minh biết ĐỎ.** Test xanh mà không thể đỏ thì
 không phải bằng chứng, nó chỉ là sự yên tâm.
@@ -267,6 +311,7 @@ không phải bằng chứng, nó chỉ là sự yên tâm.
 ```
 Gỡ FORCE khỏi một bảng      → 5 test đỏ    (đúng cái bẫy im lặng của RLS)
 Gỡ nullif khỏi policy       → 3 test đỏ    (đúng lỗi tìm được hôm nay)
+Gỡ interceptor khỏi host    → 4 test đỏ    (và đúng 4 ca "hai khách hàng")
 Trỏ test vào role superuser → test đầu đỏ  (bộ đo tự tố giác khi nó vô nghĩa)
 ```
 
@@ -299,20 +344,21 @@ tenant · canonical_case · evidence_item · knowledge_record · assertion · as
                         ✅ đã đo trên PostgreSQL 18.6, 9 test giữ
 ```
 
+Và một **project host** chạy được: `dotnet run`, 3 endpoint, cả hai chế độ deploy.
+
 **Chưa có:**
 
 ```
-· Project host (API / Worker) để có "request"  → ĐANG CHẶN 4 dòng dưới nó
-· Cài đặt ITenantContext đọc tenant từ request → mới có hợp đồng, chưa có thân
-                                                 (vì chưa có request nào tồn tại)
-· Truy vấn "tìm N case cũ liên quan"
+· Truy vấn "tìm N case cũ liên quan"           → việc kế tiếp. AR4: Postgres
+                                                 full-text search trước
 · Phần gọi AI soạn nháp quy trình              → bề mặt AI của MVP chỉ có 2 hàm
 · Luồng duyệt
-· Kênh 1 — đường nhận tín hiệu từ khách
+· Kênh 1 — đường nhận tín hiệu từ khách        → host đã có, endpoint tín hiệu chưa
 · Kênh 2 — đường nạp/đồng bộ tài liệu (AR5)
 · Bảng Document lưu tài liệu khách nạp lên     → đích của kênh 2, chưa có entity
 · Phép so bản nháp AI với bản người sửa
 · ProcessDefinition / ProcessRun               → thiết kế xong, chưa code
+· Xác thực người gọi ở chế độ nhiều khách hàng → câu hỏi SẢN PHẨM, không phải code
 · Test cho phần tri thức (Assertion, lifecycle) → hiện chỉ ranh giới tenant có test
 ```
 
@@ -326,9 +372,9 @@ tenant · canonical_case · evidence_item · knowledge_record · assertion · as
 
 | | |
 |---|---|
-| ⚠ **Chưa có chỗ nào đọc tenant từ một request thật** | Đường ống từ C# xuống Postgres đã nối và đã đo. Nhưng đầu vào của nó — "khách hàng nào đang gọi" — chưa tồn tại, vì chưa có project host nên chưa có request nào. Đây là mảnh cuối của ranh giới tenant. |
+| ⚠ **Chế độ nhiều khách hàng dùng chung chưa có xác thực** | Tenant đến từ header `X-Tenant-Key`, và chưa có gì kiểm người gọi có quyền dùng khoá đó — biết khoá là đọc được dữ liệu. Nên chế độ này **từ chối khởi động** trừ khi được thừa nhận tường minh bằng một cờ cấu hình. Cờ đó không bảo vệ gì; nó chỉ làm việc deploy một API chưa xác thực thành **quyết định** thay vì **sơ suất**. Cần quyết ở tầng sản phẩm: API key theo khách? mTLS? chữ ký trên payload? (`AR-e`) <br><br>⚠ **Không chặn khách hàng đầu tiên** — bản deploy riêng lấy tenant từ cấu hình, không từ người gọi. |
 | ⚠ **Hai cơ chế phía tri thức chưa bị thử phá** | 3 trong 5 cơ chế giờ có test (RLS guard, mắt xích tenant, và interface tenant). Hai cơ chế còn lại — bắt buộc khai nguồn gốc, và danh sách trạng thái chỉ có 3 giá trị — chỉ được **trình biên dịch** chặn. Chặn lúc biên dịch mạnh hơn test, nhưng nó không kiểm được cái mà nó không thấy: một nơi gọi truyền `Origin` **sai** vẫn biên dịch bình thường. Đó đúng là kiểu lỗi mà `AP3` gọi là im lặng nhất. |
-| ⚠ Chưa chốt lấy chuỗi kết nối / mật khẩu DB từ đâu ở deploy thật | Hiện chỉ có mặc định cho máy dev, ghi đè được bằng biến môi trường `KP_TEST_DB`. Cần quyết cùng lúc với project host — `AR-d` trong `07` §5. |
+| ⚠ Chưa chốt lấy chuỗi kết nối / mật khẩu DB từ đâu ở deploy thật | Hình dạng đã có: host đọc từ `IConfiguration`, nên biến môi trường hoặc secret provider nào của .NET cũng cắm được mà không sửa code, và thiếu nó là không start được. Còn phải chọn dùng secret store nào (`AR-d`). |
 | ⚠ Kết luận "không cần vector DB" đứng trên n=1 | Dựa vào con số "5-10 loại nguyên nhân" chưa ai đếm. Phép đếm mất ~30 phút, chưa chạy. |
 | ⚠ Nhãn quyền xem để dạng chuỗi tự do | Chưa ai chốt danh sách giá trị cho phép. Cố ý không tự phát minh ở tầng code. |
 

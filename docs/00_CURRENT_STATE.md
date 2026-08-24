@@ -2,7 +2,14 @@
 
 ## AI Operational Knowledge & Process Platform
 
-> **Cập nhật:** 2026-08-24 — ✅ **RANH GIỚI TENANT ĐÃ ĐÓNG MỘT VÒNG TRÊN DB THẬT.**
+> **Cập nhật:** 2026-08-24 buổi 2 — ✅ **ĐÃ CÓ PROJECT HOST.** Ranh giới tenant giờ
+> sống được trong một **request HTTP thật**, ở CẢ HAI chế độ deploy của `G13`
+> (dedicated lấy tenant từ cấu hình · shared lấy từ header). Cấu hình sai là
+> **không start được** — 4 ca đã kiểm. 20 test xanh ở hai tầng, và đã chứng minh
+> biết đỏ (gỡ interceptor khỏi host → 4 test API đỏ).
+> Sinh `IM-12`..`IM-14` và `AR-e` (chế độ shared chưa có xác thực — KHÔNG chặn
+> khách hàng #0, vì bản dedicated lấy tenant từ cấu hình).
+> **Cùng ngày, buổi 1:** ✅ **RANH GIỚI TENANT ĐÃ ĐÓNG MỘT VÒNG TRÊN DB THẬT.**
 > Máy đã có PostgreSQL 18.6. Migration apply thật, `RlsGuard` chạy thật, và có
 > **test project đầu tiên** — 9/9 xanh, đã chứng minh biết đỏ. `AR-c` ĐÓNG.
 > Sinh 3 quyết định mới `IM-9`..`IM-11` → `docs/07_MVP_IMPLEMENTATION.md` §3.
@@ -46,8 +53,9 @@ STAGE     ✅ DOMAIN MODELING KẾT THÚC 2026-08-23
              slice đầu: Path A. Nền móng đã build, build sạch 0 warning.
              → src/ · tests/ · nhật ký quyết định: docs/07_MVP_IMPLEMENTATION.md
              ✅ RLS ĐÃ kiểm trên PostgreSQL 18.6 thật (2026-08-24) — AR-c đóng
-                9/9 test cách ly tenant xanh, role không phải superuser
-                gỡ FORCE → 5 test đỏ · gỡ nullif → 3 test đỏ (bộ test biết đỏ)
+             ✅ ĐÃ CÓ PROJECT HOST (KnowledgePlatform.Api) — cả hai chế độ G13
+                20 test xanh: 9 ở tầng DB + 11 qua HTTP thật
+                bộ test đã chứng minh biết ĐỎ, không chỉ biết xanh
 
           ★ 04 §3C.5  hình dạng đầy đủ của một KnowledgeRecord
           ★ 04 §3D.7  bảng từ vựng ĐÃ KHÓA — tham chiếu duy nhất
@@ -82,17 +90,21 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 ## Việc tiếp theo
 
 ```text
-1  Workstream 07 — tiếp slice Path A. Nền móng ĐÃ XONG và ĐÃ ĐO (xem 07 §2).
-   Việc kế tiếp là PROJECT HOST (API / Worker) — nó đang CHẶN mọi thứ còn lại,
-   vì `ITenantContext` cần một "request" thật mới có gì mà đọc. Interceptor đã
-   sẵn sàng nhận (IM-10); chỉ còn thiếu cài đặt đọc tenant từ tín hiệu host app.
-   Sau đó: truy vấn "tìm N case liên quan" · ISoạnNhápSOP gọi Anthropic SDK
-   · luồng duyệt (S7) · đường nhận tín hiệu · tính diff(A,B) cho M2.
-   Kèm theo cần chốt AR-d: chuỗi kết nối / mật khẩu DB lấy từ đâu ở deploy thật.
+1  Workstream 07 — tiếp slice Path A. Nền móng VÀ host ĐÃ XONG, ĐÃ ĐO (07 §2).
+   Việc kế tiếp là TRUY VẤN "tìm N case cũ liên quan" — dependency đầu tiên của
+   Path A, và giờ đã có chỗ để chạy: host sống, tenant thật, RLS đang làm việc.
+   AR4: Postgres full-text search TRƯỚC, pgvector khi ĐO ĐƯỢC là không đủ.
+   Sau đó: ISoạnNhápSOP gọi Anthropic SDK · luồng duyệt (S7) · đường nhận tín
+   hiệu · tính diff(A,B) cho M2.
 
    ⚠ Dựng DB local một lần:  psql -U postgres -f scripts/dev-db-setup.sql
      KHÔNG chạy app hay test bằng role superuser — superuser đi vòng qua RLS,
      mọi test cách ly tenant sẽ PASS GIẢ. Test đầu trong bộ test kiểm điều này.
+
+   ⚠ AR-e MỚI: chế độ shared multi-tenant chưa có xác thực nên nó TỪ CHỐI KHỞI
+     ĐỘNG trừ khi được thừa nhận tường minh. Cần quyết ở tầng sản phẩm (API key
+     theo tenant? mTLS? chữ ký trên payload?). KHÔNG chặn khách hàng #0 — bản
+     deploy dedicated lấy tenant từ cấu hình, không từ người gọi.
 
 2  §8.2  ĐẾM CASE OTA — bản nhẹ, ~30 phút, VIỆC CỦA BẠN. Chạy song song.
          Luật quyết định đã chốt TRƯỚC khi đếm (≤15 / ≥40 / ở giữa).

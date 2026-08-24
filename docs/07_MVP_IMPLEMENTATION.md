@@ -5,6 +5,9 @@
 > **Bắt đầu:** 2026-08-23 · Slice đầu tiên = **Path A đi hết một đường**
 > **Cập nhật:** 2026-08-24 — có PostgreSQL thật. `AR-c` ĐÓNG. Sinh `IM-9`..`IM-11`,
 > test project đầu tiên, và `TenantConnectionInterceptor` (mắt xích C# ↔ RLS).
+> **Cùng ngày, buổi 2:** có **project host**. Ranh giới tenant giờ sống được trong
+> một request HTTP thật, ở CẢ HAI chế độ deploy của `G13`. Sinh `IM-12`..`IM-14`
+> và `AR-e` (chế độ shared chưa có xác thực).
 > **File này CỐ Ý NGẮN.** §6.7 cảnh báo tốc độ sản xuất tài liệu vượt tốc độ sử dụng.
 > Đây là **nhật ký quyết định phát sinh khi code**, không phải bản thiết kế.
 
@@ -46,11 +49,25 @@ src/KnowledgePlatform.slnx          (.slnx — định dạng solution của .NE
     Migrations/…_InitialPathASchema.cs  schema + RLS trong CÙNG migration đầu
     Migrations/…_HardenTenantPolicy…    sửa BIỂU THỨC policy, không đổi schema ← IM-9
 
+  KnowledgePlatform.Api/               ← PROJECT HOST, 06 §1 "API nhận tín hiệu"
+    Program.cs                          DI + 3 endpoint + thứ tự middleware
+    Tenancy/TenancyOptions.cs           HAI chế độ deploy của G13, không mặc định
+    Tenancy/RequestTenantContext.cs     ITenantContext cho MỘT request
+    Tenancy/TenantResolutionMiddleware.cs
+                                        dedicated → từ cấu hình
+                                        shared    → từ header của request
+    Tenancy/TenantDirectory.cs          ExternalKey → TenantId  ← IM-14
+    Startup/StartupChecks.cs            cấu hình sai = KHÔNG START ĐƯỢC
+
 tests/KnowledgePlatform.Infrastructure.Tests/
     TestDatabase.cs                     fixture — chạy trên PostgreSQL THẬT
-    TenantIsolationTests.cs             9 test cách ly tenant
+    TenantIsolationTests.cs             9 test cách ly tenant ở tầng DB
 
-scripts/dev-db-setup.sql                dựng kp_dev + kp_test + role kp_app
+tests/KnowledgePlatform.Api.Tests/
+    ApiFactory.cs                       dựng host thật, DB riêng kp_api_test
+    TenantBoundaryThroughHttpTests.cs   11 test cách ly tenant qua HTTP THẬT
+
+scripts/dev-db-setup.sql                role kp_app + 3 database
 ```
 
 ## Trạng thái verify
@@ -60,9 +77,12 @@ scripts/dev-db-setup.sql                dựng kp_dev + kp_test + role kp_app
 ✅  dotnet ef migrations   sinh được
 ✅  apply migration        PostgreSQL 18.6 local · kp_dev + kp_test · cả 2 migration
 ✅  RlsGuard chạy thật     PASS trên DB sống, bằng code C# thật (không phải SQL tay)
-✅  cách ly tenant         9/9 test xanh, chạy bằng role KHÔNG phải superuser
+✅  cách ly tenant (DB)    9/9 test xanh, chạy bằng role KHÔNG phải superuser
+✅  cách ly tenant (HTTP)  11/11 test xanh, qua host thật, cả hai chế độ G13
+✅  host chạy thật         dotnet run + curl: 3 case trong DB, API thấy đúng 1
 ✅  bộ test có thể ĐỎ      gỡ FORCE khỏi một bảng    → 5 test đỏ
                            gỡ nullif khỏi policy      → 3 test đỏ
+                           gỡ interceptor khỏi host   → 4 test API đỏ
 ```
 
 **`AR-c` ĐÓNG 2026-08-24.** "Đúng cú pháp" đã trở thành "chặn được thật", đo trên PostgreSQL 18.6.
@@ -86,9 +106,9 @@ không** — nó đỏ nếu ai đó trỏ test vào role superuser.
 
 # 3. Quyết định phát sinh khi code — cần người dùng biết
 
-Mười một quyết định dưới đây **suy ra từ** các quyết định domain đã chốt, không phát minh gì mới. Nhưng chúng là lựa chọn, nên ghi lại.
+Mười bốn quyết định dưới đây **suy ra từ** các quyết định domain đã chốt, không phát minh gì mới. Nhưng chúng là lựa chọn, nên ghi lại.
 
-`IM-1`..`IM-8` viết khi chưa có PostgreSQL. `IM-9`..`IM-11` sinh ra từ việc **chạy thật** ngày 2026-08-24 — hai trong ba là thứ đọc SQL không phát hiện được.
+`IM-1`..`IM-8` viết khi chưa có PostgreSQL. `IM-9`..`IM-11` sinh ra từ việc **chạy thật** ngày 2026-08-24 — hai trong ba là thứ đọc SQL không phát hiện được. `IM-12`..`IM-14` sinh ra khi dựng project host cùng ngày.
 
 ## `IM-1` · Assertion là bất biến; sửa thì tạo bản mới
 
@@ -206,16 +226,78 @@ Kết quả: Infrastructure biên dịch với 10.0.11, consumer nhận 10.0.4
 → Thêm `Microsoft.EntityFrameworkCore.Relational` 10.0.11 **không private** vào
 Infrastructure. Gặp thật khi thêm test project; project host sau này sẽ gặp y hệt.
 
+## `IM-12` · Host KHÔNG đọc cấu hình trước khi `builder.Build()`
+
+Nghe như chuyện kỹ thuật nhỏ, nhưng nó quyết định hai thứ lớn.
+
+```text
+1  G13 dùng MỘT đường code cho hai chế độ deploy
+   Nếu chế độ được đọc trước khi build rồi rẽ nhánh đăng ký dịch vụ, thì hai
+   chế độ thành hai đường code — và đường ít chạy hơn sẽ mục dần mà không ai
+   biết, đúng loại lỗi G13 sinh ra để chặn.
+
+2  Test tích hợp GHI ĐÈ ĐƯỢC cấu hình
+   WebApplicationFactory chỉ chen được vào cấu hình khi build. Code đọc cấu
+   hình trước đó nhìn thấy giá trị của máy dev, nên "test cấu hình" hoá ra là
+   test cấu hình của người viết test. Ba trong 11 test API là ca CẤU HÌNH SAI
+   PHẢI KHÔNG START ĐƯỢC — không ghi đè được thì không viết được test đó.
+```
+
+→ Mọi thứ đọc cấu hình đều nằm sau `Build()`: `AddDbContext` dùng bản
+`(sp, options)`, `TenantDirectory` dựng bằng factory, và toàn bộ việc kiểm nằm
+trong `StartupChecks` chạy trước `app.Run()`.
+
+## `IM-13` · Chế độ shared TỪ CHỐI KHỞI ĐỘNG khi chưa có xác thực
+
+Ở chế độ shared, tenant đến từ header `X-Tenant-Key`. Hiện **không có gì** kiểm
+người gọi có quyền dùng khoá đó — biết khoá là đọc được dữ liệu.
+
+```text
+Lựa chọn A  tự phát minh một cơ chế xác thực ngay      → 06 §0 nói rõ danh sách
+                                                         endpoint và cơ chế là
+                                                         việc của workstream này,
+                                                         nhưng XÁC THỰC chưa ai
+                                                         quyết → đúng kiểu §6.9
+Lựa chọn B  để đó, ghi TODO                            → deploy được do sơ suất
+Lựa chọn C  chạy được, nhưng phải NÓI RA tường minh    ← chọn
+```
+
+→ `Tenancy:AcknowledgeUnauthenticatedTenantHeader` phải bằng `true`, không thì
+ném lúc khởi động kèm giải thích đầy đủ. Cờ này **không bảo vệ gì** — cờ nào cũng
+bật được. Nó chỉ biến việc deploy một API chưa xác thực từ **sơ suất** thành
+**quyết định**. Cùng tinh thần `IM-2` và `IM-5`.
+
+**→ Sinh `AR-e`.** Xem §5.
+
+⚠️ Chế độ dedicated không có câu hỏi này: tenant đến từ cấu hình của chính bản
+deploy, không từ người gọi. Đó là chế độ của khách hàng #0 (`D3`) — nên mảnh còn
+thiếu **không chặn** khách hàng đầu tiên.
+
+## `IM-14` · Danh bạ tenant nằm NGOÀI ranh giới tenant
+
+`TenantDirectory` (đổi `ExternalKey` thành `TenantId`) **không** dùng
+`AppDbContext`. Ban đầu tưởng là hạn chế của DI: `AppDbContext` cần
+`ITenantContext`, mà lúc này `ITenantContext` đang đi tìm chính tenant của mình.
+
+Nhưng vòng tròn đó nói lên một điều thật: **việc tra tenant không thể nằm trong
+ranh giới tenant.** Nó cũng giải thích vì sao `kp.tenant` là bảng duy nhất không
+có RLS — nó là danh bạ, không phải dữ liệu của một khách hàng nào.
+
+→ Dùng `NpgsqlConnection` trực tiếp, một truy vấn khoá chính, KHÔNG cache (§6.7).
+Cache sai ở đúng chỗ này nghĩa là **phục vụ sai khách hàng**, đắt hơn nhiều chỗ
+nó tiết kiệm.
+
+**Về endpoint `/internal/tenant-boundary`:** nó là endpoint HẠ TẦNG, không phải bề
+mặt sản phẩm (`G11` — không tự phỏng to capability đã chốt). Nó trả lời đúng một
+câu hỏi vận hành: *"trên bản deploy NÀY, ranh giới tenant có đang sống không?"* —
+bằng một câu SQL thô cố ý không có điều kiện tenant. Hai khách hàng gọi cùng
+endpoint đó phải thấy hai con số khác nhau; đó là `AR2` ở dạng đo được bằng `curl`.
+
 ---
 
 # 4. Chưa build — phần còn lại của slice Path A
 
 ```text
-· Project host (API / Worker)              CHẶN 3 việc dưới nó — cần một "request"
-                                           thật để ITenantContext có gì mà đọc.
-                                           Interceptor đã sẵn sàng nhận (IM-10);
-                                           chỉ còn thiếu cài đặt đọc tenant từ
-                                           tín hiệu của host app.
 · Truy vấn "tìm N case cũ liên quan"       Q-C đã chốt là dependency của Cap 3
                                            AR4: Postgres FTS trước
 · ISoạnNhápSOP → Anthropic SDK             AR3 interface mỏng · structured outputs
@@ -225,9 +307,14 @@ Infrastructure. Gặp thật khi thêm test project; project host sau này sẽ 
 · Tính diff(A,B) cho M2
 ```
 
-**Ranh giới tenant giờ đã ĐÓNG hết một vòng** — từ `ITenantContext` trong C#, qua
-interceptor, xuống policy của Postgres, và có test giữ. Mọi thứ trong danh sách trên
-xây trên một nền đã được đo, không phải trên một nền được cho là đúng.
+**Ranh giới tenant giờ đã ĐÓNG hết một vòng** — từ một request HTTP thật, qua
+`ITenantContext`, qua interceptor, xuống policy của Postgres, và có 20 test giữ ở
+hai tầng. Mọi thứ trong danh sách trên xây trên một nền đã được đo, không phải trên
+một nền được cho là đúng.
+
+Việc tiếp theo nên là **truy vấn "tìm N case cũ liên quan"** — nó là dependency đầu
+tiên của Path A và giờ đã có chỗ để chạy: một host sống, một tenant thật, một
+database có RLS đang làm việc.
 
 ---
 
@@ -249,8 +336,21 @@ AR-c   ĐÓNG 2026-08-24. RLS đã kiểm trên PostgreSQL 18.6 thật, bằng c
        test biết ĐỎ (gỡ FORCE → 5 đỏ; gỡ nullif → 3 đỏ). Sinh ra IM-9 và IM-10.
 
 AR-d   Chuỗi kết nối và mật khẩu DB lấy từ đâu ở deploy thật?
-       Hiện chỉ có mặc định cho máy dev (biến môi trường KP_TEST_DB ghi đè được).
-       Cần quyết khi có project host — cùng lúc với việc cài ITenantContext.
+       ĐÃ CÓ HÌNH DẠNG, chưa chốt nguồn. Host đọc ConnectionStrings:Default từ
+       IConfiguration, nên biến môi trường ConnectionStrings__Default hoặc bất kỳ
+       secret provider nào của .NET đều cắm vào được, không sửa code. Thiếu nó là
+       KHÔNG START ĐƯỢC. Còn phải quyết: dùng secret store nào ở deploy thật.
+
+AR-e   Chế độ shared multi-tenant xác thực người gọi bằng cách gì?          ← MỚI
+       Hiện tenant đến từ header X-Tenant-Key và KHÔNG có gì kiểm người gọi có
+       quyền dùng khoá đó. Biết khoá là đọc được dữ liệu của khách hàng đó.
+       Chế độ shared vì thế TỪ CHỐI KHỞI ĐỘNG trừ khi được thừa nhận tường minh
+       (IM-13). Đây là câu hỏi cần quyết ở tầng sản phẩm, không phải tầng code:
+       API key theo tenant? mTLS? chữ ký trên payload tín hiệu? Gắn với 06 §1
+       ("phần mềm có sẵn của khách phát tín hiệu" — ai chứng minh mình là ai).
+
+       ⚠ KHÔNG chặn khách hàng #0: D3 nói khách #0 là công ty của người dùng, và
+         bản deploy dedicated lấy tenant từ cấu hình chứ không từ người gọi.
 ```
 
 ---
@@ -288,3 +388,7 @@ Bốn cơ chế trên là toàn bộ giá trị của slice nền móng này. Ph
 
 Nên từ đây, mỗi cơ chế chống-thất-bại-im-lặng cần một test **đã được chứng minh là
 biết đỏ**. Test xanh mà không thể đỏ thì không phải bằng chứng, nó chỉ là sự yên tâm.
+
+Áp luôn cho project host cùng ngày: gỡ `AddInterceptors` khỏi `Program.cs` → đúng 4
+test API đỏ, và cả 4 đều là ca "hai khách hàng phải thấy hai bộ dữ liệu". Đó là bằng
+chứng rằng 11 test kia đang đo mắt xích chứ không đo lại policy của Postgres.
