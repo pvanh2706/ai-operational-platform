@@ -8,6 +8,10 @@ mà công ty đã có sẵn.
 sự kiện**: phần mềm có sẵn của khách (Jira, CRM, helpdesk...) phát tín hiệu, sản phẩm này
 thức tỉnh, xử lý, và trả kết quả về.
 
+Bên cạnh kênh tín hiệu đó còn một kênh thứ hai — **nạp / đồng bộ dữ liệu** (khách tải tài
+liệu lên, job quét nguồn). Kênh này mang *vật chứa* vào, không mang *tri thức* vào: xem `S6`
+trong sơ đồ dưới.
+
 ---
 
 ## ⚠ Đọc mục này trước khi đọc bất cứ thứ gì khác
@@ -51,14 +55,23 @@ Công nghệ: **C# / .NET 10 + PostgreSQL**. Quyết định và lý do ở
 
 ## Luồng chạy khi có một tín hiệu
 
-Sơ đồ này là **thiết kế**, không phải mô tả code hiện có. ✅ = đã build · ○ = chưa build.
+Sơ đồ này là **thiết kế**, không phải mô tả code hiện có.
+`✅` = đã build · `◐` = mới có một phần · `○` = chưa build.
+
+> ⚠ **Mũi tên là thứ tự dữ liệu chảy LÚC CHẠY, không phải thứ tự BUILD.**
+> Hai thứ này khác nhau. Slice đầu tiên không đi theo sơ đồ này mà đi theo
+> [sơ đồ Path A bên dưới](#luồng-ngược--slice-đang-build) — lý do ở ngay dưới đó.
+
 Thông tin ở đây rải trong ba tài liệu khác nhau (`06` §1, `05` §5, `04` §3B.1) nên nó
 được vẽ lại ở đây cho gọn.
 
 ```mermaid
 flowchart TD
-    A["📥 Phần mềm của khách phát tín hiệu<br/>deal đổi stage · issue mới · người dùng hỏi"]
-    B["✅ Xác định tenant từ ngữ cảnh request<br/>KHÔNG từ hằng số toàn cục"]
+    A["📥 KÊNH 1 — TÍN HIỆU SỰ KIỆN<br/>phần mềm của khách phát<br/>deal đổi stage · issue mới · người dùng hỏi"]
+    A2["📄 KÊNH 2 — NẠP / ĐỒNG BỘ DỮ LIỆU<br/>khách tải tài liệu lên · job quét Jira, Drive<br/>AR5 · 00 §7 — thuộc MVP"]
+    B["◐ Xác định tenant từ ngữ cảnh request<br/>KHÔNG từ hằng số toàn cục<br/>áp cho CẢ HAI kênh"]
+    K["○ Tạo Document — vật chứa + nội dung đọc được"]
+    S6["🛑 S6 — ĐƯỜNG NÀY DỪNG Ở ĐÂY, CỐ Ý<br/>nạp tài liệu KHÔNG tự sinh tri thức<br/>Document = thứ tổ chức CÓ<br/>KnowledgeRecord = thứ tổ chức đã KHẲNG ĐỊNH<br/>→ tri thức chỉ đến từ Path A, sơ đồ bên dưới"]
     C["○ Tìm hoặc tạo Case<br/>bảng canonical_case đã có, luồng nhận tín hiệu chưa"]
     D["○ Khớp với quy trình đã duyệt<br/>ProcessDefinition"]
     E["○ Suy ra đang ở bước nào<br/>từ bằng chứng — KHÔNG lưu cờ tiến độ"]
@@ -68,13 +81,33 @@ flowchart TD
     I["○ Trả gợi ý kèm dẫn chứng trỏ về nguồn"]
     J["○ Ghi lại — đã gợi ý gì, người có dùng không"]
 
-    A --> B --> C --> D --> E --> F --> G --> H --> I --> J
+    A --> B
+    A2 --> B
+    B --> C --> D --> E --> F --> G --> H --> I --> J
+    B --> K --> S6
     J -.->|"nạp lại cho thước đo tháng đầu<br/>và cho bộ eval"| G
 ```
 
+**Về ô tenant (`◐`)** — đã có phần *cấm*, chưa có phần *làm*:
+
+```
+✅ ITenantContext là interface phải tiêm vào, không phải static
+✅ RLS ở tầng DB + RlsGuard kiểm lúc khởi động
+❌ chưa có cài đặt nào đọc tenant từ request thật
+❌ chưa có chỗ đặt app.current_tenant lên connection Postgres
+   → C# biết TenantId, Postgres CHƯA biết. Chạy hôm nay thì policy từ chối tất cả.
+```
+
+**Về `S6`** — đây là chỗ dễ hiểu nhầm nhất của sơ đồ. Tải tài liệu lên **không** làm hệ
+thống có tri thức; nó chỉ làm hệ thống có *vật chứa*. Chi tiết: `04` §1.9.
+
+---
+
+## Luồng ngược — slice đang build
+
 Khi khách **chưa có** quy trình nào trong hệ thống, luồng trên không có gì để chạy — và đó
-là tình trạng ngày đầu ở khách hàng #0 (chỉ 10% quy trình là viết ra và tìm được). Nên slice
-đầu tiên làm **đường ngược lại**:
+là tình trạng ngày đầu ở khách hàng #0 (chỉ 10% quy trình là viết ra và tìm được; §8.1 đã đi
+kiểm chứng thực tế và xác nhận **không có SOP viết**). Nên slice đầu tiên làm **đường ngược lại**:
 
 ```mermaid
 flowchart LR
@@ -88,6 +121,24 @@ flowchart LR
 
 Chênh lệch giữa **bản AI soạn** và **bản người duyệt** vừa là thước đo chính của tháng đầu,
 vừa là nhãn cho bộ eval. Đó là lý do bản gốc không bao giờ bị ghi đè.
+
+### Vì sao build đường này trước, không build kênh nhận tín hiệu trước
+
+```
+1  Không có gì để tải lên      §8.1 đã xác nhận khách #0 không có SOP viết
+2  Kể cả có thì S6 chặn        nạp tài liệu ra Document, KHÔNG ra KnowledgeRecord
+                               → build xong kênh nạp vẫn là 0 tri thức
+3  Chỉ Path A đẻ được cái      nó có "hành vi khẳng định" (người duyệt) mà S6 đòi
+   đầu tiên                    07 §1: "Cap 1 và Cap 2 không có gì để làm cho tới
+                               khi Path A tạo ra thứ đầu tiên"
+4  Ranh giới tenant đi trước   nhồi vào sau rất đắt: phải backfill TenantId, rà lại
+   mọi thứ                     mọi truy vấn đã viết. D3 + G7. Nên RLS nằm trong
+                               CHÍNH migration đầu tiên — không có khoảnh khắc nào
+                               bảng tồn tại mà chưa được bảo vệ.
+```
+
+Nguyên tắc xếp thứ tự ở đây là **làm trước cái mà làm sau sẽ đắt**, không phải làm trước
+cái đứng đầu mũi tên.
 
 ---
 
@@ -168,16 +219,23 @@ tenant · canonical_case · evidence_item · knowledge_record · assertion · as
         └───────────── 5 bảng sau đều có bảo mật tenant ─────────────┘
 ```
 
+⚠ "Có bảo mật tenant" ở đây nghĩa là **schema đã có luật**. Luật đó chưa được nối với
+ứng dụng — xem hai dòng `❌` ở [ô tenant](#luồng-chạy-khi-có-một-tín-hiệu).
+
 **Chưa có:**
 
 ```
 · Truy vấn "tìm N case cũ liên quan"
 · Phần gọi AI soạn nháp quy trình              → bề mặt AI của MVP chỉ có 2 hàm
 · Luồng duyệt
-· Đường nhận tín hiệu từ hệ thống của khách
+· Cài đặt ITenantContext đọc tenant từ request → mới có hợp đồng, chưa có thân
+· Chỗ đặt app.current_tenant lên connection    → mắt xích nối C# với luật RLS
+· Project host (API / Worker) để có "request"  → solution mới chỉ có 2 thư viện
+· Kênh 1 — đường nhận tín hiệu từ khách
+· Kênh 2 — đường nạp/đồng bộ tài liệu (AR5)
+· Bảng Document lưu tài liệu khách nạp lên     → đích của kênh 2, chưa có entity
 · Phép so bản nháp AI với bản người sửa
 · ProcessDefinition / ProcessRun               → thiết kế xong, chưa code
-· Bảng lưu tài liệu khách nạp lên
 · Test — chưa có test nào
 ```
 
@@ -191,6 +249,7 @@ tenant · canonical_case · evidence_item · knowledge_record · assertion · as
 
 | | |
 |---|---|
+| ⚠ **Luật RLS chưa nối được với ứng dụng** | Không có chỗ nào đặt `app.current_tenant` lên connection Postgres. Chạy hôm nay thì policy **từ chối mọi truy vấn** — an toàn đúng hướng, nhưng chưa dùng được. Cần project host trước, vì tenant phải đặt theo từng request. |
 | ⚠ **Bảo mật tenant chưa chạy trên database thật** | Máy phát triển không có PostgreSQL. SQL đúng cú pháp ≠ chặn được thật. **Đây là việc đầu tiên khi có Postgres.** |
 | ⚠ Chưa có test nào | Bốn cơ chế ở trên là giá trị chính của slice, và chưa cơ chế nào được test. |
 | ⚠ Kết luận "không cần vector DB" đứng trên n=1 | Dựa vào con số "5-10 loại nguyên nhân" chưa ai đếm. Phép đếm mất ~30 phút, chưa chạy. |
