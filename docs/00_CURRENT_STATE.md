@@ -2,7 +2,13 @@
 
 ## AI Operational Knowledge & Process Platform
 
-> **Cập nhật:** 2026-08-23 buổi 7 — ✅ **CÔNG NGHỆ ĐÃ CHỐT.** Workstream 06 đóng
+> **Cập nhật:** 2026-08-24 — ✅ **RANH GIỚI TENANT ĐÃ ĐÓNG MỘT VÒNG TRÊN DB THẬT.**
+> Máy đã có PostgreSQL 18.6. Migration apply thật, `RlsGuard` chạy thật, và có
+> **test project đầu tiên** — 9/9 xanh, đã chứng minh biết đỏ. `AR-c` ĐÓNG.
+> Sinh 3 quyết định mới `IM-9`..`IM-11` → `docs/07_MVP_IMPLEMENTATION.md` §3.
+> Hai thứ chỉ chạy thật mới thấy: policy văng lỗi khi biến session là chuỗi rỗng,
+> và **superuser đi vòng qua RLS kể cả khi có FORCE** (làm bộ đo tự hỏng).
+> **Trước đó:** 2026-08-23 buổi 7 — ✅ **CÔNG NGHỆ ĐÃ CHỐT.** Workstream 06 đóng
 > (`AR1`-`AR5`, `G13`) → `docs/06_MVP_ARCHITECTURE.md`. Stack: **C#/.NET + PostgreSQL**.
 > Tiếp theo là **Workstream 07 — MVP Implementation**, và đây là lúc được viết code.
 > **Cùng ngày:** buổi 6 — ✅ **DOMAIN MODELING KẾT THÚC.** Workstream 05
@@ -38,8 +44,10 @@ STAGE     ✅ DOMAIN MODELING KẾT THÚC 2026-08-23
              CÔNG NGHỆ ĐÃ CHỐT: C#/.NET + PostgreSQL + blob storage
           🔵 Workstream 07 — MVP Implementation  ← ĐANG LÀM, CÓ CODE
              slice đầu: Path A. Nền móng đã build, build sạch 0 warning.
-             → src/ · nhật ký quyết định: docs/07_MVP_IMPLEMENTATION.md
-             ⚠ RLS chưa kiểm trên DB thật (môi trường không có Postgres)
+             → src/ · tests/ · nhật ký quyết định: docs/07_MVP_IMPLEMENTATION.md
+             ✅ RLS ĐÃ kiểm trên PostgreSQL 18.6 thật (2026-08-24) — AR-c đóng
+                9/9 test cách ly tenant xanh, role không phải superuser
+                gỡ FORCE → 5 test đỏ · gỡ nullif → 3 test đỏ (bộ test biết đỏ)
 
           ★ 04 §3C.5  hình dạng đầy đủ của một KnowledgeRecord
           ★ 04 §3D.7  bảng từ vựng ĐÃ KHÓA — tham chiếu duy nhất
@@ -51,8 +59,8 @@ STAGE     ✅ DOMAIN MODELING KẾT THÚC 2026-08-23
           Success Metrics (Q-E)            ✅ CHỐT 2026-08-23
                                            → 02_SUCCESS_METRICS_V1.md
 
-CHƯA CODE. Chốt công nghệ là quyền của người dùng — AGENT.md §10.1.
-          Đúng thời điểm chốt là Workstream 06, không phải bây giờ.
+LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công nghệ là quyền
+          của người dùng — AGENT.md §10.1. Từ Workstream 07 thì được code.
 ```
 
 ## Ba con số phải nhớ
@@ -74,11 +82,17 @@ CHƯA CODE. Chốt công nghệ là quyền của người dùng — AGENT.md §
 ## Việc tiếp theo
 
 ```text
-1  Workstream 07 — tiếp slice Path A. Nền móng ĐÃ XONG (xem 07 §2).
-   Còn lại: truy vấn "tìm N case liên quan" · ISoạnNhápSOP gọi Anthropic SDK
+1  Workstream 07 — tiếp slice Path A. Nền móng ĐÃ XONG và ĐÃ ĐO (xem 07 §2).
+   Việc kế tiếp là PROJECT HOST (API / Worker) — nó đang CHẶN mọi thứ còn lại,
+   vì `ITenantContext` cần một "request" thật mới có gì mà đọc. Interceptor đã
+   sẵn sàng nhận (IM-10); chỉ còn thiếu cài đặt đọc tenant từ tín hiệu host app.
+   Sau đó: truy vấn "tìm N case liên quan" · ISoạnNhápSOP gọi Anthropic SDK
    · luồng duyệt (S7) · đường nhận tín hiệu · tính diff(A,B) cho M2.
-   ⚠ VIỆC ĐẦU TIÊN khi có PostgreSQL: apply migration và chạy RlsGuard.
-     SQL sinh ra đúng cú pháp, nhưng "đúng cú pháp" khác "chặn được thật".
+   Kèm theo cần chốt AR-d: chuỗi kết nối / mật khẩu DB lấy từ đâu ở deploy thật.
+
+   ⚠ Dựng DB local một lần:  psql -U postgres -f scripts/dev-db-setup.sql
+     KHÔNG chạy app hay test bằng role superuser — superuser đi vòng qua RLS,
+     mọi test cách ly tenant sẽ PASS GIẢ. Test đầu trong bộ test kiểm điều này.
 
 2  §8.2  ĐẾM CASE OTA — bản nhẹ, ~30 phút, VIỆC CỦA BẠN. Chạy song song.
          Luật quyết định đã chốt TRƯỚC khi đếm (≤15 / ≥40 / ở giữa).
