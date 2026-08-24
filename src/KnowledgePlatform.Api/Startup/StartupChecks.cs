@@ -1,3 +1,4 @@
+using KnowledgePlatform.Api.Signals;
 using KnowledgePlatform.Api.Tenancy;
 using KnowledgePlatform.Infrastructure.Persistence;
 using Microsoft.Extensions.Options;
@@ -27,6 +28,7 @@ public static class StartupChecks
 
         RequireConnectionString(config);
         await ResolveTenancyAsync(sp, tenancy, ct);
+        RequireSignalEndpointDecision(sp.GetRequiredService<IOptions<IngestOptions>>().Value);
 
         // Kiểm RLS trên database THẬT. Danh sách bảng suy ra từ model (`IM-7`),
         // nên thêm entity tenant-scoped mà migration quên bật RLS là ném ở đây.
@@ -49,6 +51,34 @@ public static class StartupChecks
             ⚠ Đừng dùng role superuser. Superuser đi vòng qua row-level security,
               kể cả khi bảng có FORCE — xem scripts/dev-db-setup.sql.
             """);
+    }
+
+    /// <summary>
+    /// Endpoint tín hiệu là endpoint GHI. Không xác thực nghĩa là bất kỳ ai cũng
+    /// bơm được case giả vào dữ liệu khách hàng — làm sai kho tri thức và làm sai
+    /// luôn `M2`. Nên phải có khoá, hoặc phải có người nói ra rằng mình biết.
+    /// </summary>
+    private static void RequireSignalEndpointDecision(IngestOptions ingest)
+    {
+        if (!string.IsNullOrWhiteSpace(ingest.SignalApiKey)) return;
+        if (ingest.AcknowledgeUnauthenticatedSignalEndpoint) return;
+
+        throw new InvalidOperationException(
+            $"""
+             Endpoint tín hiệu POST /signals/case-observed chưa có khoá.
+
+             Đây là endpoint GHI: không có khoá thì bất kỳ ai gọi được cũng bơm được
+             case giả vào dữ liệu của khách hàng. Nó không crash, không báo — nó chỉ
+             làm sai kho tri thức và sai thước đo M2.
+
+             Chọn một trong hai, tường minh:
+                 Ingest:SignalApiKey = <chuỗi bí mật>
+                 Ingest:AcknowledgeUnauthenticatedSignalEndpoint = true   (dev/test)
+
+             ⚠ Khoá dùng chung KHÔNG phải câu trả lời cho AR-e: nó không phân biệt
+               được khách A với khách B ở chế độ shared, không thu hồi theo từng
+               khách, không chống replay. Nó chỉ là cái chốt trong lúc chờ.
+             """);
     }
 
     private static async Task ResolveTenancyAsync(

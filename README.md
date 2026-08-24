@@ -17,9 +17,9 @@ trong sơ đồ dưới.
 ## ⚠ Đọc mục này trước khi đọc bất cứ thứ gì khác
 
 ```
-Tài liệu thiết kế   ~10.500 dòng     27 quyết định domain + 14 quyết định khi code
-Code                  ~1.800 dòng     nền móng + project host
-Test                    ~760 dòng     20 test, chạy trên PostgreSQL THẬT
+Tài liệu thiết kế   ~10.600 dòng     27 quyết định domain + 17 quyết định khi code
+Code                  ~2.150 dòng     nền móng + host + đường nhận tín hiệu
+Test                  ~1.100 dòng     33 test, chạy trên PostgreSQL THẬT
 ```
 
 **Tài liệu mô tả toàn bộ tầm nhìn. Code hiện có là phần nền móng của slice đầu tiên.**
@@ -30,9 +30,10 @@ Test                    ~760 dòng     20 test, chạy trên PostgreSQL THẬT
 **Giai đoạn hiện tại:** Workstream 07 — MVP Implementation, slice **Path A**
 (gom nhiều case cũ thành một bản nháp quy trình, người sửa và duyệt).
 
-**Mốc mới nhất — 2026-08-24:** ranh giới giữa các công ty khách hàng đã đóng hết một
-vòng — **từ một request HTTP thật xuống tới luật của database** — và có 20 test giữ.
-Trước ngày này nó là thiết kế; giờ nó là thứ đo được bằng một lệnh `curl`.
+**Mốc mới nhất — 2026-08-25:** đã có **đường nhận tín hiệu**. Phần mềm của khách gọi
+vào, hệ thống tạo Case, và tín hiệu gửi lại không sinh Case trùng. Cộng với mốc hôm
+trước — ranh giới giữa các công ty khách hàng đã đóng hết một vòng, từ request HTTP
+xuống tới luật của database — giờ có 33 test giữ.
 Chi tiết: [Ranh giới tenant](#ranh-giới-tenant--đã-đo-trên-database-thật).
 
 ---
@@ -67,10 +68,33 @@ curl localhost:5119/internal/tenant-boundary   # ranh giới tenant, đo từ tr
 Cái thứ ba là cái đáng xem. Nó đếm bằng **SQL thô cố ý không có điều kiện tenant** —
 nếu con số nhỏ hơn tổng số dòng thật trong bảng, nghĩa là database đang chặn hộ.
 
+### Gửi tín hiệu vào (Kênh 1)
+
+```bash
+curl -X POST localhost:5119/signals/case-observed -H "Content-Type: application/json" -d '[
+ {"sourceReference":"jira:ES-2001","subject":"Booking Traveloka không về PMS",
+  "sourceCreatedAt":"2026-01-05T09:00:00Z","sourceResolvedAt":"2026-01-05T14:30:00Z"},
+ {"sourceReference":"crm:deal/4471","subject":"Khách hỏi về tích hợp OTA"}
+]'
+```
+
+```
+{"received":2,"created":2,"results":[...]}
+```
+
+Gửi lại y nguyên thì `created` về `0` và `caseId` không đổi — **tín hiệu lặp lại
+không sinh Case trùng**. Đây không phải tiện lợi mà là bắt buộc: bên gửi retry,
+webhook gửi lại, job đồng bộ chạy lại. Nếu mỗi lần sinh một Case mới thì Path A đi
+gom về sẽ đếm một việc thành mười, và không có gì báo.
+
+`sourceReference` cố ý là **chuỗi tự do** — `"jira:..."`, `"crm:..."`, `"zalo:..."`.
+`G1`: Case không phụ thuộc Jira, Jira Issue chỉ là biểu diễn ở nguồn ngoài. Không
+field nào của hợp đồng này biết Jira là gì.
+
 ### Chạy test
 
 ```bash
-dotnet test src/KnowledgePlatform.slnx     # 20 test, tự apply migration
+dotnet test src/KnowledgePlatform.slnx     # 33 test, tự apply migration
 ```
 
 Test chạy trên **PostgreSQL thật**, cố ý. Row-level security là tính năng của database;
@@ -101,7 +125,17 @@ Công nghệ: **C# / .NET 10 + PostgreSQL**. Quyết định và lý do ở
 ## Luồng chạy khi có một tín hiệu
 
 Sơ đồ này là **thiết kế**, không phải mô tả code hiện có.
-`✅` = đã build · `◐` = mới có một phần · `○` = chưa build.
+
+```
+✅  chạy được — gửi request vào là nó làm việc, và có test giữ
+▣  chỉ có HÌNH DẠNG DỮ LIỆU — bảng và ràng buộc đúng, nhưng chưa luồng nào gọi tới
+◐  mới có một phần
+○  chưa build
+```
+
+Phân biệt `✅` với `▣` là quan trọng: hai thứ đó dễ bị đọc thành một, và đọc thành
+một chính là cái bẫy mà [mục đầu file](#-đọc-mục-này-trước-khi-đọc-bất-cứ-thứ-gì-khác)
+đang cảnh báo.
 
 > ⚠ **Mũi tên là thứ tự dữ liệu chảy LÚC CHẠY, không phải thứ tự BUILD.**
 > Hai thứ này khác nhau. Slice đầu tiên không đi theo sơ đồ này mà đi theo
@@ -112,17 +146,17 @@ Thông tin ở đây rải trong ba tài liệu khác nhau (`06` §1, `05` §5, 
 
 ```mermaid
 flowchart TD
-    A["📥 KÊNH 1 — TÍN HIỆU SỰ KIỆN<br/>phần mềm của khách phát<br/>deal đổi stage · issue mới · người dùng hỏi"]
-    A2["📄 KÊNH 2 — NẠP / ĐỒNG BỘ DỮ LIỆU<br/>khách tải tài liệu lên · job quét Jira, Drive<br/>AR5 · 00 §7 — thuộc MVP"]
+    A["◐ 📥 KÊNH 1 — TÍN HIỆU SỰ KIỆN<br/>phần mềm của khách phát<br/>✅ có việc mới ở nguồn<br/>○ đổi trạng thái · ○ người dùng hỏi"]
+    A2["○ 📄 KÊNH 2 — NẠP / ĐỒNG BỘ DỮ LIỆU<br/>khách tải tài liệu lên · job quét Jira, Drive<br/>AR5 · 00 §7 — thuộc MVP"]
     B["✅ Xác định tenant từ ngữ cảnh request<br/>KHÔNG từ hằng số toàn cục<br/>áp cho CẢ HAI kênh"]
     K["○ Tạo Document — vật chứa + nội dung đọc được"]
     S6["🛑 S6 — ĐƯỜNG NÀY DỪNG Ở ĐÂY, CỐ Ý<br/>nạp tài liệu KHÔNG tự sinh tri thức<br/>Document = thứ tổ chức CÓ<br/>KnowledgeRecord = thứ tổ chức đã KHẲNG ĐỊNH<br/>→ tri thức chỉ đến từ Path A, sơ đồ bên dưới"]
-    C["○ Tìm hoặc tạo Case<br/>bảng canonical_case đã có, luồng nhận tín hiệu chưa"]
+    C["✅ Tìm hoặc tạo Case<br/>tín hiệu lặp lại KHÔNG sinh Case trùng<br/>🛑 ĐƯỜNG DỪNG Ở ĐÂY — các ô sau chưa build"]
     D["○ Khớp với quy trình đã duyệt<br/>ProcessDefinition"]
     E["○ Suy ra đang ở bước nào<br/>từ bằng chứng — KHÔNG lưu cờ tiến độ"]
     F["○ Bước tiếp theo = bước chưa xong đầu tiên"]
     G["○ Tra tri thức theo CHỦ ĐỀ của bước đó<br/>không trỏ tới từng bản ghi cụ thể"]
-    H["✅ Tri thức: nguyên nhân + các phát biểu<br/>mỗi phát biểu có nguồn gốc và mức tin riêng"]
+    H["▣ Tri thức: nguyên nhân + các phát biểu<br/>mỗi phát biểu có nguồn gốc và mức tin riêng<br/>bảng đã có, chưa luồng nào ghi/đọc"]
     I["○ Trả gợi ý kèm dẫn chứng trỏ về nguồn"]
     J["○ Ghi lại — đã gợi ý gì, người có dùng không"]
 
@@ -133,7 +167,12 @@ flowchart TD
     J -.->|"nạp lại cho thước đo tháng đầu<br/>và cho bộ eval"| G
 ```
 
-**Về ô tenant (`✅`)** — đây là ô duy nhất trong sơ đồ đã đi hết một vòng:
+**Về ô "tìm hoặc tạo Case" (`✅`)** — đường đi vào đã sống, nhưng nó **dừng ngay ở
+đó**. Response của endpoint tín hiệu cố ý chỉ có ba trường (`received`, `created`,
+`results`) và không có `suggestions: []` — một trường rỗng sẽ làm bên gọi tưởng các ô
+sau đã tồn tại và chỉ đang không có gì trả về.
+
+**Về ô tenant (`✅`)** — ô đã đi hết một vòng từ request xuống database:
 
 ```
 ✅ ITenantContext là interface phải tiêm vào, không phải static
@@ -141,7 +180,7 @@ flowchart TD
 ✅ app.current_tenant được đặt tự động trên MỌI connection mở ra
 ✅ tenant đọc được từ một request HTTP thật, ở CẢ HAI chế độ deploy
 ✅ cấu hình tenant sai = KHÔNG START ĐƯỢC, không phải chạy im lặng
-   → 20 test giữ, ở hai tầng. Chi tiết bên dưới.
+   → 33 test giữ, ở hai tầng. Chi tiết bên dưới.
 ```
 
 ⚠ Còn một mảnh chưa xong, nhưng nó là câu hỏi **sản phẩm**, không phải code: ở chế
@@ -164,8 +203,8 @@ flowchart LR
     A["Người dùng nói —<br/>tôi cần quy trình cho chủ đề X"]
     B["○ Kéo N case cũ<br/>liên quan chủ đề đó"]
     C["○ AI soạn bản nháp<br/>đánh dấu chỗ các case<br/>KHÔNG đồng ý với nhau"]
-    D["✅ Người sửa và duyệt<br/>bản gốc của AI được giữ lại"]
-    E["✅ Tri thức ở trạng thái<br/>đang dùng, có nhãn quyền xem"]
+    D["▣ Người sửa và duyệt<br/>bản gốc của AI được giữ lại"]
+    E["▣ Tri thức ở trạng thái<br/>đang dùng, có nhãn quyền xem"]
     A --> B --> C --> D --> E
 ```
 
@@ -189,6 +228,16 @@ vừa là nhãn cho bộ eval. Đó là lý do bản gốc không bao giờ bị
 
 Nguyên tắc xếp thứ tự ở đây là **làm trước cái mà làm sau sẽ đắt**, không phải làm trước
 cái đứng đầu mũi tên.
+
+> ⚠ **Thứ tự này đã bị đổi một phần, có chủ ý — 2026-08-25.** Kênh 1 (ô "tìm hoặc tạo
+> Case") được build **trước** hai ô `○` của Path A. Lập luận bên trên KHÔNG bị xoá vì
+> nó vẫn đúng về Kênh 2 và về `S6`; nhưng nó **bỏ sót một điều**: Path A cần *"N case
+> cũ"*, và trước Kênh 1 thì không có đường nào đưa case vào hệ thống cả. Endpoint tín
+> hiệu vừa là đường chính thức lúc chạy, vừa là đường nạp case lịch sử — nên nó phục
+> vụ hai việc, và lý do số 1 ("không có gì để tải lên") không áp cho nó.
+>
+> Lý do số 2 và 3 vẫn nguyên: **Kênh 2 vẫn chưa nên build**, vì `S6` chặn — nạp tài
+> liệu ra `Document`, không ra tri thức.
 
 ---
 
@@ -271,7 +320,7 @@ flowchart LR
     A["✅ ITenantContext<br/>tenant của request này"]
     B["✅ TenantConnectionInterceptor<br/>đặt app.current_tenant<br/>lên MỌI connection"]
     C["✅ Policy của Postgres<br/>tenant_isolation<br/>ENABLE + FORCE"]
-    D["✅ 20 test<br/>trên PostgreSQL thật<br/>role KHÔNG superuser"]
+    D["✅ 33 test<br/>trên PostgreSQL thật<br/>role KHÔNG superuser"]
     R --> M --> A --> B --> C
     D -.->|giữ cả chuỗi| A
 ```
@@ -344,7 +393,8 @@ tenant · canonical_case · evidence_item · knowledge_record · assertion · as
                         ✅ đã đo trên PostgreSQL 18.6, 9 test giữ
 ```
 
-Và một **project host** chạy được: `dotnet run`, 3 endpoint, cả hai chế độ deploy.
+Và một **project host** chạy được: `dotnet run`, 4 endpoint, cả hai chế độ deploy,
+trong đó có **đường nhận tín hiệu** tạo Case.
 
 **Chưa có:**
 
@@ -353,13 +403,14 @@ Và một **project host** chạy được: `dotnet run`, 3 endpoint, cả hai c
                                                  full-text search trước
 · Phần gọi AI soạn nháp quy trình              → bề mặt AI của MVP chỉ có 2 hàm
 · Luồng duyệt
-· Kênh 1 — đường nhận tín hiệu từ khách        → host đã có, endpoint tín hiệu chưa
+· Hai loại tín hiệu còn lại của Kênh 1         → hiện chỉ có "có việc mới ở nguồn".
+                                                 Còn: đổi trạng thái · người dùng hỏi
 · Kênh 2 — đường nạp/đồng bộ tài liệu (AR5)
 · Bảng Document lưu tài liệu khách nạp lên     → đích của kênh 2, chưa có entity
 · Phép so bản nháp AI với bản người sửa
 · ProcessDefinition / ProcessRun               → thiết kế xong, chưa code
 · Xác thực người gọi ở chế độ nhiều khách hàng → câu hỏi SẢN PHẨM, không phải code
-· Test cho phần tri thức (Assertion, lifecycle) → hiện chỉ ranh giới tenant có test
+· Test cho phần tri thức (Assertion, lifecycle) → hiện chỉ tenant + Kênh 1 có test
 ```
 
 `canonical_case` chỉ có 5 field và đó là **cố ý**: mô hình đầy đủ có thêm 9 thành phần
@@ -372,6 +423,7 @@ Và một **project host** chạy được: `dotnet run`, 3 endpoint, cả hai c
 
 | | |
 |---|---|
+| ⚠ **Đường nhận tín hiệu chỉ có một cái chốt tạm** | Nó là endpoint **ghi**: không xác thực thì bất kỳ ai cũng bơm được Case giả vào dữ liệu khách hàng — không crash, không báo, chỉ làm sai kho tri thức và sai thước đo tháng đầu. Hiện có một khoá dùng chung (`Ingest:SignalApiKey`), và **thiếu nó là không start được**. Nhưng khoá dùng chung không phân biệt được khách A với khách B, không thu hồi theo từng khách, không chống replay. Nó là cái chốt trong lúc chờ `AR-e`, không phải câu trả lời. |
 | ⚠ **Chế độ nhiều khách hàng dùng chung chưa có xác thực** | Tenant đến từ header `X-Tenant-Key`, và chưa có gì kiểm người gọi có quyền dùng khoá đó — biết khoá là đọc được dữ liệu. Nên chế độ này **từ chối khởi động** trừ khi được thừa nhận tường minh bằng một cờ cấu hình. Cờ đó không bảo vệ gì; nó chỉ làm việc deploy một API chưa xác thực thành **quyết định** thay vì **sơ suất**. Cần quyết ở tầng sản phẩm: API key theo khách? mTLS? chữ ký trên payload? (`AR-e`) <br><br>⚠ **Không chặn khách hàng đầu tiên** — bản deploy riêng lấy tenant từ cấu hình, không từ người gọi. |
 | ⚠ **Hai cơ chế phía tri thức chưa bị thử phá** | 3 trong 5 cơ chế giờ có test (RLS guard, mắt xích tenant, và interface tenant). Hai cơ chế còn lại — bắt buộc khai nguồn gốc, và danh sách trạng thái chỉ có 3 giá trị — chỉ được **trình biên dịch** chặn. Chặn lúc biên dịch mạnh hơn test, nhưng nó không kiểm được cái mà nó không thấy: một nơi gọi truyền `Origin` **sai** vẫn biên dịch bình thường. Đó đúng là kiểu lỗi mà `AP3` gọi là im lặng nhất. |
 | ⚠ Chưa chốt lấy chuỗi kết nối / mật khẩu DB từ đâu ở deploy thật | Hình dạng đã có: host đọc từ `IConfiguration`, nên biến môi trường hoặc secret provider nào của .NET cũng cắm được mà không sửa code, và thiếu nó là không start được. Còn phải chọn dùng secret store nào (`AR-d`). |

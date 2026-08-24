@@ -8,6 +8,8 @@
 > **Cùng ngày, buổi 2:** có **project host**. Ranh giới tenant giờ sống được trong
 > một request HTTP thật, ở CẢ HAI chế độ deploy của `G13`. Sinh `IM-12`..`IM-14`
 > và `AR-e` (chế độ shared chưa có xác thực).
+> **Cập nhật 2026-08-25:** có **Kênh 1** — đường nhận tín hiệu. Ô "tìm hoặc tạo
+> Case" của sơ đồ luồng chạy được. Sinh `IM-15`..`IM-17`. 33 test.
 > **File này CỐ Ý NGẮN.** §6.7 cảnh báo tốc độ sản xuất tài liệu vượt tốc độ sử dụng.
 > Đây là **nhật ký quyết định phát sinh khi code**, không phải bản thiết kế.
 
@@ -58,6 +60,10 @@ src/KnowledgePlatform.slnx          (.slnx — định dạng solution của .NE
                                         shared    → từ header của request
     Tenancy/TenantDirectory.cs          ExternalKey → TenantId  ← IM-14
     Startup/StartupChecks.cs            cấu hình sai = KHÔNG START ĐƯỢC
+    Signals/CaseObservedSignal.cs       hợp đồng tín hiệu — G1: không biết Jira là gì
+    Signals/CaseSignalHandler.cs        tìm-hoặc-tạo Case, idempotent  ← IM-15
+    Signals/SignalKeyEndpointFilter.cs  chốt tạm cho endpoint GHI      ← IM-17
+    Signals/IngestOptions.cs
 
 tests/KnowledgePlatform.Infrastructure.Tests/
     TestDatabase.cs                     fixture — chạy trên PostgreSQL THẬT
@@ -66,6 +72,8 @@ tests/KnowledgePlatform.Infrastructure.Tests/
 tests/KnowledgePlatform.Api.Tests/
     ApiFactory.cs                       dựng host thật, DB riêng kp_api_test
     TenantBoundaryThroughHttpTests.cs   11 test cách ly tenant qua HTTP THẬT
+    CaseSignalTests.cs                  13 test Kênh 1
+    AssemblyInfo.cs                     chạy tuần tự — lý do ghi trong file
 
 scripts/dev-db-setup.sql                role kp_app + 3 database
 ```
@@ -79,11 +87,19 @@ scripts/dev-db-setup.sql                role kp_app + 3 database
 ✅  RlsGuard chạy thật     PASS trên DB sống, bằng code C# thật (không phải SQL tay)
 ✅  cách ly tenant (DB)    9/9 test xanh, chạy bằng role KHÔNG phải superuser
 ✅  cách ly tenant (HTTP)  11/11 test xanh, qua host thật, cả hai chế độ G13
-✅  host chạy thật         dotnet run + curl: 3 case trong DB, API thấy đúng 1
-✅  bộ test có thể ĐỎ      gỡ FORCE khỏi một bảng    → 5 test đỏ
-                           gỡ nullif khỏi policy      → 3 test đỏ
-                           gỡ interceptor khỏi host   → 4 test API đỏ
+✅  Kênh 1 chạy thật       13/13 test xanh · curl: 3 tín hiệu → 3 Case,
+                           gửi lại → 0 Case mới, khách khác không thấy gì
+✅  bộ test có thể ĐỎ      gỡ FORCE khỏi một bảng     → 5 test đỏ
+                           gỡ nullif khỏi policy       → 3 test đỏ
+                           gỡ interceptor khỏi host    → 4 test API đỏ
+                           đảo thứ tự hai filter       → 1 test đỏ
+                           gỡ trần lô tín hiệu         → 1 test đỏ
 ```
+
+⚠️ Một cơ chế KHÔNG đỏ được khi thử phá: tính idempotent của tín hiệu. Gỡ bước kiểm
+trước khi ghi thì unique index vẫn bắt, nên test vẫn xanh. Đó là hai lớp bảo vệ làm
+việc đúng như thiết kế, nhưng phải ghi rõ ở đây — nói "đã chứng minh mọi test biết
+đỏ" là nói quá.
 
 **`AR-c` ĐÓNG 2026-08-24.** "Đúng cú pháp" đã trở thành "chặn được thật", đo trên PostgreSQL 18.6.
 
@@ -106,9 +122,9 @@ không** — nó đỏ nếu ai đó trỏ test vào role superuser.
 
 # 3. Quyết định phát sinh khi code — cần người dùng biết
 
-Mười bốn quyết định dưới đây **suy ra từ** các quyết định domain đã chốt, không phát minh gì mới. Nhưng chúng là lựa chọn, nên ghi lại.
+Mười bảy quyết định dưới đây **suy ra từ** các quyết định domain đã chốt, không phát minh gì mới. Nhưng chúng là lựa chọn, nên ghi lại.
 
-`IM-1`..`IM-8` viết khi chưa có PostgreSQL. `IM-9`..`IM-11` sinh ra từ việc **chạy thật** ngày 2026-08-24 — hai trong ba là thứ đọc SQL không phát hiện được. `IM-12`..`IM-14` sinh ra khi dựng project host cùng ngày.
+`IM-1`..`IM-8` viết khi chưa có PostgreSQL. `IM-9`..`IM-11` sinh ra từ việc **chạy thật** ngày 2026-08-24 — hai trong ba là thứ đọc SQL không phát hiện được. `IM-12`..`IM-14` sinh ra khi dựng project host cùng ngày. `IM-15`..`IM-17` khi dựng Kênh 1 ngày 2026-08-25.
 
 ## `IM-1` · Assertion là bất biến; sửa thì tạo bản mới
 
@@ -293,17 +309,75 @@ câu hỏi vận hành: *"trên bản deploy NÀY, ranh giới tenant có đang 
 bằng một câu SQL thô cố ý không có điều kiện tenant. Hai khách hàng gọi cùng
 endpoint đó phải thấy hai con số khác nhau; đó là `AR2` ở dạng đo được bằng `curl`.
 
+## `IM-15` · Kênh 1 dừng ở ô "tìm hoặc tạo Case", và response nói đúng điều đó
+
+`POST /signals/case-observed` nhận tín hiệu và tạo Case. Các ô sau của sơ đồ —
+khớp quy trình đã duyệt, suy ra bước hiện tại, tra tri thức, trả gợi ý — **chưa
+build**.
+
+→ Response chỉ có ba trường: `received`, `created`, `results`. Cố ý KHÔNG có
+`suggestions: []` hay `process: null`. Một trường rỗng làm bên gọi tưởng đường đó
+đã tồn tại và chỉ đang không có gì trả về — đúng cột phải của `G11`. Có một test
+khoá đúng ba trường này.
+
+**Tín hiệu lặp lại không sinh Case trùng**, và được bảo vệ hai lớp:
+
+```text
+Lớp 1  kiểm trước khi ghi           bắt ca thường
+Lớp 2  unique (TenantId, SourceRef) bắt ca hai tín hiệu tới CÙNG LÚC
+       — index này có từ migration đầu, không phải thêm mới
+```
+
+⚠️ `TenantId` nằm TRONG unique index đó, và điều đó quan trọng: hai khách hàng đều
+có `jira:ES-1234` mà là hai việc khác nhau. Bỏ `TenantId` ra khỏi index thì tín
+hiệu của khách B sẽ **trả về Case của khách A** — rò rỉ qua một đường không ai nghĩ
+tới. Có test riêng cho ca này.
+
+**Nhận một MẢNG tín hiệu, không phải một tín hiệu.** Lô một phần tử là ca thường
+gặp; lô lớn là đường nạp Case lịch sử. Tách hai endpoint là hai đường code làm cùng
+một việc, và đường ít chạy hơn sẽ mục — cùng lý do `IM-12`.
+
+## `IM-16` · Lô vượt trần thì TỪ CHỐI CẢ LÔ, không cắt bớt
+
+Cắt bớt im lặng là kiểu thất bại tệ nhất ở đường nạp dữ liệu: bên gửi thấy `200`,
+tưởng đã nạp hết, và phần thiếu chỉ lộ ra nhiều tuần sau khi có người hỏi *"sao
+thiếu case"*.
+
+→ Vượt `Ingest:MaxSignalsPerRequest` là `400` kèm nói rõ trần là bao nhiêu. Một tín
+hiệu sai định dạng cũng làm cả lô bị từ chối — không ghi một nửa, vì "một nửa" là
+trạng thái không ai truy được về sau.
+
+## `IM-17` · Endpoint GHI có chốt riêng, và chốt đó KHÔNG phải câu trả lời cho `AR-e`
+
+Endpoint tín hiệu là endpoint **ghi**, khác `/internal/tenant-boundary` (chỉ đọc).
+Không xác thực nghĩa là bất kỳ ai cũng bơm được Case giả vào dữ liệu khách hàng —
+không crash, không báo, chỉ làm sai kho tri thức và sai luôn `M2`.
+
+→ `Ingest:SignalApiKey`, so sánh theo thời gian hằng số. Không có khoá và không
+thừa nhận tường minh thì **không khởi động được**.
+
+⚠️ Khoá dùng chung **không** giải quyết `AR-e`: nó không phân biệt khách A với khách
+B ở chế độ shared, không thu hồi theo từng khách, không chống replay. Nó chỉ là cái
+chốt trong lúc chờ, và được ghi rõ như vậy ở cả code lẫn thông báo lỗi.
+
+**Thứ tự filter là một quyết định, không phải chi tiết:** xác thực chạy TRƯỚC khi
+tra tenant. Ngược lại thì người không có khoá vẫn phân biệt được `400` ("khoá tenant
+này không tồn tại") với `401` — tức là dò được danh sách khách hàng mà không cần
+khoá nào. Có test khoá đúng thứ tự này, và nó đỏ khi đảo hai dòng.
+
 ---
 
 # 4. Chưa build — phần còn lại của slice Path A
 
 ```text
+· Hai loại tín hiệu còn lại của 06 §1      hiện chỉ có "có việc mới ở nguồn".
+                                           Còn: người dùng đổi trạng thái ·
+                                           người dùng hỏi về tài liệu
 · Truy vấn "tìm N case cũ liên quan"       Q-C đã chốt là dependency của Cap 3
                                            AR4: Postgres FTS trước
 · ISoạnNhápSOP → Anthropic SDK             AR3 interface mỏng · structured outputs
                                            · Batches API (S5: Path A không nhạy latency)
 · Luồng duyệt (S7 một hành động)           gọi KnowledgeRecord.Approve
-· Đường nhận tín hiệu từ host app          06 §1
 · Tính diff(A,B) cho M2
 ```
 
@@ -392,3 +466,26 @@ biết đỏ**. Test xanh mà không thể đỏ thì không phải bằng chứ
 Áp luôn cho project host cùng ngày: gỡ `AddInterceptors` khỏi `Program.cs` → đúng 4
 test API đỏ, và cả 4 đều là ca "hai khách hàng phải thấy hai bộ dữ liệu". Đó là bằng
 chứng rằng 11 test kia đang đo mắt xích chứ không đo lại policy của Postgres.
+
+---
+
+# 8. Điều học được ngày 2026-08-25
+
+> **Một cơ chế bảo vệ đúng vẫn có thể làm bộ test hỏng, nếu chính bộ test tạo ra
+> trạng thái mà cơ chế đó chặn.**
+
+Test `/health/ready` tắt row-level security vài chục milli-giây để chứng minh nó
+biết báo `503`. Trong khoảng đó, mọi host khởi động đều bị `RlsGuard` chặn — đúng
+như `IM-7` thiết kế. Kết quả: một test Kênh 1 đỏ **ngẫu nhiên** khi chạy cả bộ, xanh
+khi chạy một mình, và thông báo lỗi trỏ vào RLS chứ không trỏ vào nguyên nhân thật.
+
+```text
+Cơ chế       ĐÚNG    RlsGuard chặn host khởi động trên DB có RLS bị tắt
+Bộ test      SAI     tự tạo trạng thái đó rồi để test khác đi vào
+```
+
+→ Chạy tuần tự trong project test API, và ghi lý do ngay trong `AssemblyInfo.cs`.
+Chỗ đó là chỗ người tiếp theo sẽ tìm khi họ định bật lại chạy song song.
+
+**Điều đáng nhớ:** kiểu lỗi này chỉ hiện ra khi chạy CẢ BỘ. Chạy từng test một —
+việc rất tự nhiên khi đang viết test — sẽ không bao giờ thấy nó.

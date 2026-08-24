@@ -37,6 +37,7 @@ public sealed class ApiFactory(Dictionary<string, string?> settings) : WebApplic
     {
         ["Tenancy:Mode"] = "DedicatedSingleTenant",
         ["Tenancy:TenantExternalKey"] = tenantExternalKey,
+        ["Ingest:AcknowledgeUnauthenticatedSignalEndpoint"] = "true",
     });
 
     /// <summary>Một bản deploy phục vụ nhiều khách hàng, tenant từ header.</summary>
@@ -44,9 +45,23 @@ public sealed class ApiFactory(Dictionary<string, string?> settings) : WebApplic
     {
         ["Tenancy:Mode"] = "SharedMultiTenant",
         ["Tenancy:AcknowledgeUnauthenticatedTenantHeader"] = acknowledgeNoAuth ? "true" : "false",
+        ["Ingest:AcknowledgeUnauthenticatedSignalEndpoint"] = "true",
     });
 
     public static ApiFactory WithSettings(Dictionary<string, string?> settings) => new(settings);
+
+    /// <summary>
+    /// Cùng cấu hình, đổi/thêm một khoá. Trả về factory MỚI thay vì sửa tại chỗ —
+    /// cấu hình đã đọc rồi thì đổi cũng không có tác dụng, nên sửa tại chỗ chỉ tạo
+    /// ra một test trông như đang kiểm cái gì đó mà thật ra không.
+    /// </summary>
+    public ApiFactory With(string key, string? value) =>
+        new(new Dictionary<string, string?>(settings) { [key] = value });
+
+    /// <summary>Đặt khoá cho endpoint tín hiệu, và bỏ luôn phần thừa nhận "chạy không khoá".</summary>
+    public ApiFactory WithSignalApiKey(string apiKey) =>
+        With("Ingest:SignalApiKey", apiKey)
+            .With("Ingest:AcknowledgeUnauthenticatedSignalEndpoint", "false");
 }
 
 /// <summary>

@@ -1,3 +1,4 @@
+using KnowledgePlatform.Api.Signals;
 using KnowledgePlatform.Api.Startup;
 using KnowledgePlatform.Api.Tenancy;
 using KnowledgePlatform.Domain.Tenancy;
@@ -22,6 +23,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<TenancyOptions>(
     builder.Configuration.GetSection(TenancyOptions.SectionName));
+builder.Services.Configure<IngestOptions>(
+    builder.Configuration.GetSection(IngestOptions.SectionName));
 
 // Danh bạ tenant nằm NGOÀI ranh giới tenant — xem TenantDirectory.
 builder.Services.AddSingleton(sp => new TenantDirectory(
@@ -35,6 +38,8 @@ builder.Services.AddSingleton<DedicatedTenant>();
 builder.Services.AddScoped<RequestTenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<RequestTenantContext>());
 builder.Services.AddScoped<TenantEndpointFilter>();
+builder.Services.AddScoped<SignalKeyEndpointFilter>();
+builder.Services.AddScoped<CaseSignalHandler>();
 
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
@@ -113,4 +118,71 @@ app.MapGet("/internal/tenant-boundary", async (
     })
     .AddEndpointFilter<TenantEndpointFilter>();
 
+// --- KÊNH 1: đường nhận tín hiệu từ phần mềm có sẵn của khách (06 §1) ---
+//
+// Tín hiệu đi vào đây và dừng ở ô "Tìm hoặc tạo Case" của sơ đồ luồng. Các ô sau
+// — khớp quy trình đã duyệt, suy ra bước hiện tại, tra tri thức, trả gợi ý — CHƯA
+// BUILD, và response cố ý không có chỗ nào trông như thể chúng đã có (G11).
+//
+// Nhận một MẢNG tín hiệu, không phải một tín hiệu. Lô một phần tử là ca thường
+// gặp; lô lớn là đường nạp case lịch sử. Một đường code cho cả hai — xem
+// CaseSignalHandler.
+//
+// Thứ tự filter quan trọng: xác thực TRƯỚC khi tra tenant, để người gọi không có
+// khoá cũng không dò được khoá tenant nào tồn tại.
+app.MapPost("/signals/case-observed", async (
+        List<CaseObservedSignal> signals,
+        CaseSignalHandler handler,
+        IOptions<IngestOptions> ingest,
+        CancellationToken ct) =>
+    {
+        if (signals.Count == 0)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Không có tín hiệu nào",
+                detail: "Body phải là một mảng có ít nhất một tín hiệu.");
+        }
+
+        var max = ingest.Value.MaxSignalsPerRequest;
+        if (signals.Count > max)
+        {
+            // Từ chối cả lô, KHÔNG cắt bớt. Cắt bớt im lặng đọc ra thành "đã nạp
+            // hết" trong khi không phải — đúng loại thất bại im lặng của dự án này.
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Lô tín hiệu quá lớn",
+                detail: $"Nhận {signals.Count} tín hiệu, trần là {max}. Chia nhỏ rồi gửi lại — " +
+                        "cố ý không xử lý một phần, để bạn không tưởng đã nạp hết.");
+        }
+
+        var invalid = signals
+            .Select((s, i) => (Index: i, Error: Validate(s)))
+            .Where(x => x.Error is not null)
+            .ToList();
+
+        if (invalid.Count > 0)
+        {
+            return Results.ValidationProblem(
+                invalid.ToDictionary(x => $"[{x.Index}]", x => new[] { x.Error! }),
+                title: "Tín hiệu không hợp lệ");
+        }
+
+        return Results.Ok(await handler.HandleAsync(signals, ct));
+    })
+    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
 app.Run();
+
+// Kiểm ở đây, không phải bằng DataAnnotations trên record: giới hạn độ dài phải
+// khớp schema (xem AppDbContext), và một chỗ duy nhất biết cả hai thì dễ giữ khớp
+// hơn là hai chỗ.
+static string? Validate(CaseObservedSignal s) => s switch
+{
+    { SourceReference: null or "" } => "sourceReference không được để trống — nó là thứ làm tín hiệu lặp lại được mà không sinh case trùng.",
+    { Subject: null or "" } => "subject không được để trống.",
+    _ when s.SourceReference.Length > 512 => "sourceReference dài quá 512 ký tự.",
+    _ when s.Subject.Length > 1024 => "subject dài quá 1024 ký tự.",
+    _ => null,
+};
