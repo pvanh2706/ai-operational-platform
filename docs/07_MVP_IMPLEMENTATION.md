@@ -65,6 +65,14 @@ src/KnowledgePlatform.slnx          (.slnx — định dạng solution của .NE
     Signals/SignalKeyEndpointFilter.cs  chốt tạm cho endpoint GHI      ← IM-17
     Signals/IngestOptions.cs
 
+tests/KnowledgePlatform.Domain.Tests/    ← KHÔNG cần PostgreSQL, cố ý
+    KnowledgeBuilder.cs                 vật liệu test
+    KnowledgeRecordLifecycleTests.cs    V2 · V4(a) · S7 · D4
+    NeedsReviewTests.cs                 V3 — 3/5 trigger, ghim rõ 2 cái còn thiếu
+    DisplayStateTests.cs                V3 — gắn cờ chứ không rút · stub IsSuperseded
+    VerificationLadderTests.cs          V1 — thang không phải đường thẳng
+    AssertionTests.cs                   M2 · AP3 · L3
+
 tests/KnowledgePlatform.Infrastructure.Tests/
     TestDatabase.cs                     fixture — chạy trên PostgreSQL THẬT
     TenantIsolationTests.cs             9 test cách ly tenant ở tầng DB
@@ -85,6 +93,7 @@ scripts/dev-db-setup.sql                role kp_app + 3 database
 ✅  dotnet ef migrations   sinh được
 ✅  apply migration        PostgreSQL 18.6 local · kp_dev + kp_test · cả 2 migration
 ✅  RlsGuard chạy thật     PASS trên DB sống, bằng code C# thật (không phải SQL tay)
+✅  luật domain thuần     48/48 test xanh trong 77ms, KHÔNG cần PostgreSQL   ← IM-18
 ✅  cách ly tenant (DB)    9/9 test xanh, chạy bằng role KHÔNG phải superuser
 ✅  cách ly tenant (HTTP)  11/11 test xanh, qua host thật, cả hai chế độ G13
 ✅  Kênh 1 chạy thật       13/13 test xanh · curl: 3 tín hiệu → 3 Case,
@@ -94,6 +103,12 @@ scripts/dev-db-setup.sql                role kp_app + 3 database
                            gỡ interceptor khỏi host    → 4 test API đỏ
                            đảo thứ tự hai filter       → 1 test đỏ
                            gỡ trần lô tín hiệu         → 1 test đỏ
+    bộ test domain, 5 phép đột biến — mỗi phép sửa src rồi khôi phục:
+                           bỏ `Lifecycle == Active` khỏi NeedsReview  → 2 test đỏ
+                           bỏ `a.IsCurrent` khỏi NeedsReview          → 1 test đỏ
+                           Approve quên ghi phạm vi xem TRƯỚC (S7)    → 1 test đỏ
+                           IsOnLadder nhận cả Conflicting             → 1 test đỏ
+                           mở setter public cho VisibilityScope       → 1 test đỏ
 ```
 
 ⚠️ Một cơ chế KHÔNG đỏ được khi thử phá: tính idempotent của tín hiệu. Gỡ bước kiểm
@@ -367,6 +382,46 @@ khoá nào. Có test khoá đúng thứ tự này, và nó đỏ khi đảo hai 
 
 ---
 
+## `IM-18` · Luật domain có bộ test riêng, KHÔNG chạm hạ tầng
+
+Trước quyết định này, **100% test của dự án cắm vào PostgreSQL**. Hệ quả không nằm ở
+tốc độ mà ở chỗ khác: luật sinh ra từ 23 quyết định của Workstream 04 — `V1` thang
+xác minh, `V3` trigger NEEDS_REVIEW, `S7` duyệt một hành động, `M2` giữ bản gốc —
+**chưa từng được kiểm lấy một lần**. Chúng chỉ được đọc. Mà đó đúng là loại luật hỏng
+mà không có gì hiện ra: không crash, không báo, chỉ lặng lẽ không gắn cờ.
+
+→ `tests/KnowledgePlatform.Domain.Tests` chỉ tham chiếu `KnowledgePlatform.Domain`.
+Không EF Core, không Npgsql, không host. Chạy được trên máy chưa cài PostgreSQL.
+
+**Ràng buộc "không chạm hạ tầng" là một phần của quyết định, không phải tiện thể.**
+Thêm một `ProjectReference` tới Infrastructure vào project đó sẽ làm nó hỏng đúng
+theo cách khó thấy nhất: vẫn xanh trên máy có DB, đỏ trên máy chưa có.
+
+Ba thứ bộ test này ghim mà test tích hợp không ghim được:
+
+```text
+1  Khoảng trống ĐÃ BIẾT      V3 có 5 trigger, slice này làm 3. Có một test ghim
+                             KnowledgeRelation (L4) CHƯA tồn tại, và nó sẽ ĐỎ khi
+                             L4 xuất hiện — bắt người sửa quay lại viết 2 trigger kia.
+                             Cùng cách với stub IsSuperseded.
+                             Comment thì bị bỏ qua; test thì được chạy và được đếm.
+2  Hình dạng của kiểu        S7 nói hệ thống KHÔNG BAO GIỜ tự mở quyền xem. Câu đó
+                             chỉ đúng chừng nào Lifecycle/VisibilityScope/LastApproval
+                             không có setter public. Mở một cái ra là gỡ mất S7 mà
+                             KHÔNG test hành vi nào đỏ — cánh cửa vừa mở, chưa ai đi qua.
+3  Enum thiếu phân loại      Thêm một mức VerificationLevel mới mà quên nói nó trong
+                             hay ngoài thang: `is ... or ...` lặng lẽ trả false, tức là
+                             mặc định coi nó như chỗ tranh chấp. Test quét toàn enum.
+```
+
+⚠️ Chỗ phải làm khác đi vì domain tự lấy giờ: `Approve()` đóng dấu bằng
+`DateTimeOffset.UtcNow` ở trong domain nên test không chọn hộ được mốc thời gian.
+Test "duyệt lại thì tắt cờ" phải quay chờ đồng hồ thật đi qua mốc. Không chớp tắt,
+nhưng nó là dấu hiệu: nếu sau này cần kiểm luật thời gian phức tạp hơn, chỗ sửa là
+**tiêm đồng hồ vào domain**, không phải viết test khéo hơn.
+
+---
+
 # 4. Chưa build — phần còn lại của slice Path A
 
 ```text
@@ -531,3 +586,28 @@ Chỗ đó là chỗ người tiếp theo sẽ tìm khi họ định bật lại
 
 **Điều đáng nhớ:** kiểu lỗi này chỉ hiện ra khi chạy CẢ BỘ. Chạy từng test một —
 việc rất tự nhiên khi đang viết test — sẽ không bao giờ thấy nó.
+
+---
+
+# 9. Điều học được ngày 2026-08-25 (buổi 2)
+
+> **Chuyển máy là phép thử mà không ai cố ý chạy — và nó đo đúng thứ không bộ test
+> nào tự đo được: bộ test phụ thuộc vào cái gì.**
+
+Máy mới, chưa cài PostgreSQL. `dotnet build` xanh, `dotnet test` **33/33 đỏ** với
+`SocketException`. Không một test nào chạy được — kể cả những test không đụng tới
+một dòng dữ liệu nào.
+
+```text
+Con số                   Nghĩa
+33/33 cần Postgres       không phải "test tích hợp nhiều", mà là
+                         KHÔNG CÓ tầng test nào bên dưới tầng tích hợp
+```
+
+Điều đáng nhớ không phải "nên có unit test" — mà là **cách phát hiện ra**. Trên máy
+cũ, con số 33/33 vô hình: mọi thứ đều xanh nên không có gì để hỏi. Nó chỉ hiện ra khi
+môi trường bị lấy đi. Cùng loại với `IM-5` (RLS bật mà không chặn gì) và với điểm 2 ở
+§7 (superuser làm bộ đo hỏng): **một cấu hình sai vẫn cho ra toàn màu xanh**.
+
+→ `IM-18`. Sau nó: 48 test chạy được ở bất kỳ đâu, 33 test cần một database thật.
+Ranh giới đó giờ là một sự thật ghi trong `.csproj`, không phải một thói quen.

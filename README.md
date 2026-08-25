@@ -126,6 +126,11 @@ Công nghệ: **C# / .NET 10 + PostgreSQL**. Quyết định và lý do ở
 
 Sơ đồ này là **thiết kế**, không phải mô tả code hiện có.
 
+> 🧭 Cần **sơ đồ luồng CODE** — một request đi qua file nào, theo thứ tự nào, dừng
+> sớm được ở đâu — thì ở [`docs/08_CODE_MAP.md`](docs/08_CODE_MAP.md). Hai sơ đồ trả
+> lời hai câu hỏi khác nhau và **sai vào hai thời điểm khác nhau**: cái ở đây sai khi
+> thiết kế đổi, cái ở kia sai khi code đổi.
+
 ```
 ✅  chạy được — gửi request vào là nó làm việc, và có test giữ
 ▣  chỉ có HÌNH DẠNG DỮ LIỆU — bảng và ràng buộc đúng, nhưng chưa luồng nào gọi tới
@@ -444,7 +449,13 @@ trong đó có **đường nhận tín hiệu** tạo Case.
 7  docs/06_MVP_ARCHITECTURE.md         quyết định công nghệ
 8  docs/07_MVP_IMPLEMENTATION.md       nhật ký quyết định phát sinh khi code
                                        §3 IM-9/IM-10 và §7 là phần mới nhất
+9  docs/08_CODE_MAP.md                 sơ đồ luồng CODE. Mở repo lần đầu thì
+                                       đọc cái này trước khi mở file .cs nào
 ```
+
+**Lập trình viên mới:** `08` trả lời ba câu mà không file `.cs` nào trả lời được, vì
+câu trả lời nằm *giữa* các file — thứ tự pipeline lúc chạy, bốn cửa chặn lúc khởi
+động, và endpoint nào đòi khoá / đòi tenant.
 
 **Đọc nhanh nhất:** `04` §3C.5 (hình dạng đầy đủ của một tri thức) và `06` §10
 (6 ràng buộc dễ sai nhất).

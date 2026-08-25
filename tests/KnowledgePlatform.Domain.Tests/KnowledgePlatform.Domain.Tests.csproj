@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!--
+    CỐ Ý chỉ tham chiếu Domain. Không EF Core, không Npgsql, không Api.
+    Bộ test này phải chạy được trên một máy chưa cài PostgreSQL — đó là toàn bộ
+    lý do nó tồn tại tách khỏi hai bộ test kia.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KnowledgePlatform.Domain\KnowledgePlatform.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -2,7 +2,15 @@
 
 ## AI Operational Knowledge & Process Platform
 
-> **Cập nhật:** 2026-08-25 — ✅ **ĐÃ CÓ KÊNH 1** (đường nhận tín hiệu). Ô "tìm hoặc
+> **Cập nhật:** 2026-08-25 buổi 2 — ✅ **LUẬT DOMAIN ĐÃ CÓ TEST RIÊNG, KHÔNG CẦN DB.**
+> Sinh `IM-18`. **48 test mới**, chạy 77ms trên máy CHƯA cài PostgreSQL, và đã chứng
+> minh biết đỏ bằng 5 phép đột biến vào `src/`. Tổng: **81 test** (48 domain + 33 cần DB).
+> ⚠ Phát hiện khi chuyển máy: trước đó **100% test cắm vào PostgreSQL** — luật sinh
+> ra từ 23 quyết định của Workstream 04 (`V1` `V3` `S7` `M2`) chưa từng được kiểm lần
+> nào. Con số đó vô hình trên máy cũ vì mọi thứ đều xanh. Xem `07` §9.
+> ⚠ Máy hiện tại CHƯA có PostgreSQL → 33 test kia không chạy được. Chưa phải lỗi code.
+>
+> **Trước đó, cùng ngày buổi 1:** ✅ **ĐÃ CÓ KÊNH 1** (đường nhận tín hiệu). Ô "tìm hoặc
 > tạo Case" của sơ đồ luồng CHẠY ĐƯỢC: phần mềm của khách gọi vào, hệ thống tạo Case,
 > và tín hiệu gửi lại KHÔNG sinh Case trùng (hai lớp: kiểm trước khi ghi + unique
 > index có TenantId). Sinh `IM-15`..`IM-17`. **33 test.**
@@ -64,8 +72,10 @@ STAGE     ✅ DOMAIN MODELING KẾT THÚC 2026-08-23
              ✅ RLS ĐÃ kiểm trên PostgreSQL 18.6 thật (2026-08-24) — AR-c đóng
              ✅ ĐÃ CÓ PROJECT HOST (KnowledgePlatform.Api) — cả hai chế độ G13
              ✅ ĐÃ CÓ KÊNH 1 — tín hiệu vào, tạo Case, idempotent (2026-08-25)
-                33 test xanh: 9 tầng DB + 11 tenant qua HTTP + 13 Kênh 1
-                bộ test đã chứng minh biết ĐỎ, không chỉ biết xanh
+             ✅ LUẬT DOMAIN ĐÃ CÓ TEST — không cần DB (2026-08-25 buổi 2) ← IM-18
+                81 test: 48 domain (chạy ở đâu cũng được, 77ms)
+                       + 33 cần PostgreSQL thật (9 DB + 11 HTTP + 13 Kênh 1)
+                cả hai bộ đã chứng minh biết ĐỎ, không chỉ biết xanh
 
           ★ 04 §3C.5  hình dạng đầy đủ của một KnowledgeRecord
           ★ 04 §3D.7  bảng từ vựng ĐÃ KHÓA — tham chiếu duy nhất
@@ -111,6 +121,10 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
    ⭐ VIỆC CỦA BẠN, mở khoá được §8.2: xuất issue OTA từ Jira ra CSV/JSON rồi gửi
      vào POST /signals/case-observed. Có case thật thì §8.2 trả lời được bằng
      n = 50-200 thay vì ngồi đếm tay 20 case, và AR4-b cũng đo được luôn.
+
+   ⚠ MÁY HIỆN TẠI CHƯA CÓ POSTGRESQL (chuyển máy 2026-08-25). 33 test cần DB đang
+     không chạy được — chúng ĐỎ vì THIẾU MÔI TRƯỜNG, không phải vì code sai.
+     48 test domain vẫn chạy:  dotnet test tests/KnowledgePlatform.Domain.Tests
 
    ⚠ Dựng DB local một lần:  psql -U postgres -f scripts/dev-db-setup.sql
      KHÔNG chạy app hay test bằng role superuser — superuser đi vòng qua RLS,
