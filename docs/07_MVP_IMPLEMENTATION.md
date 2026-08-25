@@ -139,6 +139,47 @@ AR-b   Hai trigger còn lại của NEEDS_REVIEW (V3) chưa hiện thực đư�
        Ba trigger còn lại đã hiện thực. Ghi rõ trong code để không ai tưởng đủ.
 
 AR-c   RLS chưa được kiểm trên database thật. Việc đầu tiên khi có Postgres.
+
+AR-d   RlsGuard KHÔNG bắt được entity QUÊN CÀI ITenantScoped.
+       Ghi 2026-08-25, phát hiện khi đọc lại code. CHƯA CHỌN HƯỚNG, chưa code.
+
+       Nó kiểm MỘT CHIỀU:
+         có kiểm    "mọi bảng ĐÃ KHAI tenant-scoped, có RLS chưa?"
+         KHÔNG kiểm "mọi bảng TỒN TẠI, đã khai gì chưa?"
+
+       Chiều thứ hai mới là chiều chặn được "quên". Chuỗi khi quên interface:
+         entity mới rơi khỏi TenantScopedTables  (suy từ ITenantScoped)
+         → RlsGuard bỏ qua, app start bình thường
+         → danh sách bảng bật RLS trong migration là chuỗi VIẾT TAY, không có nó
+         → 5 dòng HasQueryFilter cũng VIẾT TAY, không có nó
+         → mọi tenant đọc được cả bảng, KHÔNG có cảnh báo nào
+
+       Tức cơ chế hiện tại là default ALLOW: không khai thì được bỏ qua.
+       G7 nói tenant boundary là NỀN TẢNG — nền tảng phải là default DENY.
+
+       Ba kiểu quên khác đều đã được chặn, chỉ kiểu này thì không:
+         cài interface, quên RLS trong migration   → RlsGuard ném lúc start
+         cài interface, quên HasQueryFilter        → RLS ở DB vẫn chặn
+         xoá interface khỏi TẤT CẢ entity          → RlsGuard ném (Count == 0)
+         QUÊN INTERFACE Ở MỘT ENTITY MỚI           → không ai bắt  ← lỗ
+       Kiểu không được canh lại đúng là kiểu dễ xảy ra nhất — thêm một entity
+       là thao tác thường ngày.
+
+       Ba hướng đã cân nhắc:
+         A  default deny ở tầng model — mọi entity phải khai là tenant-scoped
+            hoặc được miễn trừ TƯỜNG MINH (hiện chỉ Tenant cần miễn).
+         B  hẹp hơn — chỉ bắt entity có cột TenantId mà thiếu interface.
+            Không bắt được entity quên cả cột lẫn interface.
+         C  mở rộng RlsGuard quét ngược từ pg_class: bảng nào trong schema kp
+            không nằm trong danh sách mong đợi và không được miễn → ném.
+            Mạnh nhất, bắt được cả bảng tạo bằng SQL thô.
+
+       ⚠ A và B chỉ đọc Model.GetEntityTypes() → CHẠY ĐƯỢC KHÔNG CẦN POSTGRES.
+       C cần DB sống, nên xếp sau AR-c. A và C không loại trừ nhau — đúng
+       nguyên tắc hai lớp mà AppDbContext đã áp cho query.
+
+       → Đây là phần DUY NHẤT của nhóm bảo mật tenant làm được khi chưa có
+         Postgres. Và nó sẽ là test đầu tiên của dự án (hiện chưa có test nào).
 ```
 
 ---
