@@ -9,6 +9,9 @@
 appsettings.*.local.json
 .env
 *.pfx
+# Cấu hình cá nhân của script xuất Jira — chứa PAT. Mẫu để chép:
+# jira-config.example.bat (run-export.bat tự chép lần chạy đầu).
+scripts/jira-export/jira-config.bat
 
 # IDE
 .vs/
