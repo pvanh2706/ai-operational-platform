@@ -74,7 +74,18 @@ app.MapGet("/health/ready", async (AppDbContext db, CancellationToken ct) =>
 {
     try
     {
-        await RlsGuard.VerifyAsync(db, ct);
+        // ⚠ CỐ Ý dùng phép kiểm NÔNG ở đây, khác với StartupChecks (dùng phép sâu).
+        //
+        // Hai chỗ hỏi hai câu khác nhau. Readiness hỏi "tôi phục vụ được không", và nó
+        // phải trả lời về những bảng tiến trình NÀY thật sự đọc ghi. Phép kiểm sâu còn
+        // đòi "không relation lạ nào trong schema" — đúng cho lúc khởi động, nhưng ở
+        // readiness nó tạo một đường MẤT DỊCH VỤ: deploy cuốn chiếu, bản N+1 chạy
+        // migration tạo bảng mới, các tiến trình bản N cũ không biết bảng đó và đồng
+        // loạt trả 503 — rút cả đội đang khoẻ ra khỏi luồng vì một bảng chúng không đụng.
+        //
+        // Nới ở đây KHÔNG mở lỗ: chiều "quên khai entity mới" vẫn bị chặn ở startup,
+        // là nơi bản build và schema được nhìn cùng một lúc.
+        await RlsGuard.VerifyAsync(db, RlsScanDepth.DeclaredTablesOnly, ct);
         return Results.Ok(new { status = "ready" });
     }
     catch (Exception ex)

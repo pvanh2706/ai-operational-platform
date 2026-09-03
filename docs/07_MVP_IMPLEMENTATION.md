@@ -10,6 +10,9 @@
 > và `AR-e` (chế độ shared chưa có xác thực).
 > **Cập nhật 2026-08-25:** có **Kênh 1** — đường nhận tín hiệu. Ô "tìm hoặc tạo
 > Case" của sơ đồ luồng chạy được. Sinh `IM-15`..`IM-17`. 33 test.
+> **Cập nhật 2026-08-30:** có bộ test API **Postman** (`scripts/postman/`, 13 request).
+> ⚠️ Và phát hiện một **lỗ trong kế hoạch**: `evidence_item` chưa có đường ghi nào,
+> nên Path A không có nội dung để gom. Sinh `AR-f`. Thứ tự §4 đã sửa.
 > **File này CỐ Ý NGẮN.** §6.7 cảnh báo tốc độ sản xuất tài liệu vượt tốc độ sử dụng.
 > Đây là **nhật ký quyết định phát sinh khi code**, không phải bản thiết kế.
 
@@ -64,6 +67,8 @@ src/KnowledgePlatform.slnx          (.slnx — định dạng solution của .NE
     Signals/CaseSignalHandler.cs        tìm-hoặc-tạo Case, idempotent  ← IM-15
     Signals/SignalKeyEndpointFilter.cs  chốt tạm cho endpoint GHI      ← IM-17
     Signals/IngestOptions.cs
+    Signals/CaseEvidenceSignal.cs       hợp đồng evidence — K-B9: link case TUỲ CHỌN
+    Signals/CaseEvidenceHandler.cs      nạp nội dung của case, idempotent  ← AR-f
 
 tests/KnowledgePlatform.Domain.Tests/    ← KHÔNG cần PostgreSQL, cố ý
     KnowledgeBuilder.cs                 vật liệu test
@@ -81,9 +86,13 @@ tests/KnowledgePlatform.Api.Tests/
     ApiFactory.cs                       dựng host thật, DB riêng kp_api_test
     TenantBoundaryThroughHttpTests.cs   11 test cách ly tenant qua HTTP THẬT
     CaseSignalTests.cs                  13 test Kênh 1
+    CaseEvidenceTests.cs                16 test nạp evidence            ← AR-f
     AssemblyInfo.cs                     chạy tuần tự — lý do ghi trong file
 
 scripts/dev-db-setup.sql                role kp_app + 3 database
+scripts/postman/                        bộ test API dev — 13 request, 4 nhóm (A/B/C/D)
+                                        đã gọi THẬT vào app đang chạy trước khi đóng gói
+                                        ⚠ chưa commit tính tới 2026-08-30
 ```
 
 ## Trạng thái verify
@@ -382,6 +391,128 @@ khoá nào. Có test khoá đúng thứ tự này, và nó đỏ khi đảo hai 
 
 ---
 
+## `IM-22` · `RlsGuard` báo XANH trong khi dữ liệu đang rò — đã đo, đã sửa
+
+**Đây là lỗ nghiêm trọng nhất tìm được từ đầu dự án, và nó nằm bên trong chính cơ chế
+được giao việc chống rò rỉ.** Ghi 2026-09-01, phát hiện qua phản biện có chủ đích vào
+thiết kế `AR-d`, rồi đo lại bằng tay trên PostgreSQL 18.
+
+### Tái hiện — chạy được, mất 10 giây
+
+```sql
+BEGIN;
+CREATE TABLE kp.leak_probe (tenant uuid not null, val text not null);
+INSERT INTO kp.leak_probe VALUES
+  ('11111111-1111-1111-1111-111111111111','cua khach A'),
+  ('22222222-2222-2222-2222-222222222222','cua khach B');
+ALTER TABLE kp.leak_probe ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kp.leak_probe FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON kp.leak_probe
+  USING (tenant = nullif(current_setting('app.current_tenant',true),'')::uuid);
+SELECT set_config('app.current_tenant','11111111-1111-1111-1111-111111111111', false);
+
+-- Day la thu ai do co the them, bang mot dong migration:
+CREATE POLICY mo_toang ON kp.leak_probe USING (true);
+
+SELECT string_agg(val,' + ') FROM kp.leak_probe;
+ROLLBACK;
+```
+
+Kết quả thật:
+
+```text
+Khách A thấy                   | cua khach A + cua khach B      ← RÒ
+Câu SQL của RlsGuard bản cũ    | XANH — "đã được bảo vệ"
+Số policy trên bảng            | 2
+```
+
+### Vì sao
+
+Policy trong PostgreSQL mặc định là **PERMISSIVE**, tức gộp bằng **OR**. Policy thứ hai
+chỉ **nới ra**, không siết vào — nên ranh giới bằng policy LỎNG NHẤT, không phải chặt
+nhất. Còn `RlsGuard` bản cũ chỉ hỏi *"bảng này có tồn tại policy nào không"*
+(`EXISTS (SELECT 1 FROM pg_policy ...)`), **không hỏi policy đó nói gì**.
+
+⚠ Điều đáng sợ không phải là lỗ. Là chỗ nó nằm: một cơ chế được dựng riêng để biến
+"quên" thành "không start được", tự nó lại fail-open. Test xanh, guard xanh, dữ liệu rò.
+
+### Đã sửa — guard giờ đối chiếu BIỂU THỨC, không đếm
+
+Năm luật, mỗi luật một cách ranh giới có thể mất mà bản cũ mù:
+
+```text
+1  đúng MỘT policy                      policy thứ hai USING(true) = mở toang  ← đã đo
+2  biểu thức USING khớp hằng số đã biết  bảng mới chép policy tiền-IM-9 → IM-9 tái phát
+3  biểu thức WITH CHECK cũng khớp        thiếu nó thì ĐỌC bị chặn mà GHI thì không
+4  relforcerowsecurity = true            bản cũ KHÔNG kiểm; thiếu FORCE thì chủ sở hữu
+                                         bảng được miễn policy, mà app chạy bằng chủ sở hữu
+5  không relation lạ nào trong schema     bản cũ lọc relkind='r' nên view và
+                                         materialized view vô hình. MV không nhận RLS được.
+```
+
+Luật 5 chính là `AR-d` — chiều mà bản cũ không kiểm.
+
+⚠ **Hằng số biểu thức bị lặp lại giữa `RlsGuard` và migration, và trùng lặp đó là cố ý.**
+Suy hằng số ra từ migration thì đúng cái sai cần bắt — một migration viết sai — sẽ tự hợp
+lệ hoá chính nó. Đổi biểu thức phải đổi ở hai chỗ, lệch một chỗ là không khởi động được.
+
+## `IM-23` · Hai chỗ gọi `RlsGuard` hỏi hai câu khác nhau, nên dùng hai độ sâu
+
+Làm guard chặt hơn suýt tạo ra một đường **mất dịch vụ**, và nó chỉ lộ ra khi có người
+hỏi "chuyện gì xảy ra lúc deploy cuốn chiếu".
+
+```text
+StartupChecks      → IncludingUndeclaredRelations   "bản build này có khớp DB này không"
+/health/ready      → DeclaredTablesOnly             "tôi phục vụ được không"
+```
+
+Ca vỡ nếu dùng chung độ sâu: bản N+1 chạy migration tạo bảng mới trong khi các tiến trình
+bản N cũ vẫn đang phục vụ. Model bản cũ không biết bảng đó → coi là "relation lạ" → 503 →
+**rút cả đội tiến trình đang khoẻ ra khỏi luồng**, vì một bảng chúng không hề đụng tới.
+Mất dịch vụ do chính cơ chế an toàn gây ra.
+
+Nới ở readiness KHÔNG mở lỗ: chiều "quên khai entity mới" vẫn bị chặn ở startup — nơi bản
+build và schema được nhìn cùng một lúc, và cũng là nơi `G7` đòi chặn.
+
+## `IM-19` · `machineReadability` do BÊN GỬI khai, hệ thống KHÔNG suy — và gõ sai là 400
+
+Connector biết nó đang đẩy text hay đường dẫn ảnh; hệ thống nhìn vào một chuỗi thì
+không biết. Tự gán `High` cho mọi thứ là text sẽ dán nhãn sai cho ảnh chưa OCR — đúng
+trạng thái `KNOWLEDGE_EXISTS_NOT_RETRIEVABLE` ở §6.3 mà sản phẩm cần **nhìn thấy**.
+
+Bỏ trống → `Unknown`, và đó là hợp lệ: *"chưa ai nói"* là một câu trả lời thật.
+Gõ sai (`HIGHT`) → **400**, KHÔNG âm thầm về `Unknown`.
+
+⚠ Vì sao chỗ này đáng một mục riêng: âm thầm về `Unknown` nghe như "chấp nhận rộng
+rãi", nhưng nó biến một lỗi cấu hình connector thành **dữ liệu sai vĩnh viễn** — cả
+kho evidence dán nhãn `Unknown` trong khi bên gửi tưởng đã khai `High`, và không ai
+phát hiện cho tới lúc có người hỏi vì sao §6.3 không phân biệt được ba trạng thái.
+
+## `IM-20` · Gửi lại cùng khoá với nội dung KHÁC thì KHÔNG ghi đè bản cũ
+
+`K-B3`: evidence gắn với MỘT thời điểm và MỘT nguồn. Ghi đè lặng lẽ là **sửa lại quá
+khứ** — và nó kéo theo mọi assertion đang dẫn chứng bằng mẩu đó, mà không cảnh báo ai.
+
+Muốn nói *"nguồn đã đổi"* thì đó là một mẩu evidence MỚI với khoá mới. Response vẫn
+trả `created: false` như mọi lần gửi lại khác, không phải lỗi.
+
+⚠ Hệ quả chưa xử lý: hệ thống hiện KHÔNG phát hiện được việc nội dung ở nguồn đã đổi.
+Đó chính là trigger thứ năm của `V3` mà `AR-b` đã ghim là chưa hiện thực được.
+
+## `IM-21` · Hai chỗ kiểm rỗng đang lệch nhau — ĐÃ BIẾT, chưa xử lý
+
+```text
+/signals/case-observed   subject  →  chỉ kiểm null hoặc rỗng     → "   " ĐƯỢC NHẬN
+/signals/case-evidence   content  →  IsNullOrWhiteSpace          → "   " bị từ chối
+```
+
+Chỗ mới chặt hơn có chủ đích: một `content` toàn dấu cách vẫn tạo ra một dòng rỗng
+nghĩa, và Path A sẽ đưa **chính dòng đó** cho model như một quan sát thật. Rác trong
+kho gom nguy hiểm hơn rác ở một tiêu đề.
+
+Nhưng hai endpoint kiểm khác nhau là một chỗ dễ gây nhầm. Siết `subject` lại cho khớp
+là đụng vào hợp đồng ĐANG CHẠY, nên **để người dùng quyết**, không tự sửa.
+
 ## `IM-18` · Luật domain có bộ test riêng, KHÔNG chạm hạ tầng
 
 Trước quyết định này, **100% test của dự án cắm vào PostgreSQL**. Hệ quả không nằm ở
@@ -441,9 +572,28 @@ nhưng nó là dấu hiệu: nếu sau này cần kiểm luật thời gian ph�
 hai tầng. Mọi thứ trong danh sách trên xây trên một nền đã được đo, không phải trên
 một nền được cho là đúng.
 
-Việc tiếp theo nên là **truy vấn "tìm N case cũ liên quan"** — nó là dependency đầu
-tiên của Path A và giờ đã có chỗ để chạy: một host sống, một tenant thật, một
-database có RLS đang làm việc.
+~~Việc tiếp theo nên là **truy vấn "tìm N case cũ liên quan"**~~ — **SỬA 2026-08-30.**
+
+Câu trên đúng rằng FTS là dependency của Path A, nhưng bỏ sót một mắt xích đứng
+trước nó: **một `canonical_case` hôm nay là một dòng chữ.** Chỉ có subject + khoá
+nguồn + hai mốc thời gian. Không comment, không cách xử lý, không kết quả.
+
+`S8` đòi bản nháp gom mang theo một **phân bố** — *"bước kiểm room mapping: 14/20
+case đã làm"*, *"gọi OTA trước khi check log: 6/20 làm, 8/20 làm ngược lại"*. Con số
+`14/20` không suy ra được từ 20 cái tiêu đề. Và `06` §5 đã ghi ý định rõ ràng:
+*"1M context → Path A: 20 case **+ evidence** trong MỘT request"*.
+
+Nếu build FTS trước: tìm được 20 case → mỗi case một dòng tiêu đề → đưa cho model →
+model viết ra một SOP nghe hợp lý mà không dựa trên gì. Đó đúng thứ `G6`/`AP3`
+sinh ra để chặn, và nó làm hỏng `M2` ngay tại nguồn (`M2` đo *số nháp được duyệt +
+mức sửa diff(A,B)* — nháp bịa thì cả hai con số đều vô nghĩa).
+
+**Thứ tự đúng:** nạp evidence (`AR-f`) → xuất case OTA thật kèm comment (§8.2) →
+FTS tune trên corpus thật → `ISoạnNhápSOP`.
+
+✅ **Bước một đã xong cùng ngày** — `POST /signals/case-evidence` chạy được, 16 test,
+và đã gọi thật vào app đang chạy (newman: 23 request, 59 assertion, 0 đỏ). Bước kế
+tiếp giờ là **việc của người dùng**: xuất case OTA thật KÈM COMMENT.
 
 ---
 
@@ -462,7 +612,23 @@ AR-b   Hai trigger còn lại của NEEDS_REVIEW (V3) chưa hiện thực đư�
 
 AR-c   RLS chưa được kiểm trên database thật. Việc đầu tiên khi có Postgres.
 
+AR-d   ⚠️ TRÙNG SỐ HIỆU — ✅ ĐÃ SỬA 2026-09-03, người dùng chọn. `AR-d` từng chỉ
+       HAI câu hỏi khác nhau: mục ngay dưới đây (RlsGuard) và mục "Chuỗi kết nối
+       và mật khẩu DB" ở phía sau. Người dùng chốt: RlsGuard GIỮ chữ `d` (sinh
+       trước 2026-08-25, được nhắc nhiều nhất trong 00/07); chuỗi kết nối đổi
+       thành `AR-i`. Đã sửa pointer ở README.md §"Rủi ro đang mở" và
+       appsettings.Development.json cùng ngày.
+
 AR-d   RlsGuard KHÔNG bắt được entity QUÊN CÀI ITenantScoped.
+       ✅ ĐÓNG 2026-09-03 — người dùng xác nhận sau khi xem tóm tắt hiện thực
+       (5 luật của guard + chiều quét ngược + bằng chứng đột biến).
+       Hiện thực 2026-09-01:
+       Làm hướng A + C gộp (đúng gợi ý "hai lớp" của chính mục này): guard quét
+       ngược pg_class trong schema kp, mọi relation phải được model khai là
+       tenant-scoped HOẶC nằm trong AppDbContext.TenantExemptRelations kèm LÝ DO.
+       Quét cả 'v' và 'm' — không chỉ 'r'. Hôm nay đúng một miễn trừ: kp.tenant.
+       Đi kèm một phát hiện NẶNG HƠN câu hỏi gốc: xem IM-22.
+       6 test mới, và 5 phép đột biến đã chứng minh cả 5 luật đều biết ĐỎ.
        Ghi 2026-08-25, phát hiện khi đọc lại code. CHƯA CHỌN HƯỚNG, chưa code.
 
        Nó kiểm MỘT CHIỀU:
@@ -506,7 +672,8 @@ AR-c   ĐÓNG 2026-08-24. RLS đã kiểm trên PostgreSQL 18.6 thật, bằng c
        thật, với role KHÔNG phải superuser. 9/9 test xanh, và đã chứng minh bộ
        test biết ĐỎ (gỡ FORCE → 5 đỏ; gỡ nullif → 3 đỏ). Sinh ra IM-9 và IM-10.
 
-AR-d   Chuỗi kết nối và mật khẩu DB lấy từ đâu ở deploy thật?
+AR-i   Chuỗi kết nối và mật khẩu DB lấy từ đâu ở deploy thật?
+       (số hiệu cũ: `AR-d` thứ hai — đánh lại 2026-09-03 vì trùng, xem ghi chú trên)
        ĐÃ CÓ HÌNH DẠNG, chưa chốt nguồn. Host đọc ConnectionStrings:Default từ
        IConfiguration, nên biến môi trường ConnectionStrings__Default hoặc bất kỳ
        secret provider nào của .NET đều cắm vào được, không sửa code. Thiếu nó là
@@ -522,6 +689,98 @@ AR-e   Chế độ shared multi-tenant xác thực người gọi bằng cách g
 
        ⚠ KHÔNG chặn khách hàng #0: D3 nói khách #0 là công ty của người dùng, và
          bản deploy dedicated lấy tenant từ cấu hình chứ không từ người gọi.
+
+AR-f   Evidence vào hệ thống bằng đường nào?
+       ✅ CHỐT 2026-08-30 bởi người dùng. Đã code, 16 test, đã gọi thật.
+       → ENDPOINT RIÊNG `POST /signals/case-evidence`, `caseSourceReference` NHẬN NULL.
+         Lý do chọn: K-B9 nói evidence được phép không thuộc case nào. Lồng vào tín
+         hiệu case thì loại đó vĩnh viễn không có đường vào — rồi cũng phải mở cửa
+         thứ hai, và LÚC ĐÓ mới đúng cái bẫy IM-12 (hai đường code cùng tạo ra
+         evidence_item, đường ít chạy hơn mục dần). Một cửa duy nhất tránh được.
+       → Case được nhắc mà không tồn tại: TỪ CHỐI CẢ LÔ. Không tự tạo case rỗng,
+         không nhận rồi để link NULL. Bên gửi không phải "nhớ đã gửi gì" vì
+         /signals/case-observed idempotent — cứ gửi case trước mỗi lần.
+       → Idempotent theo (TenantId, SourceReference), giống hệt canonical_case.
+       → Một evidence gắn ĐÚNG MỘT case (v0.2 §9 nói NHIỀU). Rút gọn có chủ đích,
+         ghi thẳng vào EvidenceItem.cs để không ai đọc vào tưởng là quên.
+       Sinh IM-19, IM-20, IM-21.
+
+       Câu hỏi phụ CÒN LẠI, chưa quyết:
+         · K-B9 mới mở được nửa đường: evidence KHÔNG thuộc case nào đã nạp được,
+           nhưng đường Evidence → Knowledge trực tiếp thì chưa có (chưa có
+           KnowledgeRecord nào để trỏ tới). Mở nốt khi Path A sinh ra record đầu.
+
+AR-h   Full-text search: bốn ràng buộc ĐÃ ĐO, phải tuân theo khi build.   ← MỚI
+       Ghi 2026-09-01. Đo trực tiếp trên PostgreSQL 18 của máy này, role kp_app.
+       Ghi ở đây vì mất chúng là phải đo lại, và ba trong bốn cái đi ngược trực giác.
+
+       1) RLS GIẾT INDEX GIN. Toán tử @@ (ts_match_vq) KHÔNG leakproof, nên Postgres
+          không được phép chạy nó trước điều kiện RLS -> nó không bao giờ thành
+          index condition. Đo được:
+             không RLS  -> Bitmap Index Scan on ..._gin   Index Cond: tsv @@ ...
+             có RLS     -> Bitmap Index Scan on ..._tenant
+                           Filter: tsv @@ ...              <-- tụt xuống filter
+          Đã thử hai đường cứu, CẢ HAI THẤT BẠI: GIN gộp (tenant, tsv) chỉ dùng được
+          phần tenant; và kể cả tự viết WHERE tenant = '...' tường minh thì @@ vẫn là
+          Filter.
+          => Cột tsvector LƯU SẴN là thứ chịu lực. Index GIN là đồ thừa chừng nào RLS
+             còn bật, mà RLS thì không tắt được (G7). ĐỪNG tạo nó cho giống người ta.
+
+       2) MỘT DẤU GẠCH NGANG ĐẢO NGƯỢC TRUY VẤN.
+             websearch_to_tsquery('simple','khong or -ve or room')
+                -> 'khong' | !'ve' | 'room'
+             to_tsvector('simple','hoan toan khac biet') @@ <cái đó>  -> TRUE
+          Bất kỳ chủ đề nào chứa một token bắt đầu bằng '-' (dán từ Jira, một gạch
+          thừa) trả về gần như TOÀN BỘ kho của khách đó, không lỗi, không log.
+
+       3) websearch_to_tsquery CÓ NÉM. Chuỗi dài -> "stack depth limit exceeded".
+          Nên đầu vào topic không chặn độ dài là một lỗi 500.
+
+       4) ts_rank_cd KHÔNG CÓ TRẦN theo số lần lặp:
+             comment lặp "pms" 10 lần, trọng số B  -> 4
+             subject đúng chủ đề,      trọng số A  -> 1
+          Một comment dài đè bẹp tiêu đề 4:1 — ngược hẳn thứ S8 cần.
+
+       Ba cái sau đều là THẤT BẠI IM LẶNG: không crash, chỉ trả kết quả sai. Và cả ba
+       sẽ làm hỏng đúng con số "14/20 case đã làm bước này" mà S8 nói là toàn bộ giá
+       trị của bản nháp gom.
+
+AR-g   Đọc evidence ra bằng đường nào?                                    ← MỚI
+       Ghi 2026-08-30. CHƯA CHỌN HƯỚNG, chưa code.
+       Hiện có đường GHI mà không có đường ĐỌC: không endpoint nào trả về evidence
+       của một case. Bộ test phải mở thẳng AppDbContext để kiểm (ApiDatabaseFixture
+       .OpenContext) — chấp nhận được cho test, KHÔNG chấp nhận được cho sản phẩm.
+       Chưa chặn gì: ô kế tiếp (FTS + soạn nháp) chạy trong tiến trình, đọc thẳng
+       từ DbContext. Sẽ chặn khi có bề mặt cần xem lại nguồn của một bản nháp — mà
+       đó chính là thứ S8 nói người duyệt cần nhất.
+
+       evidence_item có schema đầy đủ, có RLS, có index — và KHÔNG có đường ghi.
+       Cả codebase chỉ một dòng chạm tới nó: khai báo DbSet ở AppDbContext.
+       Đây là chỗ chặn Path A, không phải FTS. Xem §4.
+
+       Hai hình dạng API đang cân nhắc:
+
+         (1) LỒNG trong tín hiệu case — thêm mảng evidence[] vào CaseObservedSignal
+             + case và nội dung tới cùng lúc, một lần gọi là xong
+             + không có trạng thái "case tồn tại mà rỗng nội dung"
+             − không bổ sung evidence cho case ĐÃ nạp được
+             − body phình to; trần MaxSignalsPerRequest=500 phải tính lại
+
+         (2) ENDPOINT RIÊNG — POST /signals/case-evidence, trỏ case qua sourceReference
+             + bổ sung được cho case cũ; comment mới ở nguồn đẩy sang được
+             + hai đường độc lập, mỗi đường một trần riêng
+             − bên gửi phải gọi hai lần và tự lo thứ tự
+             − sinh trạng thái trung gian: case có mặt nhưng chưa có nội dung
+             − IM-12 cảnh báo: hai endpoint làm việc gần giống nhau thì đường ít
+               chạy hơn sẽ mục dần. Cần cân nhắc chỗ này.
+
+       Câu hỏi phụ chưa quyết, cả hai hướng đều phải trả lời:
+         · idempotency của evidence — dùng lại (TenantId, SourceReference) như case,
+           hay evidence được phép trùng?
+         · K-B9 nói evidence trỏ THẲNG vào Knowledge được, không qua Case. Slice này
+           có mở đường đó luôn không, hay chỉ làm ObservedInCaseId trước?
+         · MachineReadability do bên gửi khai hay hệ thống suy? AP3 nói provenance
+           không được đoán — nhưng đây là metadata, không phải origin.
 ```
 
 ---

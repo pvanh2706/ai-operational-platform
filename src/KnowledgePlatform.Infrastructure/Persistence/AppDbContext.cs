@@ -30,6 +30,29 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<AssertionEvidence> AssertionEvidenceLinks => Set<AssertionEvidence>();
 
     /// <summary>
+    /// Relation trong schema <c>kp</c> được MIỄN TRỪ khỏi luật "phải có ranh giới tenant".
+    ///
+    /// ⚠ Đây là danh sách VIẾT TAY, và đó là chủ đích — ngược với
+    /// <see cref="TenantScopedTables"/> vốn suy ra từ model. Lý do: cái được bảo vệ thì
+    /// nên tự động (quên là bị bắt), còn cái được MIỄN thì phải là một hành động có
+    /// người ký tên. Một danh sách miễn trừ tự suy ra là một danh sách tự nới lỏng.
+    ///
+    /// Kiểu <c>Dictionary</c> chứ không phải <c>HashSet</c> cũng vì thế: thêm một dòng
+    /// vào đây buộc phải viết LÝ DO, và lý do đó hiện ra trong diff khi có người review.
+    ///
+    /// ⚠ Miễn trừ theo TÊN RELATION, không theo kiểu C#. Cố ý: thứ cần miễn trừ có thể
+    /// không có entity type nào cả — một view, một materialized view, hay một bảng tạo
+    /// bằng SQL thô trong migration. Khoá bằng <c>Type</c> thì đúng những thứ đó lại
+    /// không diễn đạt được.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> TenantExemptRelations { get; } =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["tenant"] = "Danh bạ khách hàng — nó LÀ tenant, không thuộc tenant nào. " +
+                         "Phải đọc được TRƯỚC khi biết tenant của request, nên không thể tự bảo vệ bằng RLS (`IM-14`).",
+        };
+
+    /// <summary>
     /// Tên các bảng phải có RLS. Suy ra TỪ MODEL, không phải danh sách viết tay —
     /// một entity mới cài <see cref="ITenantScoped"/> tự động vào danh sách này,
     /// nên không có đường nào thêm entity mà quên RLS.

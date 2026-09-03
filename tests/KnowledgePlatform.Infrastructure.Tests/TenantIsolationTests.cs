@@ -284,4 +284,197 @@ public sealed class TenantIsolationTests : IClassFixture<TestDatabaseFixture>
         // cho các test sau, và để chứng minh nó đã dọn xong.
         await RlsGuard.VerifyAsync(db);
     }
+
+    // =====================================================================
+    //  RlsGuard — năm cách ranh giới tenant mất mà bản guard CŨ vẫn báo xanh
+    //
+    //  Cả năm đều là fail-open: dữ liệu rò hoặc không được bảo vệ, mà cơ chế
+    //  canh gác lại nói "ổn". Bản cũ chỉ hỏi "có tồn tại policy nào không", nên
+    //  nó mù với cả năm. Xem chú thích đầu RlsGuard.cs.
+    // =====================================================================
+
+    /// <summary>
+    /// ⚠ CA QUAN TRỌNG NHẤT — đã đo trên PostgreSQL 18 trước khi viết test này:
+    /// thêm một policy thứ hai <c>USING (true)</c> thì khách A đọc được dòng của
+    /// khách B, trong khi guard bản cũ vẫn báo XANH.
+    ///
+    /// Lý do: policy trong PostgreSQL mặc định là PERMISSIVE, tức gộp bằng <b>OR</b>.
+    /// Policy thứ hai chỉ NỚI ra, không siết vào — nên ranh giới bằng policy lỏng
+    /// nhất, không phải chặt nhất.
+    /// </summary>
+    [Fact]
+    public async Task RlsGuard_nem_khi_co_policy_thu_hai_permissive()
+    {
+        await using var db = _db.NewContext(new FixedTenantContext(Guid.CreateVersion7()));
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE POLICY mo_toang ON kp.canonical_case USING (true)");
+        try
+        {
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => RlsGuard.VerifyAsync(db));
+
+            Assert.Contains("canonical_case", ex.Message);
+            Assert.Contains("2 policy", ex.Message);
+            // Thông báo phải nói VÌ SAO hai policy là hỏng, không chỉ nói là hỏng.
+            Assert.Contains("OR", ex.Message);
+        }
+        finally
+        {
+            await db.Database.ExecuteSqlRawAsync("DROP POLICY mo_toang ON kp.canonical_case");
+        }
+
+        await RlsGuard.VerifyAsync(db);
+    }
+
+    /// <summary>
+    /// `IM-9` tái phát: một bảng mới chép policy từ migration ĐẦU TIÊN — bản chưa có
+    /// <c>nullif</c>. Lúc đó biến session đã từng được đặt rồi <c>RESET</c> (đúng việc
+    /// connection pool làm) sẽ là chuỗi RỖNG, và <c>''::uuid</c> ném một lỗi KHÔNG
+    /// nhắc gì tới tenant. Người gặp nó sẽ đi tìm bug ép kiểu uuid.
+    ///
+    /// Guard cũ mù với ca này vì nó không đọc biểu thức policy.
+    /// </summary>
+    [Fact]
+    public async Task RlsGuard_nem_khi_bieu_thuc_policy_la_ban_truoc_IM9()
+    {
+        await using var db = _db.NewContext(new FixedTenantContext(Guid.CreateVersion7()));
+
+        await db.Database.ExecuteSqlRawAsync("""
+            DROP POLICY tenant_isolation ON kp.evidence_item;
+            CREATE POLICY tenant_isolation ON kp.evidence_item
+                USING ("TenantId" = current_setting('app.current_tenant', true)::uuid)
+                WITH CHECK ("TenantId" = current_setting('app.current_tenant', true)::uuid);
+            """);
+        try
+        {
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => RlsGuard.VerifyAsync(db));
+
+            Assert.Contains("evidence_item", ex.Message);
+            Assert.Contains("USING", ex.Message);
+            // Phải in ra CẢ hai biểu thức để người đọc thấy ngay chỗ lệch.
+            Assert.Contains("NULLIF", ex.Message);
+        }
+        finally
+        {
+            await db.Database.ExecuteSqlRawAsync($"""
+                DROP POLICY tenant_isolation ON kp.evidence_item;
+                CREATE POLICY tenant_isolation ON kp.evidence_item
+                    USING {RlsGuard.PolicyExpression}
+                    WITH CHECK {RlsGuard.PolicyExpression};
+                """);
+        }
+
+        await RlsGuard.VerifyAsync(db);
+    }
+
+    /// <summary>
+    /// `IM-5`: thiếu <c>FORCE</c> thì CHỦ SỞ HỮU bảng được miễn policy — mà app chạy
+    /// bằng chính chủ sở hữu (<c>kp_app</c> sở hữu database, xem dev-db-setup.sql).
+    /// RLS bật, mà không chặn gì. Guard cũ không kiểm cột này.
+    /// </summary>
+    [Fact]
+    public async Task RlsGuard_nem_khi_thieu_FORCE_ROW_LEVEL_SECURITY()
+    {
+        await using var db = _db.NewContext(new FixedTenantContext(Guid.CreateVersion7()));
+
+        await db.Database.ExecuteSqlRawAsync("ALTER TABLE kp.assertion NO FORCE ROW LEVEL SECURITY");
+        try
+        {
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => RlsGuard.VerifyAsync(db));
+
+            Assert.Contains("assertion", ex.Message);
+            Assert.Contains("FORCE", ex.Message);
+        }
+        finally
+        {
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE kp.assertion FORCE ROW LEVEL SECURITY");
+        }
+
+        await RlsGuard.VerifyAsync(db);
+    }
+
+    /// <summary>
+    /// `AR-d` — cái lỗ mà guard cũ sinh ra để bịt nhưng lại không bịt: nó kiểm MỘT
+    /// CHIỀU ("bảng đã khai có RLS chưa"), không kiểm chiều ngược ("bảng đang tồn tại
+    /// đã được khai chưa"). Quên cài <c>ITenantScoped</c> ở một entity mới thì bảng
+    /// đó rơi khỏi danh sách và guard bỏ qua — tức mặc định là ALLOW, trái `G7`.
+    ///
+    /// Test này cũng ghim luôn RANH GIỚI của phép kiểm nông: nó CỐ Ý không bắt ca này.
+    /// </summary>
+    [Fact]
+    public async Task RlsGuard_nem_khi_co_bang_la_chua_duoc_khai_hoac_mien_tru()
+    {
+        await using var db = _db.NewContext(new FixedTenantContext(Guid.CreateVersion7()));
+
+        await db.Database.ExecuteSqlRawAsync("CREATE TABLE kp.bang_ai_do_quen (id int)");
+        try
+        {
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => RlsGuard.VerifyAsync(db));
+
+            Assert.Contains("bang_ai_do_quen", ex.Message);
+            // Thông báo phải chỉ ra CẢ HAI đường sửa, vì chọn sai đường là tạo lỗ mới.
+            Assert.Contains("ITenantScoped", ex.Message);
+            Assert.Contains("TenantExemptRelations", ex.Message);
+
+            // ⚠ Và phép kiểm NÔNG cố ý KHÔNG bắt — đó là lý do /health/ready dùng nó,
+            // để deploy cuốn chiếu không rút cả đội tiến trình khoẻ ra khỏi luồng.
+            await RlsGuard.VerifyAsync(db, RlsScanDepth.DeclaredTablesOnly);
+        }
+        finally
+        {
+            await db.Database.ExecuteSqlRawAsync("DROP TABLE kp.bang_ai_do_quen");
+        }
+
+        await RlsGuard.VerifyAsync(db);
+    }
+
+    /// <summary>
+    /// Materialized view KHÔNG nhận policy RLS được — Postgres không hỗ trợ. Nên một
+    /// MV bắc qua bảng tenant-scoped là một BẢN SAO không có ranh giới nào, và
+    /// <c>REFRESH</c> chạy dưới tenant nào thì nó đông cứng dữ liệu của tenant đó cho
+    /// mọi người đọc.
+    ///
+    /// Guard cũ lọc <c>relkind = 'r'</c> nên vĩnh viễn không thấy MV. Đây là đường rò
+    /// mạnh hơn cả bảng lạ, và nó sẽ tới đúng lúc làm full-text search.
+    /// </summary>
+    [Fact]
+    public async Task RlsGuard_nem_khi_co_materialized_view_trong_schema()
+    {
+        await using var db = _db.NewContext(new FixedTenantContext(Guid.CreateVersion7()));
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE MATERIALIZED VIEW kp.mv_khong_co_rls AS SELECT 1 AS x");
+        try
+        {
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => RlsGuard.VerifyAsync(db));
+
+            Assert.Contains("mv_khong_co_rls", ex.Message);
+            Assert.Contains("materialized view", ex.Message);
+        }
+        finally
+        {
+            await db.Database.ExecuteSqlRawAsync("DROP MATERIALIZED VIEW kp.mv_khong_co_rls");
+        }
+
+        await RlsGuard.VerifyAsync(db);
+    }
+
+    /// <summary>
+    /// Miễn trừ phải KÈM LÝ DO. Kiểu <c>Dictionary</c> thay vì <c>HashSet</c> tồn tại
+    /// chỉ để ép điều này: thêm một dòng vào danh sách miễn trừ buộc phải viết ra vì
+    /// sao, và lý do đó hiện trong diff khi có người review.
+    ///
+    /// Test này đỏ nếu ai đó thêm một miễn trừ mà để lý do trống.
+    /// </summary>
+    [Fact]
+    public void Moi_mien_tru_deu_phai_co_ly_do()
+    {
+        Assert.NotEmpty(AppDbContext.TenantExemptRelations);
+        Assert.All(
+            AppDbContext.TenantExemptRelations,
+            kv => Assert.False(string.IsNullOrWhiteSpace(kv.Value), $"Miễn trừ \"{kv.Key}\" không ghi lý do."));
+
+        // Hôm nay đúng MỘT ngoại lệ hợp lệ: bảng danh bạ tenant (`IM-14`).
+        Assert.Equal(["tenant"], AppDbContext.TenantExemptRelations.Keys.OrderBy(k => k));
+    }
 }

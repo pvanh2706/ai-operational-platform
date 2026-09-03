@@ -2,13 +2,52 @@
 
 ## AI Operational Knowledge & Process Platform
 
-> **Cập nhật:** 2026-08-25 buổi 2 — ✅ **LUẬT DOMAIN ĐÃ CÓ TEST RIÊNG, KHÔNG CẦN DB.**
+> **Cập nhật:** 2026-09-01 — 🛑 **TÌM RA LỖ FAIL-OPEN TRONG CHÍNH `RlsGuard`, ĐÃ SỬA.**
+> Guard bản cũ chỉ hỏi *"bảng này có policy nào không"*, không hỏi policy đó **nói gì**.
+> Policy PostgreSQL gộp bằng **OR**, nên thêm một policy `USING (true)` là khách A đọc
+> được dữ liệu khách B — **trong khi guard vẫn báo xanh**. Đã đo thật, câu SQL tái hiện
+> ở `07` §3 `IM-22`. Sinh `IM-22`, `IM-23`; `AR-d` ✅ ĐÓNG 2026-09-03 (người dùng xác
+> nhận). Cùng ngày: hết trùng số hiệu — câu "chuỗi kết nối DB" đổi thành `AR-i`.
+> **103 test** (48 domain + 15 hạ tầng + 40 API), và 5 phép đột biến chứng minh cả 5
+> luật mới của guard đều biết ĐỎ.
+> ⚠ Lỗ nằm bên trong cơ chế được dựng riêng để chống rò rỉ. Đó là điều đáng nhớ nhất:
+> một cơ chế canh gác cũng cần có người canh nó.
+> ⚠ Sinh `AR-h` — **bốn ràng buộc đã đo cho FTS**, ba trong bốn đi ngược trực giác.
+> Nặng nhất: **RLS giết index GIN** (toán tử `@@` không leakproof). Đọc trước khi
+> build bước (c), kẻo làm xong mới biết index vô dụng.
+> ⚠ Cả ba thiết kế do workflow sinh ra đều bị phản biện trả `needs_revision` — **không
+> cái nào được ship nguyên trạng**. Chỉ phần `AR-d` được viết lại tay rồi mới code.
+>
+> **Trước đó:** 2026-08-30 — ✅ **ĐÃ CÓ ĐƯỜNG NẠP NỘI DUNG.** `POST /signals/case-evidence`
+> chạy được: một Case giờ mang được comment, ghi chú xử lý, email — thứ mà Path A thật
+> sự gom. `AR-f` CHỐT: endpoint riêng, link case **nhận null** (`K-B9`). Sinh `IM-19`..
+> `IM-21` và `AR-g`. **97 test** (48 domain + 9 hạ tầng + 40 API), và đã chứng minh biết
+> đỏ bằng 5 phép đột biến — trong đó hai phép tách bạch được HAI TẦNG chống trùng:
+> bỏ kiểm-trước-khi-ghi mà giữ unique index thì VẪN XANH, bỏ cả hai thì ĐỎ.
+> ✅ Bộ Postman lên **23 request / 59 assertion**, chạy thật bằng newman: 0 đỏ.
+> ⚠ CHƯA COMMIT — người dùng chọn "chỉ sửa docs, chưa commit".
+>
+> **Cùng ngày, trước đó:** ⚠️ **PHÁT HIỆN LỖ TRONG KẾ HOẠCH: `evidence_item` KHÔNG CÓ
+> ĐƯỜNG GHI NÀO.** Toàn bộ codebase chỉ có một dòng chạm tới nó — khai báo `DbSet`.
+> Nghĩa là một `canonical_case` hôm nay là **một dòng chữ**: subject + khoá nguồn +
+> hai mốc thời gian, không có comment, không có cách xử lý, không có kết quả.
+> Hệ quả: `S8` đòi bản nháp gom mang theo một **phân bố** (*"14/20 case đã làm bước
+> này"*), mà con số đó KHÔNG suy ra được từ 20 cái tiêu đề. `06` §5 cũng đã ghi ý
+> định rõ: *"1M context → Path A: 20 case **+ evidence** trong MỘT request"*.
+> ⚠ Lỗ này KHÔNG nằm trong danh sách §4 "Chưa build" của `07` — nó là chỗ kế hoạch
+> bỏ sót, không phải việc đã biết mà chưa tới lượt. Sinh `AR-f`.
+> → Thứ tự đã sửa: **nạp evidence** trước, rồi bạn xuất Jira thật, rồi mới FTS.
+> ✅ **MÁY NÀY ĐÃ CÓ POSTGRESQL.** 81/81 test xanh (48 domain + 9 hạ tầng + 24 API).
+> ✅ Có bộ test API Postman: `scripts/postman/` — 13 request, đã gọi thật vào app đang
+> chạy trước khi đóng gói. ⚠ CHƯA COMMIT (untracked).
+>
+> **Trước đó:** 2026-08-25 buổi 2 — ✅ **LUẬT DOMAIN ĐÃ CÓ TEST RIÊNG, KHÔNG CẦN DB.**
 > Sinh `IM-18`. **48 test mới**, chạy 77ms trên máy CHƯA cài PostgreSQL, và đã chứng
 > minh biết đỏ bằng 5 phép đột biến vào `src/`. Tổng: **81 test** (48 domain + 33 cần DB).
 > ⚠ Phát hiện khi chuyển máy: trước đó **100% test cắm vào PostgreSQL** — luật sinh
 > ra từ 23 quyết định của Workstream 04 (`V1` `V3` `S7` `M2`) chưa từng được kiểm lần
 > nào. Con số đó vô hình trên máy cũ vì mọi thứ đều xanh. Xem `07` §9.
-> ⚠ Máy hiện tại CHƯA có PostgreSQL → 33 test kia không chạy được. Chưa phải lỗi code.
+> ⚠ Lúc đó máy chưa có PostgreSQL → 33 test kia không chạy được. **Đã hết từ 2026-08-30.**
 >
 > **Trước đó, cùng ngày buổi 1:** ✅ **ĐÃ CÓ KÊNH 1** (đường nhận tín hiệu). Ô "tìm hoặc
 > tạo Case" của sơ đồ luồng CHẠY ĐƯỢC: phần mềm của khách gọi vào, hệ thống tạo Case,
@@ -111,20 +150,34 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ```text
 1  Workstream 07 — tiếp slice Path A. Nền móng, host VÀ Kênh 1 ĐÃ XONG (07 §2).
-   Việc kế tiếp là TRUY VẤN "tìm N case cũ liên quan" — dependency đầu tiên của
-   Path A, và giờ có ĐỦ ĐIỀU KIỆN để làm cho đúng: đã có đường đưa case thật vào
-   hệ thống (POST /signals/case-observed nhận cả lô), nên FTS chạy trên dữ liệu
-   thật chứ không trên case bịa.
-   AR4: Postgres full-text search TRƯỚC, pgvector khi ĐO ĐƯỢC là không đủ.
-   Sau đó: ISoạnNhápSOP gọi Anthropic SDK · luồng duyệt (S7) · diff(A,B) cho M2.
 
-   ⭐ VIỆC CỦA BẠN, mở khoá được §8.2: xuất issue OTA từ Jira ra CSV/JSON rồi gửi
-     vào POST /signals/case-observed. Có case thật thì §8.2 trả lời được bằng
-     n = 50-200 thay vì ngồi đếm tay 20 case, và AR4-b cũng đo được luôn.
+   ⚠ THỨ TỰ ĐÃ SỬA 2026-08-30. Bản cũ ghi việc kế tiếp là TRUY VẤN "tìm N case cũ
+     liên quan". Thứ tự đó đúng nhưng thiếu một mắt xích: `evidence_item` chưa có
+     đường ghi, nên FTS sẽ tìm trên tiêu đề 1 dòng và Path A không gom được gì.
+     Lập luận cũ KHÔNG bị xoá — nó vẫn đúng rằng FTS là dependency của Path A;
+     nó chỉ bỏ sót việc case rỗng nội dung thì tìm được cũng không dùng được.
 
-   ⚠ MÁY HIỆN TẠI CHƯA CÓ POSTGRESQL (chuyển máy 2026-08-25). 33 test cần DB đang
-     không chạy được — chúng ĐỎ vì THIẾU MÔI TRƯỜNG, không phải vì code sai.
-     48 test domain vẫn chạy:  dotnet test tests/KnowledgePlatform.Domain.Tests
+   a  ✅ XONG 2026-08-30 — NẠP EVIDENCE VÀO KÊNH 1.
+      POST /signals/case-evidence · AR-f chốt · 16 test · đã gọi thật.
+   b  ⭐ VIỆC CỦA BẠN, LÀ VIỆC KẾ TIẾP: xuất issue OTA thật từ Jira KÈM COMMENT
+      rồi đẩy vào Kênh 1. Hai lần gọi, theo thứ tự:
+        1. POST /signals/case-observed   ← issue (idempotent, gửi lại vô hại)
+        2. POST /signals/case-evidence   ← comment, trỏ về issue qua sourceReference
+      Trần mặc định 500 mỗi lô cho mỗi đường. Xem nhóm E của bộ Postman để lấy mẫu
+      body đúng. Mở khoá §8.2 (n = 50-200 thay vì đếm tay 20) và AR4-b.
+   c  TRUY VẤN "tìm N case cũ liên quan" — tune trên corpus thật, không phải case bịa.
+      AR4: Postgres full-text search TRƯỚC, pgvector khi ĐO ĐƯỢC là không đủ.
+      ⚠ ĐỌC `AR-h` (07 §5) TRƯỚC KHI BUILD. Bốn ràng buộc đã đo, và cái nặng nhất là
+        RLS giết index GIN — làm xong mới biết index vô dụng thì mất công hai lần.
+      ⚠ Chưa có tsvector, chưa có GIN index. Index duy nhất trên canonical_case là
+        (TenantId, SourceResolvedAt) — index theo TRẠNG THÁI/THỜI GIAN, dù comment
+        ngay phía trên nó trong AppDbContext ghi "index để tìm theo chủ đề".
+        Comment và code đang lệch nhau ở đó. Bước (c) phải sinh migration mới.
+   d  Sau đó: ISoạnNhápSOP gọi Anthropic SDK · luồng duyệt (S7) · diff(A,B) cho M2.
+
+   ✅ MÁY NÀY ĐÃ CÓ POSTGRESQL (kiểm 2026-08-30). 81/81 test xanh:
+     dotnet test src/KnowledgePlatform.slnx
+     48 domain (124ms) + 9 hạ tầng (691ms) + 24 API (1s).
 
    ⚠ Dựng DB local một lần:  psql -U postgres -f scripts/dev-db-setup.sql
      KHÔNG chạy app hay test bằng role superuser — superuser đi vòng qua RLS,
