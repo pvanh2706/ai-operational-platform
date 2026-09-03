@@ -165,6 +165,12 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
         2. POST /signals/case-evidence   ← comment, trỏ về issue qua sourceReference
       Trần mặc định 500 mỗi lô cho mỗi đường. Xem nhóm E của bộ Postman để lấy mẫu
       body đúng. Mở khoá §8.2 (n = 50-200 thay vì đếm tay 20) và AR4-b.
+      ✅ SCRIPT ĐÃ CÓ 2026-09-03: scripts/jira-export/export_jira_to_channel1.py
+      (Python, chỉ stdlib; Jira Server/DC — PAT qua Bearer, rơi về Basic).
+      Việc của bạn thu lại còn: đặt JIRA_BASE_URL + JIRA_PAT + JIRA_JQL, chạy
+      --dry-run soi hai file JSON, rồi chạy thật khi app đang chạy local.
+      Cách dùng đầy đủ nằm ở docstring đầu script. Script tự chuẩn hoá timestamp
+      +0700 → +07:00 (Jira Server trả dạng .NET không đọc được — đã thử và vá).
    c  TRUY VẤN "tìm N case cũ liên quan" — tune trên corpus thật, không phải case bịa.
       AR4: Postgres full-text search TRƯỚC, pgvector khi ĐO ĐƯỢC là không đủ.
       ⚠ ĐỌC `AR-h` (07 §5) TRƯỚC KHI BUILD. Bốn ràng buộc đã đo, và cái nặng nhất là

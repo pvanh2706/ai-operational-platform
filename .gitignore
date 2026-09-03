@@ -14,3 +14,7 @@ appsettings.*.local.json
 .vs/
 .idea/
 *.swp
+
+# Đầu ra --dry-run của script xuất Jira — dữ liệu vận hành của công ty,
+# chỉ để soi bằng mắt trước khi nạp, không thuộc về repo.
+scripts/jira-export/dry-run-*.json
