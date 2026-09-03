@@ -34,6 +34,16 @@ public sealed class EvidenceItem : ITenantScoped
     /// <summary>
     /// Case mà evidence này được quan sát trong đó, nếu có.
     /// NULL là hợp lệ và quan trọng — đó là K-B9 (email/ghi chú rời không thuộc case nào).
+    ///
+    /// ⚠ **ĐỘ LỆCH CÓ CHỦ ĐÍCH so với v0.2 §9 — đọc trước khi sửa.**
+    /// §9 nói *"một EvidenceItem có thể liên quan NHIỀU Case"*, còn field này chỉ giữ
+    /// được MỘT. Đây là rút gọn ĐÃ CÂN NHẮC (`AR-f`, chốt 2026-08-30), không phải quên:
+    /// Path A chỉ cần "evidence của case này là những gì", chưa cần một evidence phục
+    /// vụ hai case. §6.7 — vừa đủ để build.
+    ///
+    /// Làm đúng §9 sẽ là một bảng liên kết <c>case_evidence</c> và bỏ field này. Khi nào
+    /// tới lúc đó: khi có ca thật cần một mẩu evidence chống lưng cho hai case khác nhau.
+    /// Ghi ở đây để người đọc sau phân biệt được "đã cân nhắc rồi rút gọn" với "bỏ sót".
     /// </summary>
     public Guid? ObservedInCaseId { get; set; }
 

@@ -91,6 +91,16 @@ public sealed class ApiDatabaseFixture : IAsyncLifetime
 
     public Task DisposeAsync() => Task.CompletedTask;
 
+    /// <summary>
+    /// Mở một <see cref="AppDbContext"/> trỏ vào chính database test, với tenant chỉ định.
+    ///
+    /// Dùng khi test cần ĐỌC LẠI thứ vừa ghi mà API chưa có endpoint đọc — ví dụ nhãn
+    /// <c>MachineReadability</c> đã lưu là gì. Không có nó thì mấy hành vi "âm thầm"
+    /// (tự về Unknown, âm thầm ghi đè nội dung) chỉ kiểm được gián tiếp qua số dòng,
+    /// mà số dòng thì không phân biệt được "giữ nguyên" với "ghi đè".
+    /// </summary>
+    public AppDbContext OpenContext(Guid tenantId) => NewContext(tenantId: tenantId);
+
     private static AppDbContext NewContext(bool unresolvedTenant = false, Guid? tenantId = null)
     {
         ITenantContext tenant = unresolvedTenant

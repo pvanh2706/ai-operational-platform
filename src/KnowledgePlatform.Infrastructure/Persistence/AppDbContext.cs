@@ -83,6 +83,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             // K-B9: ObservedInCaseId NULL là HỢP LỆ và quan trọng — một email của
             // senior hay tin Zalo không thuộc case nào. Không đặt required ở đây.
             e.HasIndex(x => new { x.TenantId, x.ObservedInCaseId });
+
+            // Chống trùng, GIỐNG HỆT canonical_case và vì cùng một lý do: webhook gửi
+            // lại, job đồng bộ chạy lại, bên gửi retry. Thiếu index này thì cùng một
+            // comment Jira gửi mười lần ra mười dòng, và bản nháp gom của Path A sẽ
+            // đếm một quan sát thành mười — hỏng đúng chỗ `S8` cần chính xác nhất
+            // ("14/20 case đã làm bước này").
+            e.HasIndex(x => new { x.TenantId, x.SourceReference }).IsUnique();
         });
 
         // --- KnowledgeRecord + cụm assertion (§3C.5) ---

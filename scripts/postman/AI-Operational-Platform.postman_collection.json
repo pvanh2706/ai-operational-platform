@@ -1,0 +1,1411 @@
+{
+  "info": {
+    "_postman_id": "a7f3c1d0-2b45-4e88-9c1a-6d0e5f4b7a21",
+    "name": "AI Operational Platform — Dev (Kênh 1)",
+    "description": "# AI Operational Knowledge & Process Platform — bộ test API dev\n\nWorkstream 07, slice **Path A**. Mọi request trong bộ này đã được gọi thật vào app đang\nchạy trước khi đóng gói — phản hồi mô tả trong từng request là phản hồi thật, không phải\nphỏng đoán từ code.\n\n> **Cập nhật 2026-09-03** — 27 request · 70 phép kiểm · chạy thật bằng newman, 0 đỏ.\n> Bộ này phủ **toàn bộ 5 endpoint** đang tồn tại; không có endpoint nào chưa được test.\n> Lần này sửa ba chỗ: **A2** mô tả lại theo `IM-23` (readiness cố ý kiểm NÔNG hơn lúc\n> khởi động — nói rõ nó bắt được gì và KHÔNG bắt được gì), **A3** đọc cả ba bộ đếm chứ\n> không chỉ `cases`, và nhóm **E** thêm bốn ca lỗi (E7–E10) song song với nhóm C.\n\n## Trước khi chạy\n\n```bash\ndotnet run --project src/KnowledgePlatform.Api\n```\n\nApp lắng nghe ở `http://localhost:5119`. Đổi biến `baseUrl` nếu bạn chạy cổng khác.\n\n## Năm nhóm\n\n| Nhóm | Nội dung |\n|---|---|\n| **A** | Kiểm tra sống — liveness, readiness, ranh giới tenant |\n| **B** | Kênh 1 — gửi tín hiệu vào, gồm phép thử chống trùng Case |\n| **C** | Ca lỗi — chỗ hệ thống hứa không thất bại im lặng |\n| **D** | Hai hành vi dễ hiểu nhầm là lỗ hổng |\n| **E** | Kênh 1 — nạp **nội dung** (evidence), gồm phép thử chống trùng evidence |\n\n## Chạy cả bộ\n\nDùng **Collection Runner** theo thứ tự A → B → C → D → E. Mọi request đều có test tự động.\nBốn chỗ phụ thuộc nhau:\n\n- **B2** dùng lại khoá nguồn B1 vừa gửi, để kiểm `created` về `0`.\n- **C4b** so số case với giá trị **A3** đã ghi, để chứng minh lô pha trộn bị từ chối\n  trọn vẹn chứ không xử lý một phần.\n- **E1** gắn evidence vào chính Case mà **B1** tạo, và **E2** dùng lại khoá E1 vừa gửi.\n- **E11** so số evidence với giá trị **E0** đã ghi, cùng mục đích với C4b.\n\nChạy lẻ từng request vẫn được — chỉ hai test phụ thuộc ở trên sẽ đỏ.\n\nCollection chạy lại được nhiều lần: các `sourceReference` đều sinh kèm timestamp.\n\n## Ranh giới thật của slice này\n\nTín hiệu đi vào, tạo Case và nạp được **nội dung** của Case đó (nhóm E, thêm 2026-08-30).\nRồi dừng. Các ô sau của sơ đồ luồng — khớp quy trình đã duyệt, suy ra bước hiện tại, tra\ntri thức, trả gợi ý — **chưa build**, và **không** có bước nào rút assertion hay sinh\nKnowledgeRecord từ evidence vừa nạp (`S6`: nạp nội dung không tự sinh tri thức).\nResponse cố ý không có trường nào trông như thể chúng đã có.\n\n## Xoá sạch dữ liệu test\n\n```\npsql -U kp_app -h localhost -d kp_dev -c \"TRUNCATE kp.canonical_case, kp.evidence_item;\"\n```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "A. Kiểm tra sống",
+      "description": "Ba câu hỏi khác nhau, cố ý tách rời:\n\n- `/health` — tiến trình còn sống không? Không chạm database, không cần tenant.\n- `/health/ready` — phục vụ được chưa? Database sống VÀ row-level security còn nguyên.\n- `/internal/tenant-boundary` — ranh giới giữa các khách hàng có đang sống không?",
+      "item": [
+        {
+          "name": "A1 · Liveness — /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Không chạm database, không cần tenant.\n\nTrả `{\"status\":\"ok\"}` kể cả khi database chết — đó là chủ đích: \"tiến trình còn sống\"\nvà \"phục vụ được\" là hai câu hỏi khác nhau, nên là hai endpoint khác nhau."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status = ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A2 · Readiness — /health/ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/ready",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Database sống VÀ ranh giới tenant còn nguyên.\n\n⚠ **Đổi 2026-09-01 (`IM-23`) — endpoint này CỐ Ý kiểm NÔNG hơn lúc khởi động.**\n\n| | Kiểm gì | Câu hỏi nó trả lời |\n|---|---|---|\n| Lúc khởi động | mọi bảng đã khai **cộng** \"không relation lạ nào trong schema\" | bản build này có khớp database này không |\n| Endpoint này | **chỉ** các bảng model khai là tenant-scoped | tôi phục vụ được không |\n\nNên nó vẫn bắt được: ai đó tắt RLS, gỡ `FORCE`, đổi biểu thức policy, hoặc thêm một\npolicy thứ hai `USING (true)` trên một bảng đã khai — tất cả trên database ĐANG CHẠY,\nvà trả **503** kèm lý do cụ thể.\n\nNó **KHÔNG** bắt: một bảng/view/materialized view lạ xuất hiện trong schema. Cái đó\nchỉ chặn lúc khởi động, và đó là quyết định có chủ đích: nếu readiness cũng chặn thì\nlúc deploy cuốn chiếu, bản N+1 chạy migration tạo bảng mới sẽ làm các tiến trình bản N\ncũ đồng loạt trả 503 — rút cả đội đang khoẻ ra khỏi luồng vì một bảng chúng không đụng."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 — dang phuc vu duoc', () => pm.response.to.have.status(200));",
+                  "pm.test('status = ready', () => pm.expect(pm.response.json().status).to.eql('ready'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A3 · Ranh giới tenant — /internal/tenant-boundary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/tenant-boundary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "tenant-boundary"
+              ]
+            },
+            "description": "**Endpoint đáng xem nhất trong bộ này.**\n\n`rowsVisibleWithoutTenantFilter` đếm bằng một câu SQL thô **cố ý không có điều kiện\ntenant**. Nếu RLS đang làm việc, nó chỉ đếm được dữ liệu của khách hàng gọi request\nnày. Hai khách hàng gọi cùng endpoint này phải thấy hai con số khác nhau — và đó là\ntoàn bộ lời hứa AR2, đo được bằng một request.\n\nĐây là endpoint HẠ TẦNG, không phải bề mặt sản phẩm.\n\nRequest này ghi `caseCount` vào biến collection để C4b đối chiếu về sau."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "const rows = b.rowsVisibleWithoutTenantFilter;",
+                  "pm.test('co tenantId', () => pm.expect(b.tenantId).to.be.a('string'));",
+                  "// Ba bo dem, khong phai mot. `evidence` them 2026-08-30 cung duong nap noi dung —",
+                  "// khong do duoc thi loi hua \"lo hong thi KHONG ghi gi\" cua nhom E khong kiem duoc.",
+                  "pm.test('du ca ba bo dem: cases · evidence · knowledge', () =>",
+                  "  pm.expect(Object.keys(rows).sort()).to.eql(['cases', 'evidence', 'knowledge']));",
+                  "pm.test('knowledge van la 0 — chua luong nao ghi tri thuc (S6)', () =>",
+                  "  pm.expect(rows.knowledge).to.eql(0));",
+                  "pm.collectionVariables.set('caseCount', rows.cases);",
+                  "console.log('Tenant:', b.mode, b.tenantId);",
+                  "console.log('cases:', rows.cases, '| evidence:', rows.evidence, '| knowledge:', rows.knowledge);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "B. Kênh 1 — gửi tín hiệu",
+      "description": "Đường nhận tín hiệu từ phần mềm có sẵn của khách (Jira, CRM, helpdesk, Zalo...).\n\nTín hiệu đi vào và dừng ở ô **\"Tìm hoặc tạo Case\"**. Các ô sau của sơ đồ luồng — khớp\nquy trình đã duyệt, suy ra bước hiện tại, tra tri thức, trả gợi ý — **CHƯA BUILD**, và\nresponse cố ý không có trường nào trông như thể chúng đã có.\n\n⚠ Chạy B1 rồi B2 đúng thứ tự: B2 kiểm chống trùng bằng chính khoá B1 vừa gửi.",
+      "item": [
+        {
+          "name": "B1 · Một tín hiệu mới",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "Endpoint nhận một **MẢNG** tín hiệu, không phải một tín hiệu. Lô một phần tử là ca\nthường gặp; lô lớn là đường nạp case lịch sử. Một đường code cho cả hai — tách hai\nendpoint là tạo hai đường code làm cùng một việc, và đường ít chạy hơn sẽ mục dần\nmà không ai biết.\n\n`sourceReference` sinh kèm timestamp để chạy lại collection vẫn ra `created: true`.\nKhoá này được lưu vào biến `dedupRef` cho B2 dùng lại.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"sourceReference\": \"{{dedupRef}}\",\n    \"subject\": \"Rate plan sai gia tren Agoda\",\n    \"sourceCreatedAt\": \"2026-02-11T08:15:00Z\",\n    \"sourceResolvedAt\": \"2026-02-11T16:40:00Z\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Khoa moi moi lan chay, de B1 luon la \"tao moi\" that.",
+                  "pm.collectionVariables.set('dedupRef', 'jira:ES-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('received = 1', () => pm.expect(b.received).to.eql(1));",
+                  "pm.test('created = 1 — case moi', () => pm.expect(b.created).to.eql(1));",
+                  "pm.collectionVariables.set('dedupCaseId', b.results[0].caseId);",
+                  "console.log('Case vua tao:', b.results[0].caseId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B2 · Gửi lại y nguyên — chống trùng Case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "**Phép thử quan trọng nhất của cả bộ.**\n\nBody giống hệt B1. Kỳ vọng: `created` về `0` và `caseId` **không đổi**.\n\nĐây không phải tiện lợi mà là bắt buộc — bên gửi retry, webhook gửi lại, job đồng bộ\nchạy lại. Nếu mỗi lần sinh một Case mới thì Path A đi gom về sẽ đếm một việc thành\nmười, và không có gì báo.\n\nCơ chế: unique index `(TenantId, SourceReference)` có từ migration đầu tiên.\n\n`created: false` KHÔNG phải lỗi. Trả lỗi cho nó sẽ bắt bên gửi phải tự nhớ mình đã\ngửi gì — đúng thứ tích hợp hệ thống không làm được.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"sourceReference\": \"{{dedupRef}}\",\n    \"subject\": \"Rate plan sai gia tren Agoda\",\n    \"sourceCreatedAt\": \"2026-02-11T08:15:00Z\",\n    \"sourceResolvedAt\": \"2026-02-11T16:40:00Z\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 — gui lai KHONG phai loi', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('received = 1', () => pm.expect(b.received).to.eql(1));",
+                  "pm.test('created = 0 — khong sinh case trung', () => pm.expect(b.created).to.eql(0));",
+                  "pm.test('caseId giu nguyen nhu B1', () =>",
+                  "  pm.expect(b.results[0].caseId).to.eql(pm.collectionVariables.get('dedupCaseId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B3 · Lô nhiều nguồn khác nhau",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "`sourceReference` cố ý là **chuỗi tự do** — `jira:`, `crm:`, `zalo:`, gì cũng được.\n\nG1: Case KHÔNG phụ thuộc Jira; Jira Issue chỉ là biểu diễn ở nguồn ngoài. Không field\nnào của hợp đồng này biết Jira là gì, và đó là chủ đích.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"sourceReference\": \"jira:ES-{{$timestamp}}\", \"subject\": \"Booking Traveloka khong ve PMS\", \"sourceCreatedAt\": \"2026-02-12T09:00:00Z\", \"sourceResolvedAt\": \"2026-02-12T11:20:00Z\"},\n  {\"sourceReference\": \"crm:deal/{{$timestamp}}\", \"subject\": \"Khach hoi ve tich hop OTA\"},\n  {\"sourceReference\": \"zalo:msg/{{$timestamp}}\", \"subject\": \"Khach nhan tin hoi gia phong\", \"sourceCreatedAt\": \"2026-02-12T14:05:00Z\"}\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('received = 3', () => pm.expect(b.received).to.eql(3));",
+                  "pm.test('ca 3 nguon deu tao duoc case', () => pm.expect(b.results).to.have.lengthOf(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B4 · Case chưa xong (không có sourceResolvedAt)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "`sourceResolvedAt: null` = việc chưa xử lý xong ở nguồn.\n\nPath A cần field này để chọn \"case CŨ\" — case chưa xong thì chưa có gì để học.\nTín hiệu vẫn được nhận và vẫn tạo Case, chỉ là Path A sẽ không gom nó.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"sourceReference\": \"jira:ES-open-{{$timestamp}}\", \"subject\": \"Dang xu ly, chua xong\"}\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('created = 1', () => pm.expect(pm.response.json().created).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "C. Ca lỗi — không thất bại im lặng",
+      "description": "Nhóm này test đúng chỗ hệ thống hứa: **thà từ chối cả lô còn hơn xử lý một phần rồi để\nbạn tưởng đã nạp hết**.\n\nMọi request trong nhóm kỳ vọng 400.",
+      "item": [
+        {
+          "name": "C1 · Mảng rỗng → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "Body hợp lệ về cú pháp nhưng không mang tín hiệu nào. Trả 400 thay vì 200 im lặng.",
+            "body": {
+              "mode": "raw",
+              "raw": "[]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('title = Khong co tin hieu nao', () =>",
+                  "  pm.expect(pm.response.json().title).to.include('Không có tín hiệu nào'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "C2 · Thiếu sourceReference → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "Thiếu khoá nguồn thì không có gì làm chỗ dựa cho việc chống trùng — nên từ chối thẳng,\nkhông tự sinh khoá thay.\n\nLỗi trả về chỉ rõ chỉ số phần tử hỏng: `[0]`.",
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"subject\": \"Thieu khoa nguon\"}]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "const b = pm.response.json();",
+                  "pm.test('loi tro dung phan tu [0]', () => pm.expect(b.errors).to.have.property('[0]'));",
+                  "pm.test('noi ro thieu sourceReference', () =>",
+                  "  pm.expect(b.errors['[0]'][0]).to.include('sourceReference'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "C3 · Thiếu subject → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "`subject` là \"việc gì cần xử lý, ở dạng chữ\". Không có nó thì Case rỗng nghĩa.",
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"sourceReference\": \"jira:ES-9999\"}]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('noi ro thieu subject', () =>",
+                  "  pm.expect(pm.response.json().errors['[0]'][0]).to.include('subject'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "C4 · Lô pha trộn → từ chối CẢ LÔ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "`[0]` hợp lệ, `[1]` thiếu `subject`.\n\nKỳ vọng: 400, lỗi trỏ đúng `[1]`, và **`[0]` KHÔNG được tạo**.\n\nRequest C4b ngay sau đây kiểm chính điều đó.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"sourceReference\": \"jira:ES-7777\", \"subject\": \"Hop le\"},\n  {\"sourceReference\": \"jira:ES-8888\"}\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "const b = pm.response.json();",
+                  "pm.test('loi tro dung [1], khong phai [0]', () => {",
+                  "  pm.expect(b.errors).to.have.property('[1]');",
+                  "  pm.expect(b.errors).to.not.have.property('[0]');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "C4b · Đối chiếu — [0] có bị tạo nhầm không?",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/tenant-boundary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "tenant-boundary"
+              ]
+            },
+            "description": "Chạy ngay sau C4. So số `cases` với giá trị A3 đã ghi.\n\nBằng nhau nghĩa là lô pha trộn bị từ chối trọn vẹn, không xử lý một phần.\n\n⚠ Test này chỉ đúng khi chạy cả collection theo thứ tự bằng Collection Runner.\nSố kỳ vọng = `caseCount` lúc A3 + 5 case do B1(1) + B3(3) + B4(1) tạo. B2 trùng\nnên không tính, D2 chạy sau nên chưa ảnh hưởng."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const now = pm.response.json().rowsVisibleWithoutTenantFilter.cases;",
+                  "const before = Number(pm.collectionVariables.get('caseCount'));",
+                  "const expected = before + 5; // B1(1) + B3(3) + B4(1); B2 trung nen khong tinh",
+                  "pm.test('C4 khong tao nham case nao — tong dung ' + expected, () =>",
+                  "  pm.expect(now).to.eql(expected));",
+                  "console.log('cases truoc:', before, '| sau:', now, '| ky vong:', expected);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "C5 · Lô quá lớn (501 > trần 500) → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "Trần `Ingest:MaxSignalsPerRequest`, mặc định 500.\n\nTừ chối **cả lô**, KHÔNG cắt bớt. Cắt bớt im lặng đọc ra thành \"đã nạp hết\" trong khi\nkhông phải — đúng loại thất bại im lặng dự án này đang chặn.\n\nBody sinh bằng Pre-request Script vì 501 phần tử không dán tay được.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{bigBatch}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('bigBatch', JSON.stringify(",
+                  "  Array.from({length: 501}, (_, i) => ({sourceReference: 'bulk:' + i, subject: 'x'}))",
+                  "));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "const b = pm.response.json();",
+                  "pm.test('title = Lo tin hieu qua lon', () =>",
+                  "  pm.expect(b.title).to.include('Lô tín hiệu quá lớn'));",
+                  "pm.test('noi ro nhan bao nhieu / tran bao nhieu', () => {",
+                  "  pm.expect(b.detail).to.include('501');",
+                  "  pm.expect(b.detail).to.include('500');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "D. Hai ca dễ hiểu nhầm",
+      "description": "Hai hành vi trông như lỗ hổng nhưng là cấu hình dev có chủ đích.\nĐể đây cho khỏi mất thời gian truy nhầm.",
+      "item": [
+        {
+          "name": "D1 · X-Tenant-Key KHÔNG đổi được tenant",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Key",
+                "value": "mot-khach-hang-khac"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/internal/tenant-boundary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "tenant-boundary"
+              ]
+            },
+            "description": "Bản dev chạy `Tenancy:Mode = DedicatedSingleTenant` — một bản deploy, một khách hàng.\nTenant lấy từ **cấu hình**, đã tra và xác nhận tồn tại lúc khởi động. Header bị bỏ qua\nhoàn toàn, `tenantId` trả về không đổi.\n\nHeader `X-Tenant-Key` chỉ có tác dụng ở chế độ `SharedMultiTenant`. Cả hai chế độ đi\nqua cùng một cài đặt `ITenantContext` (G13) — khác nhau ở chỗ middleware quyết, không\nở đường code riêng.\n\nỞ chế độ shared, khoá lạ KHÔNG trả 404: \"khoá này có tồn tại không\" là thông tin về\nkhách hàng khác. Nó trả 400 chung chung."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('van la DedicatedSingleTenant', () =>",
+                  "  pm.expect(b.mode).to.eql('DedicatedSingleTenant'));",
+                  "pm.test('header KHONG doi duoc tenantId', () =>",
+                  "  pm.expect(b.tenantId).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "D2 · X-Signal-Key sai vẫn qua (trên máy dev)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Signal-Key",
+                "value": "sai-be-bet"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-observed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-observed"
+              ]
+            },
+            "description": "`appsettings.Development.json` đặt `Ingest:AcknowledgeUnauthenticatedSignalEndpoint = true`,\nnên endpoint dev chạy KHÔNG cần khoá và header sai bị bỏ qua → 200.\n\nĐây là trạng thái **đã biết**, không phải bị bỏ sót: nếu không cấu hình khoá và cũng\nkhông thừa nhận tường minh thì ứng dụng đã không khởi động được (StartupChecks).\n\nMuốn thấy 401: đặt biến môi trường `Ingest__SignalApiKey` rồi khởi động lại app.\nKhi đó thiếu khoá và sai khoá trả CÙNG một thông báo — hai câu trả lời khác nhau là\nmột kênh dò khoá. So sánh dùng thời gian hằng số, vì so bằng `==` thoát sớm ở ký tự\nđầu khác nhau và thời gian đó đo được.\n\n⚠ Khoá dùng chung này là chốt TẠM, không phải câu trả lời cho AR-e: nó không phân biệt\nđược khách A với khách B ở chế độ shared, không thu hồi theo từng khách, không chống replay.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\"sourceReference\": \"test:key-check-{{$timestamp}}\", \"subject\": \"Thu khoa sai\"}\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 tren may dev — khong phai lo hong', () => pm.response.to.have.status(200));",
+                  "pm.test('van tao duoc case', () => pm.expect(pm.response.json().created).to.eql(1));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "E. Kênh 1 — nạp nội dung (evidence)",
+      "description": "Cửa thứ hai của Kênh 1, mở 2026-08-30 (`AR-f`).\n\nTrước đường này một Case là **một dòng chữ** — subject + khoá nguồn + hai mốc thời\ngian. `S8` lại đòi bản nháp gom mang theo một **phân bố** (*\"bước kiểm room mapping:\n14/20 case đã làm\"*), mà con số đó không suy ra được từ 20 cái tiêu đề. Nhóm này\ntest đường đưa nội dung vào.\n\n⚠ Về mặt ý nghĩa nhóm này thuộc về **B** (cùng là Kênh 1). Nó nằm cuối vì hai lý\ndo thực dụng: không phải đánh số lại C/D đang được nhắc tên trong mô tả các request\nkhác, và không đụng vào phép tính của **C4b**.\n\n⚠ Chạy theo thứ tự **E0 → E11**. E1 gắn evidence vào chính Case mà **B1** đã tạo, nên\nnhóm B phải chạy trước. E11 đối chiếu với số E0 ghi lại.\n\nNhóm này có bốn ca lỗi (**E7**–**E10**) song song với nhóm C ở endpoint tín hiệu — cùng\nmột lời hứa \"thà từ chối cả lô còn hơn xử lý một phần\", áp cho đường ghi thứ hai.\n\n**Vì sao là endpoint riêng chứ không lồng vào `/signals/case-observed`:** `K-B9` đã\nchốt evidence được phép **không thuộc case nào** — email của senior, tin Zalo. Lồng\nvào tín hiệu case thì loại đó vĩnh viễn không có đường vào. E3 là phép thử của việc đó.",
+      "item": [
+        {
+          "name": "E0 · Ghi số evidence hiện có",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/tenant-boundary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "tenant-boundary"
+              ]
+            },
+            "description": "Mốc để **E7** đối chiếu. Cùng vai trò với A3 đối với C4b.\n\n`rowsVisibleWithoutTenantFilter.evidence` là cột mới, thêm cùng đường nạp này —\nkhông đo được thì lời hứa \"lô hỏng thì KHÔNG ghi gì\" của nhóm này không có cách\nnào kiểm từ ngoài, khác hẳn với case."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('co cot evidence', () => pm.expect(b.rowsVisibleWithoutTenantFilter.evidence).to.be.a('number'));",
+                  "pm.collectionVariables.set('evidenceCount', b.rowsVisibleWithoutTenantFilter.evidence);",
+                  "console.log('evidence hien co:', b.rowsVisibleWithoutTenantFilter.evidence);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E1 · Nạp evidence cho Case của B1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "Hai mẩu nội dung gắn vào Case mà **B1** vừa tạo.\n\n`caseSourceReference` trỏ bằng **khoá nguồn**, không phải `caseId`. Chủ đích: bên\ngửi là phần mềm của khách, nó biết `ES-1234` chứ không biết UUID nội bộ của ta.\n\nMẩu thứ nhất khai `machineReadability: High`, mẩu thứ hai bỏ trống → `Unknown`.\nBên gửi khai, hệ thống **không tự suy** — connector biết nó đang đẩy text hay\nđường dẫn ảnh, hệ thống nhìn vào một chuỗi thì không biết.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef1}}\",\n    \"content\": \"Da kiem room mapping, khong thay lech\",\n    \"observedAt\": \"2026-02-11T09:12:00Z\",\n    \"machineReadability\": \"High\"\n  },\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef2}}\",\n    \"content\": \"Goi OTA xac nhan, ho bao phong da day\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Khoa moi moi lan chay, treo vao chinh Case ma B1 vua tao.",
+                  "const ts = Date.now();",
+                  "const c = pm.collectionVariables.get('dedupRef');",
+                  "pm.collectionVariables.set('evRef1', c + '#c1-' + ts);",
+                  "pm.collectionVariables.set('evRef2', c + '#c2-' + ts);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('received = 2', () => pm.expect(b.received).to.eql(2));",
+                  "pm.test('created = 2 — hai mau moi', () => pm.expect(b.created).to.eql(2));",
+                  "pm.test('ca hai gan vao dung Case cua B1', () =>",
+                  "  b.results.forEach(r => pm.expect(r.caseId).to.eql(pm.collectionVariables.get('dedupCaseId'))));",
+                  "pm.collectionVariables.set('evId1', b.results[0].evidenceId);",
+                  "console.log('evidence vua tao:', b.results.map(r => r.evidenceId).join(', '));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E2 · Gửi lại y nguyên — chống trùng evidence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "**Phép thử quan trọng nhất của nhóm này.** Body giống hệt E1.\n\nKỳ vọng `created` về `0` và `evidenceId` **không đổi**.\n\nVì sao nó quan trọng hơn chống trùng Case: `S8` nói giá trị của bản nháp gom nằm\nở **phân bố** — *\"14/20 case đã làm bước này\"*. Một comment bị nhân đôi làm sai\nđúng con số đó, và sai theo hướng không ai nhìn ra: bản nháp vẫn đọc trôi chảy,\nchỉ có tỉ lệ là bịa.\n\nCơ chế: unique index `(TenantId, SourceReference)` trên `kp.evidence_item`.\n\n⚠ Gửi lại cùng khoá với **nội dung khác** thì bản đã lưu KHÔNG bị đổi — `K-B3`:\nevidence gắn với một thời điểm và một nguồn, ghi đè lặng lẽ là sửa lại quá khứ.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef1}}\",\n    \"content\": \"Da kiem room mapping, khong thay lech\",\n    \"observedAt\": \"2026-02-11T09:12:00Z\",\n    \"machineReadability\": \"High\"\n  },\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef2}}\",\n    \"content\": \"Goi OTA xac nhan, ho bao phong da day\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('created = 0 — khong sinh ban trung', () => pm.expect(b.created).to.eql(0));",
+                  "pm.test('evidenceId khong doi', () =>",
+                  "  pm.expect(b.results[0].evidenceId).to.eql(pm.collectionVariables.get('evId1')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E3 · Evidence không thuộc Case nào — K-B9",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "`caseSourceReference: null`. Kỳ vọng **200** và `caseId: null`.\n\nĐây là lý do đường nạp evidence là endpoint **riêng** chứ không phải một mảng lồng\ntrong tín hiệu case. `K-B9` đã chốt: một email của senior hay một tin Zalo **không\nthuộc case nào**, và với thực tế 60% fragment rải rác thì đó không phải trường hợp\nhiếm. Lồng vào tín hiệu case thì loại này vĩnh viễn không có đường vào — không\nphải \"chưa hỗ trợ\", mà là không thể.\n\n⚠ Nếu request này bắt đầu trả 400, cái mất không phải một tiện ích mà là toàn bộ\nđường vào của 60%.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"caseSourceReference\": null,\n    \"sourceReference\": \"{{evRefFloat}}\",\n    \"content\": \"Senior noi: khong co incoming log thi loi phia OTA\",\n    \"machineReadability\": \"Medium\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('evRefFloat', 'email:senior-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('created = 1', () => pm.expect(b.created).to.eql(1));",
+                  "pm.test('caseId = null — evidence roi, khong thuoc case nao', () =>",
+                  "  pm.expect(b.results[0].caseId).to.be.null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E4 · Case được tham chiếu không tồn tại → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "`[0]` hợp lệ, `[1]` trỏ vào một Case không có thật.\n\nKỳ vọng: **400**, lỗi trỏ đúng `[1]`, và `[0]` **KHÔNG được tạo** — E7 kiểm điều đó.\n\nBa cách xử lý khi thiếu Case, hai cách sai:\n\n```\ntự tạo case rỗng thay thế   →  sinh Case không subject, trái luật của Kênh 1\nnhận rồi để link NULL       →  evidence trôi lơ lửng, IM LẶNG          ← cấm\ntừ chối, nói rõ thiếu cái nào                                          ← chọn\n```\n\nNghe như bắt bên gửi phải xếp thứ tự gọi, nhưng không: `/signals/case-observed`\nidempotent (xem **B2**), nên cứ gửi Case trước mỗi lần, lần hai trả `created: 0`\nvà vô hại. Gánh nặng thật chỉ là \"gọi hai lần\", không phải \"tự nhớ đã gửi gì\".",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRefBad}}\",\n    \"content\": \"Mau nay hop le\"\n  },\n  {\n    \"caseSourceReference\": \"jira:KHONG-CO-THAT\",\n    \"sourceReference\": \"{{evRefBad}}-2\",\n    \"content\": \"Mau nay tro vao case khong ton tai\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('evRefBad', 'jira:mixed-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "const b = pm.response.json();",
+                  "pm.test('loi tro dung [1]', () => pm.expect(b.errors).to.have.property('[1]'));",
+                  "pm.test('noi ro khoa nao thieu', () =>",
+                  "  pm.expect(JSON.stringify(b.errors)).to.include('jira:KHONG-CO-THAT'));",
+                  "pm.test('KHONG tro nham vao [0]', () => pm.expect(b.errors).to.not.have.property('[0]'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E5 · machineReadability sai chính tả → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "`HIGHT` thay vì `High`. Kỳ vọng **400**, và thông báo nói luôn nhận giá trị nào.\n\nVì sao KHÔNG âm thầm về `Unknown`: nghe thì như \"chấp nhận rộng rãi\", nhưng nó\nbiến một lỗi cấu hình connector thành **dữ liệu sai vĩnh viễn** — cả kho evidence\ndán nhãn `Unknown` trong khi bên gửi tưởng đã khai `High`. Không ai phát hiện cho\ntới lúc có người hỏi vì sao §6.3 không phân biệt được ba trạng thái coverage.\n\nBỏ TRỐNG thì là `Unknown` và đó là hợp lệ — \"chưa ai nói\" là một câu trả lời thật.\nKhác hẳn với \"có người nói nhưng gõ sai\".",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"sourceReference\": \"{{evRefBadLabel}}\",\n    \"content\": \"Anh chup man hinh log khach gui\",\n    \"machineReadability\": \"HIGHT\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('evRefBadLabel', 'jira:label-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "const s = JSON.stringify(pm.response.json().errors);",
+                  "pm.test('nhac lai gia tri sai', () => pm.expect(s).to.include('HIGHT'));",
+                  "pm.test('noi ro nhan gia tri nao', () => pm.expect(s).to.include('High'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E6 · Thiếu content → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "Một mẩu evidence rỗng nghĩa là **rác trong kho gom của Path A** — và rác ở đây\nnguy hiểm hơn rác ở một tiêu đề, vì chính nội dung này sẽ được đưa cho model như\nmột quan sát thật.\n\n⚠ Nội dung toàn dấu cách cũng bị từ chối. Chỗ này **chặt hơn** `subject` của\n`/signals/case-observed`, và đó là độ lệch đã biết chứ không phải vô tình.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"jira:ES-9999#c1\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('noi ro thieu content', () =>",
+                  "  pm.expect(JSON.stringify(pm.response.json().errors)).to.include('content'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E7 · Mảng rỗng → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "Body hợp lệ về cú pháp nhưng không mang mẩu evidence nào. Trả 400 thay vì 200 im lặng.\n\nSong song với **C1** ở endpoint tín hiệu — cùng một luật, hai đường ghi.",
+            "body": {
+              "mode": "raw",
+              "raw": "[]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('noi ro la khong co evidence nao', () =>",
+                  "  pm.expect(pm.response.text()).to.include('Không có evidence nào'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E8 · Lô quá lớn (501 > trần 500) → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "Trần `Ingest:MaxEvidencePerRequest`, mặc định 500.\n\n⚠ Đây là trần **RIÊNG**, không dùng chung với `Ingest:MaxSignalsPerRequest` của\nendpoint tín hiệu. Cố ý: một tín hiệu case là bốn trường ngắn, còn một mẩu evidence\nmang cả nội dung comment — cùng con số 500 nghĩa là hai kích thước body rất khác\nnhau. Gộp làm một là để con số đúng cho loại này thành con số sai cho loại kia.\n\nTừ chối **cả lô**, KHÔNG cắt bớt (`IM-16`). Body sinh bằng Pre-request Script.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{bigEvidenceBatch}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 501 mau — vuot tran mac dinh 500. Sinh bang script vi khong dan tay duoc.",
+                  "const ts = Date.now();",
+                  "const items = [];",
+                  "for (let i = 0; i < 501; i++) {",
+                  "  items.push({ sourceReference: 'jira:big-' + ts + '-' + i,",
+                  "               content: 'noi dung mau so ' + i });",
+                  "}",
+                  "pm.collectionVariables.set('bigEvidenceBatch', JSON.stringify(items));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "const t = pm.response.text();",
+                  "pm.test('noi ro tran la bao nhieu', () => pm.expect(t).to.include('trần là 500'));",
+                  "pm.test('noi ro da nhan bao nhieu', () => pm.expect(t).to.include('501'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E9 · content toàn dấu cách → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "`content` chỉ có dấu cách cũng là rỗng.\n\n⚠ **Chỗ này CHẶT HƠN `subject` của `/signals/case-observed`, và đó là độ lệch ĐÃ\nBIẾT (`IM-21`), không phải vô tình.** Endpoint tín hiệu chỉ kiểm `null` hoặc chuỗi\nrỗng, nên `subject = \"   \"` vẫn được nhận ở đó.\n\nLý do chặt hơn: một mẩu evidence rỗng nghĩa sẽ được Path A đưa cho model **như một\nquan sát thật**. Rác trong kho gom nguy hiểm hơn rác ở một tiêu đề.\n\nSiết `subject` lại cho khớp là đụng vào hợp đồng đang chạy, nên đang chờ người dùng quyết.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"sourceReference\": \"jira:ES-8888#c1\",\n    \"content\": \"   \"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('loi tro dung [0] va nhac content', () => {",
+                  "  const e = pm.response.json().errors;",
+                  "  pm.expect(e).to.have.property('[0]');",
+                  "  pm.expect(JSON.stringify(e)).to.include('content');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E10 · sourceReference dài quá 512 → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals/case-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals",
+                "case-evidence"
+              ]
+            },
+            "description": "Trần độ dài đặt ở tầng kiểm tra để **khớp schema** (`character varying(512)`) —\nmột chỗ duy nhất biết cả hai thì dễ giữ khớp hơn hai chỗ.\n\n⚠ `content` thì **KHÔNG** có trần, cố ý: cột là `text`, không giới hạn ở schema, nên\nđặt một con số ở tầng code là tạo ra đúng chỗ lệch mà chú thích trên vừa cảnh báo.\nChặn trên của nó là trần body của Kestrel và `MaxEvidencePerRequest`.",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"sourceReference\": \"{{refQuaDai}}\",\n    \"content\": \"Noi dung hop le\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 605 ky tu — vuot tran 512 cua cot SourceReference.",
+                  "pm.collectionVariables.set('refQuaDai', 'jira:' + 'x'.repeat(600));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('noi ro tran 512', () =>",
+                  "  pm.expect(pm.response.text()).to.include('512'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E11 · Đối chiếu — lô hỏng có ghi nhầm gì không?",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/internal/tenant-boundary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "tenant-boundary"
+              ]
+            },
+            "description": "Chạy ngay sau E10. So số `evidence` với giá trị **E0** đã ghi.\n\nKỳ vọng đúng **E0 + 3**: E1 tạo 2 · E3 tạo 1. E2 trùng nên không tính; và **bảy** request\nlỗi — E4 → E10 — đều 400 nên **không được ghi gì**, kể cả phần tử `[0]`\nhợp lệ của E4 và cả 501 mẩu của E8.\n\nBằng nhau nghĩa là mọi lô hỏng bị từ chối trọn vẹn, không xử lý một phần.\n\n⚠ Test này chỉ đúng khi chạy cả nhóm E theo thứ tự bằng Collection Runner."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const now = pm.response.json().rowsVisibleWithoutTenantFilter.evidence;",
+                  "const before = Number(pm.collectionVariables.get('evidenceCount'));",
+                  "const expected = before + 3; // E1(2) + E3(1); E2 trung; E4..E10 deu bi tu choi",
+                  "pm.test('khong lo hong nao ghi nham — tong dung ' + expected, () =>",
+                  "  pm.expect(now).to.eql(expected));",
+                  "console.log('evidence truoc:', before, '| sau:', now, '| ky vong:', expected);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5119",
+      "type": "string",
+      "description": "Gốc của API dev. Khớp applicationUrl trong Properties/launchSettings.json."
+    },
+    {
+      "key": "dedupRef",
+      "value": "",
+      "type": "string",
+      "description": "B1 sinh, B2 dùng lại. Đừng sửa tay."
+    },
+    {
+      "key": "dedupCaseId",
+      "value": "",
+      "type": "string",
+      "description": "caseId B1 tạo, B2 đối chiếu."
+    },
+    {
+      "key": "caseCount",
+      "value": "",
+      "type": "string",
+      "description": "Số case A3 đọc được, C4b đối chiếu."
+    },
+    {
+      "key": "evidenceCount",
+      "value": "",
+      "type": "string",
+      "description": "Số evidence E0 đọc được, E7 đối chiếu."
+    },
+    {
+      "key": "evRef1",
+      "value": "",
+      "type": "string",
+      "description": "E1 sinh, E2 dùng lại. Đừng sửa tay."
+    },
+    {
+      "key": "evRef2",
+      "value": "",
+      "type": "string",
+      "description": "E1 sinh, E2 dùng lại. Đừng sửa tay."
+    },
+    {
+      "key": "evId1",
+      "value": "",
+      "type": "string",
+      "description": "evidenceId E1 tạo, E2 đối chiếu."
+    },
+    {
+      "key": "evRefFloat",
+      "value": "",
+      "type": "string",
+      "description": "E3 sinh — evidence không thuộc case nào (K-B9)."
+    },
+    {
+      "key": "evRefBad",
+      "value": "",
+      "type": "string",
+      "description": "E4 sinh."
+    },
+    {
+      "key": "evRefBadLabel",
+      "value": "",
+      "type": "string",
+      "description": "E5 sinh."
+    },
+    {
+      "key": "bigEvidenceBatch",
+      "value": "",
+      "type": "string",
+      "description": "E8 sinh — 501 mẩu, vượt trần. Đừng sửa tay."
+    },
+    {
+      "key": "refQuaDai",
+      "value": "",
+      "type": "string",
+      "description": "E10 sinh — sourceReference 605 ký tự."
+    }
+  ]
+}

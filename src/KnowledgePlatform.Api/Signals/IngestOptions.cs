@@ -40,4 +40,15 @@ public sealed class IngestOptions
     /// thành "đã nạp hết" trong khi không phải.
     /// </summary>
     public int MaxSignalsPerRequest { get; set; } = 500;
+
+    /// <summary>
+    /// Trần số mẩu evidence trong một request. Trần RIÊNG, không dùng chung với
+    /// <see cref="MaxSignalsPerRequest"/>: một tín hiệu case là bốn trường ngắn, còn
+    /// một mẩu evidence mang cả nội dung comment — cùng con số 500 nghĩa là hai kích
+    /// thước body rất khác nhau. Gộp làm một là để con số đúng cho loại này thành
+    /// con số sai cho loại kia.
+    ///
+    /// Vượt là **từ chối cả lô** kèm nói rõ trần, KHÔNG cắt bớt — cùng lý do `IM-16`.
+    /// </summary>
+    public int MaxEvidencePerRequest { get; set; } = 500;
 }
