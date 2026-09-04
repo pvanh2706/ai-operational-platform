@@ -102,6 +102,21 @@
 > sửa theo, nên nó là **cận TRÊN**, không phải ước lượng đúng cho corpus khác.
 > → Một luật che chưa đo recall là một luật tạo ra sự an tâm giả.
 >
+> 🛑 **CREDENTIAL KHÔNG PHẢI CA CÁ BIỆT — NÓ LÀ MẪU HÀNH VI.** Luật che chạy trên
+> corpus 150 case bắt **40 chỗ trên 18/345 mẩu = 5,2%**, tức **cứ ~19 mẩu evidence có
+> một mẩu chứa credential**. Phần lớn là CẶP ID + mật khẩu Ultraviewer, gửi thành hai
+> tin nhắn liên tiếp: `214 250 580`/`17106` · `23 996 795`/`01551` ·
+> `110 143 652`/`13333` · `79 053 771`/`0279` · `111 444 028`/`86846` và 10 cặp nữa.
+> Cộng hai JWT token và `Pass: KKlai123`.
+> → Đây không phải một sự cố của `ES-346481` mà là **cách support team làm việc**: xin
+>   Ultraviewer để remote vào máy khách. `AR-j` vì thế không giải được bằng cách xử lý
+>   vài mẩu — nó cần một luật chạy mỗi lần nạp. Đã có: `check_corpus.py`.
+>
+> ✅ **Và một false positive đã tìm ra + sửa, ghi lại vì nó là loại dễ bỏ qua nhất:**
+> `...&table_id=23&id=2469&area=4` bị bắt vì nhãn `ID` khớp `id=` trong URL. Che nó đi
+> thì mất đúng đường dẫn người duyệt cần để mở lại màn hình đang lỗi. Sửa bằng cách bỏ
+> URL trước khi quét; recall giữ nguyên 100%, corpus 150 case giảm 48 → 40 chỗ.
+>
 > ⚠ **Và script export có một lỗ đã sửa:** kéo 150 issue là ~380 request liên tiếp; một
 > timeout ở request thứ ~380 làm **mất trắng 6 phút và 328 mẩu đã đọc xong**, vì hàm gọi
 > HTTP `die()` ngay. Giờ có retry với backoff, và một issue lỗi thì BỎ QUA issue đó rồi

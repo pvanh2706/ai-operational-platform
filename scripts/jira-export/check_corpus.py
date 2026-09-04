@@ -87,38 +87,106 @@ def kiem_trung_byte(evidence: list, cases: list) -> None:
             canh_bao.append(f"{len(trung)} nhóm {ten} trùng byte - khử trùng trước khi nạp.")
 
 
-def kiem_bi_mat(evidence: list) -> None:
-    muc("3. BÍ MẬT - quét theo NGỮ CẢNH, không theo từ khoá cùng dòng (AR-j)")
-    # Vì sao cửa sổ ngữ cảnh: đo được trên corpus thật là luật theo-DÒNG chỉ bắt 11%.
-    # Khách gõ ID rồi mật khẩu ở HAI tin nhắn trần, còn chữ "Ultraview" nằm ở lượt nói
-    # TRƯỚC ĐÓ của nhân viên. Bộ lọc theo dòng mù, mà model đọc thì thừa ngữ cảnh để
-    # hiểu đúng - mù đúng chiều xấu nhất.
-    remote = re.compile(r"(?i)ultra ?view|utlatra|teamview|anydesk")
-    day_so = re.compile(r"^\s*(?:\d{2,3}[ ]\d{3}[ ]\d{3}|\d{4,9})\s*$")
-    key_json = re.compile(
-        r"(?i)\"?(?:a?c?pass\w*|password|matkhau|token|secret|api[_-]?key)\"?\s*[\":=]\s*\"?[^\"\s,}]{3,}")
+def quet_bi_mat(evidence: list) -> list[tuple[str, str, str]]:
+    """Trả về [(khoá nguồn, hình dạng nào bắt được, giá trị)]. TÁCH RIÊNG để ĐO ĐƯỢC.
 
-    n_ngu_canh = n_key = 0
+    ⚠ Vì sao tách khỏi phần in: đo recall bằng cách đọc lại output là một phép đo sai,
+    và đã sai thật khi thử (2026-09-04). Hai lý do, cả hai đều âm thầm:
+      · output bị cắt bớt cho dễ đọc, nên "không thấy trong output" ≠ "luật không bắt"
+      · chính dòng cảnh báo cuối hàm có chứa `80771` và `0304746657`, nên phép đo
+        precision đếm luôn dòng cảnh báo và báo là ăn nhầm
+    Một luật cần đo thì phải trả về DỮ LIỆU, không trả về chữ đã định dạng để người đọc.
+    """
+    CONG_CU = r"(?i)ultra ?view|utlatra|teamview|anydesk"
+    # ⚠ Dấu tiếng Việt phải liệt kê ĐỦ: "khẩu" là kh-ẩ-u, không phải kh-â-u. Bản đầu
+    # thiếu chữ 'ẩ' và vì thế trượt đúng một credential ("Mật khẩu: 46169").
+    NHAN = (r"(?i)(?:m[aậâạ][tj]?\s*kh[aâẩ]u|matkhau|pass(?:word)?|pw|pwd"
+            r"|ID(?:\s*c[uủ]a\s*b[aạ]n)?)")
+    SO = r"\d{2,3}[ ]\d{3}[ ]\d{3}|\d{4,9}"
+
+    cong_cu = re.compile(CONG_CU)
+    nhan_va_so = re.compile(NHAN + r"\s*[:=]?\s*(" + SO + r")")
+    so_tran = re.compile(r"^\s*(?:" + SO + r")\s*$")
+    lay_so = re.compile(SO)
+    # `account`/`username` cũng vào đây: bản đầu chỉ bắt password nên để lọt cả hai
+    # tài khoản VNPT. Một cặp đăng nhập thiếu nửa nào cũng vẫn là nửa bị rò.
+    key_json = re.compile(
+        r"(?i)\"?(a?c?pass\w*|password|matkhau|token|secret|api[_-]?key|account"
+        r"|user(?:name)?|login)\"?\s*[\":=]\s*\"?([^\"\s,}]{3,})")
+
+    # ⚠ Bỏ URL trước khi quét. Đo được một false positive thật trên corpus 12 tháng:
+    # `...&table_id=23&id=2469&area=4` bị bắt vì nhãn `ID` khớp `id=`. Tham số truy vấn
+    # trong URL không phải bí mật, và che nó đi thì mất một đường dẫn mà người duyệt cần
+    # để mở lại đúng màn hình đang lỗi. Thay bằng khoảng trắng chứ không xoá hẳn, để
+    # hình dạng 3 ("dãy số trần ở dòng kế tiếp") không bị lệch số dòng.
+    url = re.compile(r"https?://\S+")
+
+    ra: list[tuple[str, str, str]] = []
     for e in evidence:
         noi_dung = e.get("content") or ""
-        dong = noi_dung.split("\n")
+        dong = [url.sub(" <URL> ", d) for d in noi_dung.splitlines()]
+        ref = e.get("sourceReference", "?")
         for i, d in enumerate(dong):
-            if not remote.search(d):
-                continue
-            # Bốn dòng sau một lần nhắc công cụ remote: dãy số trần là credential.
-            for k in range(i + 1, min(i + 5, len(dong))):
-                if day_so.match(dong[k]):
-                    n_ngu_canh += 1
-                    print(f"      [ngữ cảnh] {e.get('sourceReference')}: {dong[k].strip()[:40]}")
-        for m in key_json.finditer(noi_dung):
-            n_key += 1
-            print(f"      [key JSON] {e.get('sourceReference')}: {m.group(0)[:60]}")
+            for m in nhan_va_so.finditer(d):          # hình dạng 1
+                ra.append((ref, "nhãn+số", m.group(1)))
+            mc = cong_cu.search(d)
+            if mc:                                    # hình dạng 2
+                for s in lay_so.findall(d[mc.end():]):
+                    ra.append((ref, "công cụ+số", s))
+            if mc or nhan_va_so.search(d):            # hình dạng 3
+                for k in range(i + 1, min(i + 7, len(dong))):
+                    if so_tran.match(dong[k]):
+                        ra.append((ref, "số trần", dong[k].strip()))
+        for m in key_json.finditer(url.sub(" <URL> ", noi_dung)):  # hình dạng 4
+            ra.append((ref, "key JSON", m.group(2)[:40]))
+    return ra
 
-    print(f"\n  bắt theo ngữ cảnh: {n_ngu_canh}   ·   bắt theo key JSON: {n_key}")
-    if n_ngu_canh or n_key:
-        chan.append(f"{n_ngu_canh + n_key} chỗ nghi là credential - xử lý trước khi nạp (AR-j).")
-    print("  ⚠ KHÔNG dùng luật chỉ theo hình dạng số: nó ăn nhầm số đặt phòng (80771)")
-    print("    và mã số thuế (0304746657) - cả hai là dữ liệu CẦN GIỮ.")
+
+def kiem_bi_mat(evidence: list) -> None:
+    """Quét bí mật theo BỐN HÌNH DẠNG đã thấy trong dữ liệu thật, không theo giá trị.
+
+    ⚠ RECALL ĐÃ ĐO, không phải phỏng đoán. Đáp án là danh sách 13 credential xác định
+    bằng tay trong `make_fixture.py` (đã qua phản biện đối kháng):
+
+        luật theo DÒNG (từ khoá phải cùng dòng với giá trị) ->   11%
+        luật theo NGỮ CẢNH, bản đầu                        ->   23%
+        luật theo BỐN HÌNH DẠNG dưới đây                   ->  100%  (13/13)
+        và 0/5 lần ăn nhầm dữ liệu cần giữ
+
+    ⚠ NHƯNG 100% ĐÓ LÀ CẬN TRÊN, KHÔNG PHẢI ƯỚC LƯỢNG ĐÚNG. Luật được sửa THEO chính
+    corpus dùng để đo nó — đó là overfit theo định nghĩa. Bằng chứng ngay trong dự án:
+    corpus 12 tháng lộ ra một hình dạng thứ NĂM (JWT sau chữ "Token:") mà luật này bắt
+    được nhờ `token` tình cờ có trong danh sách key JSON, không nhờ thiết kế. Hình dạng
+    thứ sáu sẽ tới, và nó sẽ không may như vậy.
+    → Sửa luật thì PHẢI ĐO LẠI. Thêm một mẫu rồi tin là đã tốt hơn chính là cách một
+      luật che biến thành sự an tâm giả.
+
+    ⚠ Và một bài học về CÁCH ĐO, đắt hơn con số: lần đầu tôi đo bằng cách đọc lại output
+    của hàm in, ra 92% rồi 69% — cả hai đều SAI. Output bị cắt cho dễ đọc nên "không
+    thấy" ≠ "không bắt"; và dòng cảnh báo cuối hàm có chứa `80771` nên phép đo precision
+    đếm luôn chính dòng cảnh báo. Vì thế `quet_bi_mat` trả về DỮ LIỆU, còn `kiem_bi_mat`
+    chỉ in. Muốn đo một thứ thì thứ đó phải trả về dữ liệu.
+
+    Bốn hình dạng, tất cả đều lấy nguyên văn từ corpus:
+      1  `ID của bạn: 24235840` / `Mật khẩu: 46169`     nhãn + giá trị CÙNG DÒNG
+      2  `Ultraview: 70 761 691    //    64467`          NHIỀU giá trị cùng dòng
+      3  `107 293 745` rồi `55663` ở hai tin nhắn        dãy số TRẦN, cách nhau vài dòng
+      4  `"Account": "ketoankhachsan"`                   key JSON, key KHÔNG phải password
+    """
+    muc("3. BÍ MẬT - quét theo BỐN HÌNH DẠNG thật (AR-j)")
+    bat = quet_bi_mat(evidence)
+
+    for ref, loai, gt in bat[:24]:
+        print(f"      [{loai:<11}] {ref}: {gt}")
+    if len(bat) > 24:
+        print(f"      ... và {len(bat) - 24} chỗ nữa (không in hết)")
+
+    print(f"\n  Tổng {len(bat)} chỗ nghi là bí mật, trên "
+          f"{len({r for r, _, _ in bat})} mẩu.")
+    if bat:
+        chan.append(f"{len(bat)} chỗ nghi la credential - xu ly truoc khi nap (AR-j).")
+    print("  Luu y: luat co Y KHONG bat day so tran khi khong co nhan hay ten cong cu")
+    print("  o gan - lam vay se an nham so dat phong va ma so thue, ca hai CAN GIU.")
 
 
 def kiem_rang_buoc_fts(cases: list, evidence: list) -> None:
