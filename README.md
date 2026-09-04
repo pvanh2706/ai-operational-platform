@@ -17,9 +17,10 @@ trong sơ đồ dưới.
 ## ⚠ Đọc mục này trước khi đọc bất cứ thứ gì khác
 
 ```
-Tài liệu thiết kế   ~10.600 dòng     27 quyết định domain + 17 quyết định khi code
-Code                  ~2.150 dòng     nền móng + host + đường nhận tín hiệu
-Test                  ~1.100 dòng     33 test, chạy trên PostgreSQL THẬT
+Tài liệu thiết kế  ~11.000 dòng     27 quyết định domain + 24 quyết định khi code
+Code                 ~2.600 dòng     nền móng + host + đường nhận tín hiệu + evidence
+Test                 ~1.500 dòng     105 test, chạy trên PostgreSQL THẬT
+Script vận hành        ~900 dòng     xuất Jira · kiểm corpus · dựng fixture
 ```
 
 **Tài liệu mô tả toàn bộ tầm nhìn. Code hiện có là phần nền móng của slice đầu tiên.**
@@ -30,10 +31,23 @@ Test                  ~1.100 dòng     33 test, chạy trên PostgreSQL THẬT
 **Giai đoạn hiện tại:** Workstream 07 — MVP Implementation, slice **Path A**
 (gom nhiều case cũ thành một bản nháp quy trình, người sửa và duyệt).
 
-**Mốc mới nhất — 2026-08-25:** đã có **đường nhận tín hiệu**. Phần mềm của khách gọi
-vào, hệ thống tạo Case, và tín hiệu gửi lại không sinh Case trùng. Cộng với mốc hôm
-trước — ranh giới giữa các công ty khách hàng đã đóng hết một vòng, từ request HTTP
-xuống tới luật của database — giờ có 33 test giữ.
+**Mốc mới nhất — 2026-09-04: đã chạm vào DỮ LIỆU VẬN HÀNH THẬT, và nó dạy bốn thứ mà
+dữ liệu bịa không dạy được.** Trước hôm nay mọi thứ đều xanh trên vật liệu do chính bộ
+test dựng ra. Xuất 150 case Jira thật rồi nạp thử làm lộ ra: một **bug 500** ở đường nạp
+(mốc thời gian `+07:00` — cả 103 test cũ không thấy vì tay người viết test luôn viết
+UTC), một **trường phân loại là hằng số** (`machineReadability` = High ở 128/128), **ranh
+giới khách sạn không có nguồn nào để thực thi**, và **credential sống trong 5,2% mẩu
+evidence**. Chi tiết ở [Rủi ro đang mở](#rủi-ro-đang-mở).
+
+⚠ Điểm chung của cả bốn: chúng **không crash** và **không đỏ test nào**. Chúng chỉ sai
+im lặng — đúng loại lỗi mà cả dự án được dựng để chặn. Bộ test hiện có **105 test**, và
+bài học đắt nhất hôm nay là *một bộ test tự cấp vật liệu cho mình chỉ kiểm được những
+hình dạng mà người viết nghĩ ra.*
+
+**Mốc trước — 2026-08-25:** đã có **đường nhận tín hiệu**. Phần mềm của khách gọi vào,
+hệ thống tạo Case, và tín hiệu gửi lại không sinh Case trùng. Cộng với mốc hôm trước —
+ranh giới giữa các công ty khách hàng đã đóng hết một vòng, từ request HTTP xuống tới
+luật của database.
 Chi tiết: [Ranh giới tenant](#ranh-giới-tenant--đã-đo-trên-database-thật).
 
 ---
@@ -94,7 +108,7 @@ field nào của hợp đồng này biết Jira là gì.
 ### Chạy test
 
 ```bash
-dotnet test src/KnowledgePlatform.slnx     # 33 test, tự apply migration
+dotnet test src/KnowledgePlatform.slnx     # 105 test, tự apply migration
 ```
 
 Test chạy trên **PostgreSQL thật**, cố ý. Row-level security là tính năng của database;
@@ -185,7 +199,7 @@ sau đã tồn tại và chỉ đang không có gì trả về.
 ✅ app.current_tenant được đặt tự động trên MỌI connection mở ra
 ✅ tenant đọc được từ một request HTTP thật, ở CẢ HAI chế độ deploy
 ✅ cấu hình tenant sai = KHÔNG START ĐƯỢC, không phải chạy im lặng
-   → 33 test giữ, ở hai tầng. Chi tiết bên dưới.
+   → 105 test giữ, ở ba tầng. Chi tiết bên dưới.
 ```
 
 ⚠ Còn một mảnh chưa xong, nhưng nó là câu hỏi **sản phẩm**, không phải code: ở chế
@@ -325,7 +339,7 @@ flowchart LR
     A["✅ ITenantContext<br/>tenant của request này"]
     B["✅ TenantConnectionInterceptor<br/>đặt app.current_tenant<br/>lên MỌI connection"]
     C["✅ Policy của Postgres<br/>tenant_isolation<br/>ENABLE + FORCE"]
-    D["✅ 33 test<br/>trên PostgreSQL thật<br/>role KHÔNG superuser"]
+    D["✅ 105 test<br/>trên PostgreSQL thật<br/>role KHÔNG superuser"]
     R --> M --> A --> B --> C
     D -.->|giữ cả chuỗi| A
 ```
@@ -428,6 +442,10 @@ trong đó có **đường nhận tín hiệu** tạo Case.
 
 | | |
 |---|---|
+| 🛑 **Dữ liệu vận hành thật mang theo bí mật SỐNG, và đó là MẪU HÀNH VI chứ không phải ca lẻ** | Đo trên corpus Jira thật 2026-09-04: **40 chỗ nghi credential trên 18/345 mẩu = 5,2%**, tức cứ ~19 mẩu evidence có một mẩu chứa thông tin đăng nhập. Phần lớn là cặp ID + mật khẩu Ultraviewer mà khách gõ thành hai tin nhắn liên tiếp; cộng hai JWT token và một mật khẩu tài khoản hoá đơn điện tử VNPT **còn sống** (nhà cung cấp trả `OK` hai lần trong chính mẩu đó). <br><br>⚠ Đây không phải sự cố của một ticket — đó là **cách support team làm việc**: xin Ultraviewer để remote vào máy khách. Nên không xử lý được bằng cách sửa vài mẩu; phải là luật chạy mỗi lần nạp. Đã có `scripts/jira-export/check_corpus.py` (trả mã thoát ≠ 0, cắm được CI). <br><br>⚠ **Lọc theo từ khoá cùng dòng KHÔNG dùng được** — đo được là bắt **11%**. Khách gõ ID rồi mật khẩu ở hai tin nhắn trần, còn chữ "Ultraview" nằm ở lượt nói TRƯỚC ĐÓ của nhân viên: bộ lọc mù, mà model đọc thì thừa ngữ cảnh để hiểu đúng. Luật theo BỐN HÌNH DẠNG thật đạt recall **100%** (13/13) với 0 lần ăn nhầm — nhưng đó là **cận trên**, vì luật được sửa theo chính corpus dùng để đo nó. (`AR-j`) |
+| 🛑 **Một trường phủ 100% với MỘT giá trị duy nhất — đã vấp HAI LẦN trong một ngày** | `machineReadability` = `High` ở **128/128** mẩu evidence, và `Mã khách sạn` của Jira = `-1.0` ở **32/32** case. Cùng một hình dạng lỗi, và nó **tệ hơn trường rỗng**: trường rỗng thì ai cũng thấy là thiếu, còn trường phủ-100%-một-giá-trị thì *trông như đã có dữ liệu* — mọi phép kiểm "trường này có được điền không?" đều trả lời CÓ. Ai viết `WHERE machineReadability = 'High'` rồi báo "đã lọc rồi" thì vừa lọc xong 100% dữ liệu. <br><br>→ **Luật đã rút ra:** với mọi trường dùng làm ranh giới hay bộ lọc, **đếm số giá trị PHÂN BIỆT, không đếm độ phủ.** Một giá trị = coi như rỗng. (`AR-k`, `AR-l`) |
+| 🛑 **Ranh giới khách sạn A ↔ khách sạn B chưa được thực thi, và hiện KHÔNG CÓ nguồn nào để thực thi** | Hôm nay `tenant` = ezCloud, nên mọi khách sạn nằm chung một kho. Đã chốt rằng đây LÀ ranh giới bảo mật, nhưng đo trên Jira thật thì không trường nào dùng được: `Mã khách sạn` là hằng số `-1.0`, `Tên khách sạn / Resort` thì 25/32 rỗng và phần còn lại ghi tên **team**. <br><br>⚠ **RLS không cứu được kiểu rò này** — rò xảy ra ở khâu **xuất bản SOP**, không ở khâu truy vấn hàng: Path A gom evidence của nhiều khách sạn (đúng quyền, RLS xanh) rồi sinh một bản nháp được duyệt và hiện cho mọi người. Dữ liệu đi qua ranh giới bằng cửa chính. <br><br>⚠ Và ĐỪNG suy sub-tenant từ tiêu đề: chỉ 8/32 case có mã trong tiêu đề, và tên trong tiêu đề lệch với thân bài (`ES-346622` ghi "Mariha" nhưng email là `mirahhotel.sales@`). (`AR-l`) |
+| ⚠ **"Đã xong" đi NGƯỢC với hàm lượng tri thức — bộ lọc tự nhiên nhất sẽ vứt đúng phần có giá trị** | Corpus 12 tháng có **100% case đã đóng** mà chỉ **1,6 mẩu dùng được mỗi case** — mỏng hơn corpus 4 ngày (2,5) vốn chỉ 22% đã đóng, và 25% case có **0** mẩu dùng được. Trên corpus nhỏ đã đọc kỹ: cả 7/7 case đã đóng chỉ ghi *hết triệu chứng* ("Done nhé" — 23 ký tự; một case đóng bằng đúng một tấm ảnh), còn nguyên nhân thật nằm ở case **CÒN MỞ**. <br><br>Lý do chạm vào **tiền đề sản phẩm**, không phải chất lượng corpus: bước kết luận không biến mất, nó **xảy ra ở nơi khác** — 6 case chuyển sang phiên remote desktop, 2 case "gọi khách không được", 1 case ghi thẳng *"như đã trao đổi qua điện thoại"*. Chính các mẩu credential ở trên là **biên lai** của những lần chẩn đoán không để lại chữ nào trong ticket. Trong 128 mẩu, Kibana — bước 1 của quy trình 5 bước — được nhắc **0 lần**. |
 | ⚠ **Đường nhận tín hiệu chỉ có một cái chốt tạm** | Nó là endpoint **ghi**: không xác thực thì bất kỳ ai cũng bơm được Case giả vào dữ liệu khách hàng — không crash, không báo, chỉ làm sai kho tri thức và sai thước đo tháng đầu. Hiện có một khoá dùng chung (`Ingest:SignalApiKey`), và **thiếu nó là không start được**. Nhưng khoá dùng chung không phân biệt được khách A với khách B, không thu hồi theo từng khách, không chống replay. Nó là cái chốt trong lúc chờ `AR-e`, không phải câu trả lời. |
 | ⚠ **Chế độ nhiều khách hàng dùng chung chưa có xác thực** | Tenant đến từ header `X-Tenant-Key`, và chưa có gì kiểm người gọi có quyền dùng khoá đó — biết khoá là đọc được dữ liệu. Nên chế độ này **từ chối khởi động** trừ khi được thừa nhận tường minh bằng một cờ cấu hình. Cờ đó không bảo vệ gì; nó chỉ làm việc deploy một API chưa xác thực thành **quyết định** thay vì **sơ suất**. Cần quyết ở tầng sản phẩm: API key theo khách? mTLS? chữ ký trên payload? (`AR-e`) <br><br>⚠ **Không chặn khách hàng đầu tiên** — bản deploy riêng lấy tenant từ cấu hình, không từ người gọi. |
 | ⚠ **Hai cơ chế phía tri thức chưa bị thử phá** | 3 trong 5 cơ chế giờ có test (RLS guard, mắt xích tenant, và interface tenant). Hai cơ chế còn lại — bắt buộc khai nguồn gốc, và danh sách trạng thái chỉ có 3 giá trị — chỉ được **trình biên dịch** chặn. Chặn lúc biên dịch mạnh hơn test, nhưng nó không kiểm được cái mà nó không thấy: một nơi gọi truyền `Origin` **sai** vẫn biên dịch bình thường. Đó đúng là kiểu lỗi mà `AP3` gọi là im lặng nhất. |
