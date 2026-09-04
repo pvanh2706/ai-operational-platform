@@ -31,6 +31,19 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+
+# Windows: khi output bi chuyen huong (pipe, ghi file, hoac chay tu trinh khac), Python
+# dat stdout ve codepage ANSI cua he thong - cp1252 tren may nay - va moi chu tieng Viet
+# lam no nem UnicodeEncodeError. Da vap that 2026-09-04: script chay dung khi in ra
+# console, chet ngay khi `| head`. Ep UTF-8 o day, khong bat nguoi chay phai nho dat
+# PYTHONIOENCODING - thu chi hong luc bi pipe la thu se hong dung luc dang go loi.
+for _luong in (sys.stdout, sys.stderr):
+    if (getattr(_luong, "encoding", "") or "").lower().replace("-", "") != "utf8":
+        try:
+            _luong.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 

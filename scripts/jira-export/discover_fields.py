@@ -40,6 +40,18 @@ MA_KHACH_SAN = re.compile(r"^\d{4,6}$")
 # Từ khoá gợi ý tên trường, cả tiếng Việt lẫn tiếng Anh.
 GOI_Y = re.compile(r"(?i)khách sạn|khach san|hotel|property|cơ sở|co so|tenant|"
                    r"khách hàng|khach hang|customer|account|mã kh|ma kh|client|đơn vị|don vi")
+# Windows: khi output bị chuyển hướng (pipe, ghi file, hoặc chạy từ trình khác), Python
+# đặt stdout về codepage ANSI của hệ thống — cp1252 trên máy này — và mọi chữ tiếng Việt
+# làm nó ném UnicodeEncodeError. Đã vấp thật 2026-09-04: script chạy đúng khi in ra
+# console, chết ngay khi `| head`. Ép UTF-8 ở đây, không bắt người chạy phải nhớ đặt
+# PYTHONIOENCODING — thứ chỉ hỏng lúc bị pipe là thứ sẽ hỏng đúng lúc đang gỡ lỗi.
+for _luong in (sys.stdout, sys.stderr):
+    if (getattr(_luong, "encoding", "") or "").lower().replace("-", "") != "utf8":
+        try:
+            _luong.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
 TIMEOUT = 60
 
 

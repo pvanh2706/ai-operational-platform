@@ -927,6 +927,49 @@ AR-l   Ranh giới KHÁCH SẠN A ↔ KHÁCH SẠN B có phải ranh giới bả
          luận trên đó. Một câu hỏi chưa quyết làm hỏng cả những phép kiểm không liên
          quan tới nó.
 
+       🛑 **ĐÃ ĐO 2026-09-04 — KHÔNG CÓ NGUỒN NÀO DÙNG ĐƯỢC. Quyết định 2 BỊ CHẶN.**
+          Chạy `scripts/jira-export/discover_fields.py` trên Jira thật, rồi đo lại trên
+          đúng 32 case của corpus (những case mà TIÊU ĐỀ đã có mã khách sạn rõ ràng):
+
+            Mã khách sạn         [customfield_12710]  -> `-1.0` ở **32/32** case.
+                                 Trường TỒN TẠI, phủ 100%, và là HẰNG SỐ. Kiểu number,
+                                 giá trị -1 là sentinel "chưa xác định" — tức nó được
+                                 thiết kế có ý định rồi KHÔNG BAO GIỜ ĐƯỢC ĐIỀN.
+            Tên khách sạn/Resort [customfield_13326]  -> 25/32 rỗng; 7 case có giá trị
+                                 thì giá trị là "ezCloud - Customer Support" — TÊN TEAM,
+                                 không phải tên khách sạn. Trường đang bị dùng sai việc.
+            ezMessageHotelID     [customfield_16115]  -> 25/32 rỗng, 7 case = "EZCLOUD".
+            C247ExtentionID      [customfield_15620]  -> 21/32 rỗng, và giá trị
+                                 (72706/72724/72729, mỗi số lặp 2-3 lần) là extension
+                                 TỔNG ĐÀI CỦA NHÂN VIÊN, không phải mã khách sạn.
+            Tên khách hàng       [customfield_12724]  -> tên NGƯỜI ("chị Thủy"), 13/32
+                                 rỗng hoặc "None".
+
+       ⚠ MẪU LỖI LẶP LẠI HAI LẦN TRONG MỘT NGÀY, và đây là điều đáng mang đi:
+         `machineReadability` = High ở 128/128 (`AR-k`) và `Mã khách sạn` = -1.0 ở 32/32
+         là **cùng một hình dạng lỗi**: một trường phủ 100% với MỘT giá trị duy nhất.
+         Nó tệ hơn trường rỗng, vì trường rỗng thì ai cũng thấy là thiếu, còn trường
+         phủ-100%-một-giá-trị thì trông như đã có dữ liệu. Mọi phép kiểm "trường này có
+         được điền không?" đều trả lời CÓ. Chỉ phép kiểm "trường này có mấy giá trị khác
+         nhau?" mới thấy.
+         → Luật chung nên áp cho MỌI trường dùng làm ranh giới hay bộ lọc:
+           **đếm số giá trị PHÂN BIỆT, không đếm độ phủ.** Một giá trị = coi như rỗng.
+
+       ⚠ Và ĐỪNG rơi vào nhánh trông hợp lý nhất: 8/32 case có mã trong tiêu đề
+         (`[17468 - ...]`, `[12027 - ...]`, `18182 - ...`). Đó là 25%. Sub-tenant là
+         ranh giới BẢO MẬT nên thiếu thì phải CHẶN NẠP — dùng tiêu đề nghĩa là chặn 75%
+         corpus, và 25% còn lại vẫn sai vì tên trong tiêu đề lệch với thân bài (ES-346622
+         "Mariha" vs `mirahhotel.sales@`; ES-346618 "Mirah Hotel" vs "Thành Danh Hotel").
+
+       Hai lựa chọn còn lại, và cả hai đều là quyết định NGOÀI CODE:
+         (a) ezCloud điền `customfield_12710` cho thật — việc của bộ phận support, không
+             phải việc của repo này. Điền dần thì corpus cũ vẫn không có.
+         (b) LÙI quyết định 2: nạp evidence KHÔNG có sub-tenant, và ghi thẳng vào tài
+             liệu rằng ranh giới khách sạn CHƯA được thực thi — để sáu tháng nữa không
+             ai tưởng nó đã có. Đây là nhánh trung thực nếu (a) không xảy ra sớm.
+       ⚠ Dù chọn nhánh nào, phần đã đo vẫn đứng: RLS không cứu được kiểu rò này, vì rò
+         xảy ra ở khâu XUẤT BẢN SOP chứ không ở khâu truy vấn hàng.
+
        Còn phải quyết khi hiện thực (KHÔNG tự quyết):
          · sub-tenant lấy từ đâu? KHÔNG được suy từ tiêu đề — đã đo: ES-346622 tiêu đề
            "Mariha" mà email trong thân bài là `mirahhotel.sales@`; ES-346618/619 tiêu
@@ -965,6 +1008,28 @@ R-K4   "Một loại vấn đề có 5-10 nguyên nhân" — VẪN CHƯA ĐẾM 
           này), đọc và đếm nguyên nhân bằng tay. Ước 1 ngày công.
        ⚠ Hệ quả về THỨ TỰ: bước (c) FTS lùi lại SAU phép đếm. Trước hôm nay FTS là
          việc kế tiếp; giờ không phải nữa. Đếm xong mới biết cần FTS hay cần phân loại.
+
+       🛑 **ĐO 2026-09-04: CƠ SỞ CỦA PHÉP ĐẾM SAI 20 LẦN.** Ước lượng "~140 case hoá
+          đơn đã đóng trong 12 tháng" được suy ra từ corpus 4 ngày (1,75 case/ngày ×
+          tỉ lệ đóng 21,9%). Đếm thật bằng JQL trên Jira:
+
+            2 723 case   chủ đề hoá đơn · 12 tháng · đã đóng · bỏ Duplicate/CannotRepro
+           38 451 case   toàn project · 12 tháng · đã đóng
+              896 case   chủ đề khoá từ · 12 tháng · đã đóng
+
+          Sai 20 lần, và lý do là chỗ đáng nhớ: corpus 4 ngày lọc thêm
+          `"Kỹ thuật phụ trách" is not EMPTY` — một tập con RẤT nhỏ (chỉ case đã được
+          giao cho kỹ thuật). Suy tốc độ của cả project từ một tập con đã lọc là sai,
+          và nó sai theo hướng làm mọi thứ trông nhỏ hơn thực tế.
+          ⚠ Bài học chung: đừng ngoại suy quy mô từ một mẫu mà chính mình đã lọc.
+
+          Hệ quả thực tế cho phép đếm: KHÔNG tải hết 2723 case (mỗi case ~2,5 request
+          nên đó là ~7 000 request lên Jira production). §8.2 nói n=50-200 là đủ, nên
+          lấy MẪU 150 case gần nhất — `MAX_ISSUES=150`, `ORDER BY resolved DESC`.
+          ⚠ Mẫu đó THIÊN LỆCH VỀ THỜI GIAN (chỉ vài tháng gần nhất, không rải đều 12
+          tháng). Ghi ra đây vì con số đếm được phải mang theo cái thiên lệch này —
+          nếu tập nguyên nhân thay đổi theo phiên bản sản phẩm thì mẫu gần đây sẽ cho
+          ÍT nguyên nhân hơn thực tế 12 tháng.
 
        Vì sao không đếm được từ corpus 32 case: hai vòng phân tích đọc CÙNG dữ liệu ra
        hai kết luận NGƯỢC NHAU — một bên đếm 12 nguyên nhân trên 12 kết luận, độ dốc
