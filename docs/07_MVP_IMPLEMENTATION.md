@@ -745,6 +745,37 @@ AR-h   Full-text search: bốn ràng buộc ĐÃ ĐO, phải tuân theo khi buil
        sẽ làm hỏng đúng con số "14/20 case đã làm bước này" mà S8 nói là toàn bộ giá
        trị của bản nháp gom.
 
+       ⚠ ĐO LẠI 2026-09-04 TRÊN CORPUS JIRA THẬT (32 case / 128 evidence, project ES).
+         Ba cái được xác nhận, và HAI CÁI TỆ HƠN con số ghi ở trên. Thêm một cái MỚI.
+         Tái hiện: scripts/jira-export + psql, xem nhật ký phiên 2026-09-04.
+
+         (2') DẤU GẠCH NGANG — ĐO ĐƯỢC LÀ NGƯỢC CHIỀU với ghi chép trên.
+              Trên ghi "trả về gần như TOÀN BỘ kho". Thực tế với websearch_to_tsquery
+              (mặc định AND, không phải OR) thì nó trả về SỐ KHÔNG. Tiêu đề THẬT:
+                 '[16776 -Villa 22 - Dalat] Kiểm tra ngày hóa đơn'
+                 -> '16776' & !'villa' & '22' & !'dalat' & 'kiểm' & 'tra' & ...
+                 -> khớp 0/5 dòng, KỂ CẢ CHÍNH NÓ.
+              Người dùng copy tiêu đề một case rồi dán vào ô tìm là KHÔNG tìm ra
+              chính case đó. Cả hai chiều đều là thất bại im lặng; chiều nào xảy ra
+              phụ thuộc hàm tsquery nào được gọi. 1/32 tiêu đề của corpus dính.
+
+         (4') ts_rank_cd: đo bằng dump THẬT 5764 ký tự thì tỉ lệ là 29:1, không phải 4:1.
+                 case lệch chủ đề + dump  -> 28.9429
+                 case đúng chủ đề, ngắn   ->  1.0000
+              Trong corpus: 16/128 mẩu là dump JSON/XML, nhưng chúng chiếm 32% TỔNG SỐ
+              KÝ TỰ. Nghĩa là 1/8 số mẩu nắm 1/3 trọng lượng xếp hạng.
+
+         (5)  MỚI — TIẾNG VIỆT KHÔNG DẤU KHÔNG KHỚP GÌ. Không có trong bản trước.
+                 to_tsvector('simple','Danh sách booking...') @@ 'danh sach booking' -> f
+                 to_tsvector('simple','Danh sách booking...') @@ 'danh sách booking' -> t
+              'simple' không có stemmer tiếng Việt nên 'phòng' và 'phong' là HAI token.
+              30/32 tiêu đề của corpus có dấu, mà người Việt tìm kiếm gõ không dấu là
+              chuyện thường. Extension `unaccent` CÓ SẴN trên máy này (đã kiểm
+              pg_available_extensions) — nhưng nó là quyết định thiết kế, không phải
+              thao tác: unaccent làm mất khả năng phân biệt các từ chỉ khác nhau ở dấu.
+              Cùng lý do đó, JQL lọc theo tiêu đề cũng phải viết CẢ HAI kiểu bỏ dấu:
+              tìm "khóa từ" ra 5 tiêu đề, "khoá từ" ra 1, hai tập KHÔNG giao nhau.
+
 AR-g   Đọc evidence ra bằng đường nào?                                    ← MỚI
        Ghi 2026-08-30. CHƯA CHỌN HƯỚNG, chưa code.
        Hiện có đường GHI mà không có đường ĐỌC: không endpoint nào trả về evidence
@@ -781,6 +812,63 @@ AR-g   Đọc evidence ra bằng đường nào?                                
            có mở đường đó luôn không, hay chỉ làm ObservedInCaseId trước?
          · MachineReadability do bên gửi khai hay hệ thống suy? AP3 nói provenance
            không được đoán — nhưng đây là metadata, không phải origin.
+         ✅ CÂU NÀY ĐÃ CÓ CÂU TRẢ LỜI TỪ DỮ LIỆU THẬT 2026-09-04, xem `AR-k`.
+
+AR-j   Dữ liệu vận hành thật mang theo BÍ MẬT SỐNG. Che bằng luật nào?      ← MỚI
+       Ghi 2026-09-04 sau khi quét corpus Jira thật đầu tiên. CHƯA CHỌN HƯỚNG.
+       ⚠ Đây KHÔNG phải câu hỏi lý thuyết — đã đo trên 128 mẩu evidence có thật.
+
+       Tìm được 6 bộ thông tin đăng nhập CÒN SỐNG của 6 khách sạn khác nhau:
+         · 1 bộ VNPT hoá đơn điện tử (ES-346481#comment-802977) — nguy hiểm nhất.
+           Nhà cung cấp trả "OK" HAI LẦN trong chính mẩu đó, tức đã xác thực thành
+           công trên production. Ai cầm được thì phát hành hoá đơn VAT thật mang MST
+           khách sạn, đúng ký hiệu và serial. Hậu quả PHÁP LÝ, không phải sự cố IT.
+         · 5 bộ ID+mật khẩu Ultraviewer/Teamviewer của 5 khách sạn. Mật khẩu có thể
+           đã xoay, nhưng ID GẮN CỨNG THEO MÁY và không bao giờ đổi.
+
+       ⚠ PHÁT HIỆN QUAN TRỌNG NHẤT, và nó phủ định cách làm hiển nhiên:
+         LỌC THEO TỪ KHOÁ CÙNG DÒNG KHÔNG DÙNG ĐƯỢC. Đo thật trên corpus:
+         với luật `ultraview|teamview|anydesk|mật khẩu|password|pass|pw|acpass`,
+         tỉ lệ bắt được các dòng chứa dãy số dạng ID là **2/17 = 11%**.
+         Ca tệ nhất (ES-346406): khách gõ "107 293 745" rồi "55663" ở HAI tin nhắn
+         liên tiếp, còn chữ "Ultraview" nằm ở lượt nói TRƯỚC ĐÓ của nhân viên. Không
+         từ khoá nào trong phạm vi dòng. Bộ lọc mù, nhưng model đọc thì thừa ngữ cảnh
+         để hiểu đúng đó là ID/PW — mù đúng chiều xấu nhất.
+         → Luật phải neo theo NGỮ CẢNH (cửa sổ N dòng quanh từ khoá) + hình dạng,
+           không neo theo dòng. Và KHÔNG được chỉ dùng hình dạng số: sẽ ăn nhầm
+           `80771` (số đặt phòng) và `0304746657` (mã số thuế) — đều là dữ liệu cần.
+
+       Ba câu chưa quyết:
+         · Che ở TẦNG NÀO — connector (script export), tầng nạp (API), hay tầng đọc?
+           Che ở connector là rẻ nhất nhưng mỗi connector mới phải làm lại.
+         · Che rồi có GIỮ DẤU không? G6/AP3 nói phải: người duyệt cần phân biệt
+           "đã che" với "export lỗi". Xoá lặng lẽ là tạo ra một loại nghi ngờ mới.
+         · Bí mật đã lọt vào Jira TỪ TRƯỚC thì che corpus không gỡ được. Sản phẩm có
+           trách nhiệm BÁO ĐỘNG khi phát hiện credential trong nguồn không? Đó là một
+           capability chưa ai chốt, và nó rất gần cột phải của G11 — cẩn thận.
+
+AR-k   `machineReadability` đang là HẰNG SỐ. Trường vô nghĩa đang gác cổng. ← MỚI
+       Ghi 2026-09-04. ⚠ ĐÂY LÀ BUG THẬT, KHÔNG PHẢI CÂU HỎI THIẾT KẾ.
+       Đo: 128/128 mẩu đều mang nhãn `High`, KỂ CẢ mẩu 5 ký tự chỉ chứa "80771",
+       mẩu 9 ký tự chỉ chứa chính mã case của nó, và mẩu 35 ký tự chỉ chứa tên file
+       ảnh. Nguyên nhân: scripts/jira-export/export_jira_to_channel1.py gán CỨNG
+       "High" cho mọi mẩu, với lý do ghi trong code là "connector biết nó đẩy text
+       thuần nên khai High là khai thật".
+
+       Lý do đó ĐÚNG nhưng trả lời nhầm câu hỏi. Nó trộn hai trục:
+         trục 1  byte có giải mã được thành ký tự không?     → connector biết. Luôn có.
+         trục 2  lấy được TRI THỨC ra không?                 → cái sản phẩm cần biết.
+       `IM-19` chốt "bên gửi khai, hệ thống không suy" — vẫn đúng. Cái sai là chỉ có
+       MỘT trường cho HAI câu hỏi, nên bên gửi khai thật mà kết quả vẫn vô dụng.
+
+       Hậu quả cụ thể: ai viết `WHERE machineReadability = 'High'` rồi báo "đã lọc
+       rồi" thì vừa lọc xong 100% dữ liệu. Thất bại im lặng, đúng loại `AP3` sinh ra
+       để chặn — và lần này nó nằm trong chính đường nạp vừa build xong.
+
+       Hướng đề xuất (CHƯA CHỐT, cần quyết ở tầng domain trước khi sửa code):
+         giữ `machineReadability` cho trục 1, thêm một trường cho trục 2. Và thêm một
+         chốt kiểm: sau mỗi lần export, nếu MỘT nhãn chiếm ≥95% thì coi như hỏng.
+         Một trường phân loại mà không phân loại được gì thì tệ hơn không có trường.
 ```
 
 ---

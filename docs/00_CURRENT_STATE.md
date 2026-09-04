@@ -2,6 +2,46 @@
 
 ## AI Operational Knowledge & Process Platform
 
+> **Cập nhật:** 2026-09-04 — 🛑 **CÓ DỮ LIỆU JIRA THẬT, VÀ NÓ KHÔNG NẠP ĐƯỢC NGUYÊN TRẠNG.**
+> Người dùng chạy script export, ra **32 case / 128 evidence** (project ES, 4 ngày đầu
+> tháng 9). MỚI CHẠY `--dry-run`, **CHƯA NẠP** — `kp_dev` vẫn 0 case, 0 evidence.
+> Đã quét bằng 28 agent: 13 phát hiện rủi ro đứng vững sau phản biện đối kháng, 5 bị bác.
+>
+> ⚠ **VIỆC GẤP, KHÔNG LIÊN QUAN TỚI CODE:** trong `ES-346481#comment-802977` có mật khẩu
+> tài khoản hoá đơn điện tử VNPT của khách sạn MST 4500621073, **còn sống** — nhà cung
+> cấp trả `OK` hai lần trong chính mẩu đó ngày 01/09. Ai đọc Jira đều thấy. Cần xoay
+> mật khẩu và rà hoá đơn đã phát hành trên dải 1/002. Che corpus KHÔNG gỡ được việc nó
+> đang nằm công khai trong Jira. Thêm 5 bộ ID+mật khẩu Ultraviewer của 5 khách sạn khác.
+> Sinh `AR-j`.
+>
+> ⚠ **BUG THẬT TRONG ĐƯỜNG NẠP VỪA BUILD:** `machineReadability` = `High` cho **128/128**
+> mẩu, kể cả mẩu 5 ký tự. Trường phân loại không phân loại được gì. Ai lọc bằng nó là
+> lọc 100% dữ liệu. Sinh `AR-k`.
+>
+> ⚠ **`AR-h` ĐO LẠI TRÊN CORPUS THẬT — hai ràng buộc TỆ HƠN bản cũ, một cái MỚI:**
+> dấu `-` làm truy vấn trả về **0 dòng kể cả chính nó** (bản cũ ghi "gần như toàn bộ
+> kho" — ngược chiều); dump đè tiêu đề **29:1** chứ không phải 4:1; và **tiếng Việt gõ
+> không dấu KHÔNG khớp gì** (30/32 tiêu đề có dấu) — cái này hoàn toàn mới.
+>
+> 🛑 **PHÁT HIỆN NẶNG NHẤT, chạm vào TIỀN ĐỀ của sản phẩm chứ không phải corpus:**
+> **cờ "đã xong" đi NGƯỢC với hàm lượng tri thức.** Cả 7 case đã đóng đều kết thúc bằng
+> câu xác nhận *hết triệu chứng*, không câu nào ghi *đã làm gì*: "Done nhé" (23 ký tự),
+> "Khách tạo được thẻ thành công rồi" (33), một case đóng bằng đúng một tấm ảnh.
+> Trong khi mọi mẩu có nguyên nhân + cách sửa thật đều nằm ở case **CÒN MỞ**.
+> → Bộ lọc tự nhiên nhất ("chỉ lấy case đã đóng") sẽ **vứt đi đúng phần có giá trị**.
+> Lý do: bước kết luận không biến mất, nó **xảy ra ở nơi khác** — 6 case chuyển sang
+> phiên remote desktop, 2 case "gọi khách không được", 1 case ghi thẳng *"như đã trao
+> đổi qua điện thoại"*. Chính 5 mẩu credential ở `AR-j` là **biên lai** của 5 lần chẩn
+> đoán diễn ra trên màn hình remote và không để lại chữ nào trong ticket.
+> Trong 128 mẩu: Kibana được nhắc **0 lần** (§8.1-KQ nói đó là bước 1 của quy trình thật).
+>
+> ⚠ Corpus KHÔNG gom nổi một SOP: chủ đề dày nhất (hoá đơn) có 7 case → **7 nguyên nhân
+> khác nhau, 0 cái lặp lại**. Con số S8 trung thực nhất viết ra được là **"1/7"**, không
+> phải "14/20". Chủ đề first use case (OTA booking) = **0/32 case**. Và `R-K4` vẫn KHÔNG
+> đếm được: hai vòng phân tích đọc CÙNG dữ liệu ra hai kết luận ngược nhau (>10 và <5)
+> — bằng chứng rằng n=32 quá nhỏ, chưa phải bằng chứng cho hướng nào.
+> → Ghi "chưa đếm được", ĐỪNG chốt kiến trúc tìm kiếm dựa trên nó.
+
 > **Cập nhật:** 2026-09-01 — 🛑 **TÌM RA LỖ FAIL-OPEN TRONG CHÍNH `RlsGuard`, ĐÃ SỬA.**
 > Guard bản cũ chỉ hỏi *"bảng này có policy nào không"*, không hỏi policy đó **nói gì**.
 > Policy PostgreSQL gộp bằng **OR**, nên thêm một policy `USING (true)` là khách A đọc
