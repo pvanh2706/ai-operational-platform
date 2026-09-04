@@ -41,6 +41,23 @@
 > đếm được: hai vòng phân tích đọc CÙNG dữ liệu ra hai kết luận ngược nhau (>10 và <5)
 > — bằng chứng rằng n=32 quá nhỏ, chưa phải bằng chứng cho hướng nào.
 > → Ghi "chưa đếm được", ĐỪNG chốt kiến trúc tìm kiếm dựa trên nó.
+>
+> ✅ **BA QUYẾT ĐỊNH CHỐT CÙNG NGÀY** (người dùng, sau khi đọc kết quả quét):
+> ```text
+> 1  Lô 32 case CHỈ vào kp_dev làm fixture, KHÔNG vào kho tri thức thật.  → AR-j
+>    Không phải vì rủi ro mà vì lợi ích bằng không: SOP tốt nhất gom được
+>    là 4 bước, MỖI BƯỚC n=1. Làm fixture thì nó có giá trị thật — đã bắt
+>    được AR-k ngay lần đọc đầu.
+> 2  Ranh giới KHÁCH SẠN A ↔ B LÀ ranh giới bảo mật. Thêm sub-tenant vào    → AR-l
+>    evidence_item NGAY, lúc bảng còn rỗng. ⚠ RLS KHÔNG cứu được kiểu rò
+>    này — rò xảy ra ở khâu XUẤT BẢN SOP, không ở khâu truy vấn hàng.
+> 3  ĐẾM nguyên nhân trên corpus 12 tháng TRƯỚC khi chốt kiến trúc tìm      → R-K4
+>    kiếm. ~1 ngày công, chặn được quyết định đắt nhất còn lại (vector DB).
+> ```
+> **VIỆC KẾ TIẾP theo đúng thứ tự ba quyết định trên:** (1) người dùng chạy JQL 12 tháng
+> chủ đề hoá đơn — có sẵn trong `scripts/jira-export/jira-config.example.bat`;
+> (2) thiết kế sub-tenant rồi sinh migration; (3) đếm nguyên nhân trên corpus mới.
+> FTS (`AR-h`) lùi lại SAU phép đếm — đó chính là điều quyết định 3 nói.
 
 > **Cập nhật:** 2026-09-01 — 🛑 **TÌM RA LỖ FAIL-OPEN TRONG CHÍNH `RlsGuard`, ĐÃ SỬA.**
 > Guard bản cũ chỉ hỏi *"bảng này có policy nào không"*, không hỏi policy đó **nói gì**.

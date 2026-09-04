@@ -816,6 +816,18 @@ AR-g   Đọc evidence ra bằng đường nào?                                
 
 AR-j   Dữ liệu vận hành thật mang theo BÍ MẬT SỐNG. Che bằng luật nào?      ← MỚI
        Ghi 2026-09-04 sau khi quét corpus Jira thật đầu tiên. CHƯA CHỌN HƯỚNG.
+
+       ✅ QUYẾT ĐỊNH 1 CHỐT 2026-09-04 bởi người dùng: **lô 32 case này CHỈ vào
+          `kp_dev` làm fixture, KHÔNG vào kho tri thức thật.**
+          Lý do chọn không phải vì rủi ro mà vì lợi ích bằng không: bản nháp SOP tốt
+          nhất gom được từ lô này là 4 bước, MỖI BƯỚC n=1, và 3/4 bước lấy từ case
+          chưa đóng. Người duyệt đọc thẳng 6 ticket mất 5 phút còn được nhiều hơn.
+          Đổi lại là 6 bộ credential, dữ liệu bên thứ ba, giá hợp đồng của một khách
+          hàng, một cặp trùng byte và một mẩu đã bị người gửi rút lại.
+          Ngược lại, làm fixture thì nó có giá trị THẬT và đã chứng minh: nó bắt được
+          `AR-k` ngay lần đọc đầu, và nó có đủ mọi hình thù xấu để test luật che, luật
+          resolve tenant, luật khử trùng — thứ mà corpus 12 tháng sạch hơn không dạy được.
+       ⚠ Việc xoay mật khẩu VNPT KHÔNG phụ thuộc quyết định này và phải làm NGAY.
        ⚠ Đây KHÔNG phải câu hỏi lý thuyết — đã đo trên 128 mẩu evidence có thật.
 
        Tìm được 6 bộ thông tin đăng nhập CÒN SỐNG của 6 khách sạn khác nhau:
@@ -847,6 +859,42 @@ AR-j   Dữ liệu vận hành thật mang theo BÍ MẬT SỐNG. Che bằng lu�
            trách nhiệm BÁO ĐỘNG khi phát hiện credential trong nguồn không? Đó là một
            capability chưa ai chốt, và nó rất gần cột phải của G11 — cẩn thận.
 
+AR-l   Ranh giới KHÁCH SẠN A ↔ KHÁCH SẠN B có phải ranh giới bảo mật không? ← MỚI
+       ✅ CHỐT 2026-09-04 bởi người dùng: **CÓ. Thêm sub-tenant vào `evidence_item`
+          NGAY BÂY GIỜ**, lúc bảng còn rỗng. Để sau là sửa ngược với dữ liệu đã có.
+
+       Vì sao câu này sinh ra: hôm nay `tenant` = ezCloud, nên 32 khách sạn nằm chung
+       MỘT kho. Corpus thật cho thấy giả định "một case = một khách sạn" đã vỡ ngay
+       trong 32 case đầu tiên:
+         · ES-346594 là việc NỘI BỘ ezCloud, không thuộc khách sạn nào, và đính kèm
+           `hotel.xlsx` liệt kê NHIỀU khách sạn
+         · ES-346615 là một CHUỖI nhiều cơ sở
+         · ES-346764 là SÂN GOLF (ezGolf), không phải khách sạn
+         · ES-346481 chứa dữ liệu của KHÁCH CỦA khách sạn — một đơn vị sự nghiệp nhà
+           nước có tên, MST, địa chỉ và số tiền giao dịch. Ranh giới hai cấp
+           (ezCloud → khách sạn) không mô tả được trường hợp này.
+
+       ⚠ ĐIỂM DỄ HIỂU NHẦM NHẤT, ghi để không ai tưởng RLS đã lo:
+         RLS KHÔNG cứu được kiểu rò này. Rò xảy ra ở khâu **XUẤT BẢN SOP**, không ở
+         khâu truy vấn hàng. Path A gom evidence của nhiều khách sạn (đúng quyền, RLS
+         xanh) rồi sinh ra MỘT bản nháp; bản nháp đó được duyệt thành KnowledgeRecord
+         và hiện cho mọi người. Dữ liệu đi qua ranh giới bằng cửa chính, không phải
+         bằng lỗ hổng. Đây là loại rò mà `G7` chưa từng phải đối mặt.
+
+       ⚠ VÀ ĐÂY LÀ LÝ DO CÂU NÀY ĐẮT: 4/5 phát hiện bị BÁC BỎ trong vòng quét đều bị
+         bác vì câu này chưa có đáp án — người phân tích tự chọn một cách hiểu rồi lập
+         luận trên đó. Một câu hỏi chưa quyết làm hỏng cả những phép kiểm không liên
+         quan tới nó.
+
+       Còn phải quyết khi hiện thực (KHÔNG tự quyết):
+         · sub-tenant lấy từ đâu? KHÔNG được suy từ tiêu đề — đã đo: ES-346622 tiêu đề
+           "Mariha" mà email trong thân bài là `mirahhotel.sales@`; ES-346618/619 tiêu
+           đề "Mirah Hotel" mà thân bài ghi "Thành Danh Hotel". Suy từ chữ là gán nhầm
+           khách sạn ngay từ mẩu đầu. Phải lấy từ trường CÓ KIỂM SOÁT của Jira; thiếu
+           thì để trống và CHẶN NẠP, không đoán (`G6`/`AP3`).
+         · evidence không thuộc khách sạn nào (việc nội bộ ezCloud) biểu diễn thế nào?
+         · cấp thứ ba (khách CỦA khách sạn) có cần chỗ riêng, hay chỉ là dữ liệu phải che?
+
 AR-k   `machineReadability` đang là HẰNG SỐ. Trường vô nghĩa đang gác cổng. ← MỚI
        Ghi 2026-09-04. ⚠ ĐÂY LÀ BUG THẬT, KHÔNG PHẢI CÂU HỎI THIẾT KẾ.
        Đo: 128/128 mẩu đều mang nhãn `High`, KỂ CẢ mẩu 5 ký tự chỉ chứa "80771",
@@ -869,6 +917,20 @@ AR-k   `machineReadability` đang là HẰNG SỐ. Trường vô nghĩa đang g�
          giữ `machineReadability` cho trục 1, thêm một trường cho trục 2. Và thêm một
          chốt kiểm: sau mỗi lần export, nếu MỘT nhãn chiếm ≥95% thì coi như hỏng.
          Một trường phân loại mà không phân loại được gì thì tệ hơn không có trường.
+
+R-K4   "Một loại vấn đề có 5-10 nguyên nhân" — VẪN CHƯA ĐẾM ĐƯỢC.
+       ✅ QUYẾT ĐỊNH 3 CHỐT 2026-09-04: **ĐẾM TRƯỚC khi chốt kiến trúc tìm kiếm.**
+          Chạy JQL 12 tháng chủ đề hoá đơn (~140 case đã đóng, ước từ chính corpus
+          này), đọc và đếm nguyên nhân bằng tay. Ước 1 ngày công.
+       ⚠ Hệ quả về THỨ TỰ: bước (c) FTS lùi lại SAU phép đếm. Trước hôm nay FTS là
+         việc kế tiếp; giờ không phải nữa. Đếm xong mới biết cần FTS hay cần phân loại.
+
+       Vì sao không đếm được từ corpus 32 case: hai vòng phân tích đọc CÙNG dữ liệu ra
+       hai kết luận NGƯỢC NHAU — một bên đếm 12 nguyên nhân trên 12 kết luận, độ dốc
+       tích luỹ đúng bằng 1.0, suy ra "chưa bão hoà, con số thật có thể >10"; bên kia
+       gộp thành 3-4 nguyên nhân mỗi nhóm, suy ra "thấp hơn cận dưới 5-10". Cả hai đều
+       lập luận được. Đó KHÔNG phải bằng chứng cho hướng nào — đó là bằng chứng rằng
+       n=32 quá nhỏ. Ghi "chưa đếm được", đừng ghi một con số nghe hay.
 ```
 
 ---
