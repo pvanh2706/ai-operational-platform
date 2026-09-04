@@ -21,4 +21,11 @@ scripts/jira-export/jira-config.bat
 # Đầu ra --dry-run của script xuất Jira — dữ liệu vận hành của công ty,
 # chỉ để soi bằng mắt trước khi nạp, không thuộc về repo.
 scripts/jira-export/dry-run-*.json
+
+# Fixture sinh ra từ dry-run. Credential ĐÃ được thay bằng giá trị giả, nhưng nó
+# vẫn mang nội dung nghiệp vụ thật của khách hàng: tên khách sạn, mô tả sự cố,
+# giá hợp đồng, và dữ liệu của bên thứ ba. Đưa cái đó vào repo là một quyết định
+# của chủ dữ liệu, không phải một thao tác kỹ thuật — nên mặc định là KHÔNG.
+# Ai cần fixture thì chạy make_fixture.py trên bản dry-run của chính mình.
+scripts/jira-export/fixture-*.json
 __pycache__/

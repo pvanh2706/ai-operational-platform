@@ -58,6 +58,22 @@
 > chủ đề hoá đơn — có sẵn trong `scripts/jira-export/jira-config.example.bat`;
 > (2) thiết kế sub-tenant rồi sinh migration; (3) đếm nguyên nhân trên corpus mới.
 > FTS (`AR-h`) lùi lại SAU phép đếm — đó chính là điều quyết định 3 nói.
+>
+> ✅ **QUYẾT ĐỊNH 1 ĐÃ THỰC HIỆN XONG cùng ngày.** 32 case + 128 evidence đã nằm trong
+> `kp_dev`, credential thật thay bằng giá trị GIẢ GIỮ NGUYÊN HÌNH DẠNG (69 chỗ, xem
+> `scripts/jira-export/make_fixture.py`) — giữ hình dạng để luật che vẫn test được, bỏ
+> giá trị để không nhân bản bí mật. Chạy lại lần hai: tạo mới 0, idempotent xác nhận.
+> ⚠ `kp_dev` còn 33 case rác từ curl/Postman các phiên trước (`crm:` `zalo:` `test:` và
+> `jira:<guid>`). KHÔNG xoá — lọc fixture bằng `SourceReference LIKE 'jira:ES-%'`.
+>
+> 🛑 **VÀ FIXTURE THẬT BẮT NGAY BUG THỨ HAI — `IM-24`.** Lần nạp đầu tiên trả **500**:
+> Npgsql từ chối `DateTimeOffset` có offset khác 0, mà Jira Server trả `+07:00`. Một đầu
+> vào **hợp lệ theo ISO 8601** bị báo thành lỗi máy chủ. Đã sửa bằng value converter ở
+> `ConfigureConventions` (một chỗ, áp cho mọi entity kể cả entity chưa ai viết).
+> ⚠ Điều đáng nhớ hơn cái bug: **vì sao 103 test không thấy nó.** Mọi mốc thời gian
+> trong bộ test đều do chính bộ test dựng ra, và tay người viết test thì luôn viết UTC.
+> Một bộ test tự cấp vật liệu cho mình chỉ kiểm được hình dạng mà người viết nghĩ ra.
+> → **105 test** (48 domain + 15 hạ tầng + 42 API), 2 test mới đã chứng minh biết ĐỎ.
 
 > **Cập nhật:** 2026-09-01 — 🛑 **TÌM RA LỖ FAIL-OPEN TRONG CHÍNH `RlsGuard`, ĐÃ SỬA.**
 > Guard bản cũ chỉ hỏi *"bảng này có policy nào không"*, không hỏi policy đó **nói gì**.

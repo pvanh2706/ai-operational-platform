@@ -66,6 +66,37 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             .OrderBy(n => n)
             .ToList();
 
+    /// <summary>
+    /// Mọi <see cref="DateTimeOffset"/> được đưa về UTC TRƯỚC KHI ghi xuống database.
+    ///
+    /// ⚠ Vì sao cần: Npgsql TỪ CHỐI ghi <c>DateTimeOffset</c> có offset khác 0 vào cột
+    /// <c>timestamptz</c> — nó ném <c>ArgumentException</c>, và vì lỗi bật ra từ tận
+    /// <c>SaveChangesAsync</c> nên endpoint trả <b>500</b> chứ không phải 400. Tức là
+    /// một đầu vào HỢP LỆ theo ISO 8601 bị báo thành lỗi máy chủ.
+    ///
+    /// <para><b>Bug này chỉ lộ ra khi nạp dữ liệu THẬT (2026-09-04, `IM-24`).</b> Cả 103
+    /// test đều xanh vì mọi mốc thời gian trong test đều do chính test dựng ra, và tay
+    /// người viết test thì luôn viết UTC. Jira Server thì trả <c>+07:00</c>. Đây là loại
+    /// lỗ mà một bộ test tự cấp vật liệu cho mình không bao giờ nhìn thấy.</para>
+    ///
+    /// Đặt ở đây chứ không ở từng handler, và đó là điểm chính: <c>ConfigureConventions</c>
+    /// áp cho MỌI thuộc tính <c>DateTimeOffset</c> của MỌI entity, kể cả entity chưa ai
+    /// viết. Sửa ở handler thì mỗi chỗ ghi mới lại phải nhớ một lần nữa — cùng lý do
+    /// <see cref="TenantScopedTables"/> suy ra từ model thay vì viết tay.
+    ///
+    /// KHÔNG mất thông tin: <c>2026-09-01T10:00:00+07:00</c> và <c>2026-09-01T03:00:00Z</c>
+    /// là cùng một thời điểm. Thứ mất đi là "múi giờ nào đã ghi nhận" — mà cột
+    /// <c>timestamptz</c> của PostgreSQL vốn đã không lưu được điều đó. Nếu sau này có
+    /// lúc cần biết múi giờ gốc thì nó phải là một CỘT RIÊNG, không phải một hy vọng
+    /// rằng offset sống sót qua tầng lưu trữ.
+    /// </summary>
+    protected override void ConfigureConventions(ModelConfigurationBuilder b)
+    {
+        b.Properties<DateTimeOffset>().HaveConversion<UtcDateTimeOffsetConverter>();
+        b.Properties<DateTimeOffset?>().HaveConversion<UtcDateTimeOffsetConverter>();
+        base.ConfigureConventions(b);
+    }
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.HasDefaultSchema("kp");

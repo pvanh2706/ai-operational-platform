@@ -400,6 +400,90 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
 
     // =====================================================================
 
+    // =====================================================================
+    //  Mốc thời gian có múi giờ — `IM-24`
+    //
+    //  ⚠ ĐỌC TRƯỚC KHI SỬA HAI TEST DƯỚI ĐÂY.
+    //  Chúng sinh ra từ một bug THẬT mà cả 103 test trước đó không thấy, và lý do
+    //  không thấy là điều đáng nhớ hơn chính cái bug: mọi mốc thời gian trong bộ
+    //  test đều do chính bộ test dựng ra, mà tay người viết test thì luôn viết UTC
+    //  (hoặc null, như hàm Evidence() ở đầu file). Jira Server trả "+07:00", và
+    //  Npgsql TỪ CHỐI ghi DateTimeOffset có offset khác 0 vào timestamptz — endpoint
+    //  trả 500 cho một đầu vào hợp lệ theo ISO 8601.
+    //
+    //  Một bộ test tự cấp vật liệu cho mình chỉ kiểm được những hình dạng mà người
+    //  viết nghĩ ra. Nên hai test này cố tình dùng đúng dạng Jira Server trả về.
+    // =====================================================================
+
+    [Fact]
+    public async Task Tin_hieu_case_mang_offset_khac_UTC_van_nap_duoc()
+    {
+        using var factory = ApiFactory.Dedicated(db.TenantAKey);
+        using var client = factory.CreateClient();
+
+        var reference = Unique("jira");
+        // Đúng dạng Jira Server/DC trả về sau khi script chuẩn hoá: +07:00, không phải Z.
+        var taoLuc = new DateTimeOffset(2026, 9, 1, 10, 0, 0, TimeSpan.FromHours(7));
+        var xongLuc = new DateTimeOffset(2026, 9, 3, 15, 0, 0, TimeSpan.FromHours(7));
+
+        var response = await client.PostAsJsonAsync(SignalPath, new[]
+        {
+            new
+            {
+                sourceReference = reference,
+                subject = "Hoa don khong dong bo sang VNPT",
+                sourceCreatedAt = taoLuc,
+                sourceResolvedAt = xongLuc,
+            },
+        });
+
+        // Trước IM-24 chỗ này là 500, không phải 400 — lỗi bật ra từ SaveChangesAsync
+        // nên bên gửi không có cách nào biết mình phải sửa gì.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // Và mốc thời gian phải là CÙNG MỘT THỜI ĐIỂM, không bị dịch đi 7 tiếng.
+        // Đây mới là phần dễ sai im lặng: một phép chuyển sai vẫn ghi được xuống DB,
+        // chỉ là ghi sai giờ — và không ai phát hiện cho tới khi Path A xếp case theo
+        // thời gian rồi ra thứ tự lạ.
+        await using var context = db.OpenContext(db.TenantAId);
+        var saved = await context.Cases.SingleAsync(c => c.SourceReference == reference);
+
+        Assert.Equal(taoLuc.ToUniversalTime(), saved.SourceCreatedAt);
+        Assert.Equal(xongLuc.ToUniversalTime(), saved.SourceResolvedAt);
+        Assert.Equal(TimeSpan.Zero, saved.SourceCreatedAt!.Value.Offset);
+    }
+
+    [Fact]
+    public async Task Evidence_mang_offset_khac_UTC_van_nap_duoc()
+    {
+        using var factory = ApiFactory.Dedicated(db.TenantAKey);
+        using var client = factory.CreateClient();
+
+        var caseReference = await NewCaseAsync(client);
+        var reference = Unique("jira");
+        var quanSatLuc = new DateTimeOffset(2026, 9, 2, 9, 0, 0, TimeSpan.FromHours(7));
+
+        var response = await client.PostAsJsonAsync(EvidencePath, new[]
+        {
+            new
+            {
+                caseSourceReference = caseReference,
+                sourceReference = reference,
+                content = "Da kiem log parser, thay payload dang X bi drop",
+                observedAt = quanSatLuc,
+                machineReadability = (string?)null,
+            },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        await using var context = db.OpenContext(db.TenantAId);
+        var saved = await context.EvidenceItems.SingleAsync(e => e.SourceReference == reference);
+
+        Assert.Equal(quanSatLuc.ToUniversalTime(), saved.ObservedAt);
+        Assert.Equal(TimeSpan.Zero, saved.ObservedAt!.Value.Offset);
+    }
+
     private static async Task<string> NewCaseAsync(HttpClient client, string? tenantKey = null)
     {
         var reference = Unique("jira");

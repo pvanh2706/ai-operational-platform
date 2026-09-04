@@ -391,6 +391,47 @@ khoá nào. Có test khoá đúng thứ tự này, và nó đỏ khi đảo hai 
 
 ---
 
+## `IM-24` · Mốc thời gian có múi giờ làm endpoint trả 500 — chỉ dữ liệu THẬT mới lộ
+
+**Ghi 2026-09-04.** Nạp fixture Jira thật vào `kp_dev` thì `POST /signals/case-observed`
+trả **500** ngay tín hiệu đầu tiên:
+
+```text
+System.ArgumentException: Cannot write DateTimeOffset with Offset=07:00:00 to
+PostgreSQL type 'timestamp with time zone', only offset 0 (UTC) is supported.
+```
+
+Npgsql từ chối mọi `DateTimeOffset` có offset khác 0. Jira Server trả `+07:00`. Và vì
+lỗi bật ra từ tận `SaveChangesAsync` nên nó thành **500**, không phải 400 — một đầu vào
+**hợp lệ theo ISO 8601** bị báo là lỗi máy chủ, và bên gửi không có cách nào biết phải
+sửa gì.
+
+**Điều đáng nhớ không phải cái bug, mà là VÌ SAO 103 test không thấy nó.**
+Mọi mốc thời gian trong bộ test đều do chính bộ test dựng ra — và tay người viết test
+thì luôn viết UTC, hoặc để `null` (xem tham số `observedAt` mặc định của hàm `Evidence()`
+trong `CaseEvidenceTests`). Một bộ test tự cấp vật liệu cho mình chỉ kiểm được những
+hình dạng mà người viết nghĩ ra. Đây là lý do thứ hai trong cùng một ngày để nói rằng
+**fixture dữ liệu thật có giá trị mà dữ liệu bịa không có** — lý do thứ nhất là `AR-k`.
+
+**Sửa ở đâu, và vì sao không sửa ở handler.** Đặt trong `AppDbContext.ConfigureConventions`
+qua `UtcDateTimeOffsetConverter`: nó áp cho MỌI thuộc tính `DateTimeOffset` của MỌI
+entity, **kể cả entity chưa ai viết**. Sửa ở handler thì mỗi chỗ ghi mới lại phải nhớ
+một lần nữa — cùng lý do `TenantScopedTables` suy ra từ model thay vì viết tay.
+
+**Không phải workaround, mà là đúng ngữ nghĩa.** `2026-09-01T10:00:00+07:00` và
+`2026-09-01T03:00:00Z` là cùng một khoảnh khắc. Thứ mất đi là *"người ghi nhận ở múi
+giờ nào"* — mà cột `timestamptz` chưa bao giờ lưu được điều đó, kể cả trước khi có lớp
+này. Ngày nào cần biết múi giờ gốc thì nó phải là một **CỘT RIÊNG do bên gửi khai**
+(đúng tinh thần `IM-19`), không phải một hy vọng rằng offset tự sống sót.
+
+2 test mới, và đã chứng minh biết ĐỎ: gỡ hai dòng `HaveConversion` khỏi
+`ConfigureConventions` → đúng 2 test đó đỏ, 40 test còn lại vẫn xanh.
+Hai test kiểm CẢ HAI thứ: endpoint trả 200, **và** mốc thời gian lưu xuống là cùng một
+thời điểm chứ không bị dịch đi 7 tiếng — một phép chuyển sai vẫn ghi được xuống DB, chỉ
+là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case theo thời gian.
+
+---
+
 ## `IM-22` · `RlsGuard` báo XANH trong khi dữ liệu đang rò — đã đo, đã sửa
 
 **Đây là lỗ nghiêm trọng nhất tìm được từ đầu dự án, và nó nằm bên trong chính cơ chế
