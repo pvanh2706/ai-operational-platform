@@ -1031,6 +1031,32 @@ R-K4   "Một loại vấn đề có 5-10 nguyên nhân" — VẪN CHƯA ĐẾM 
           nếu tập nguyên nhân thay đổi theo phiên bản sản phẩm thì mẫu gần đây sẽ cho
           ÍT nguyên nhân hơn thực tế 12 tháng.
 
+       🛑 **VÀ MỘT LỖI LẤY MẪU ĐÃ ĐO, ghi vì nó rất dễ lặp lại.** Lô đầu tiên xuất ra
+          được gọi là "mẫu 12 tháng" — thực tế nó trải **24 NGÀY** (2026-08-11 →
+          2026-09-03). Lý do đơn giản mà không ai nghĩ tới lúc đặt JQL:
+          `ORDER BY resolved DESC` + `MAX_ISSUES=150` lấy 150 case **GẦN NHẤT**, và
+          project có ~2 723 case hoá đơn đã đóng mỗi năm → 150 case chỉ ăn hết **6,6%**
+          khoảng thời gian.
+
+            "N case gần nhất" KHÔNG phải mẫu của N tháng. Nó là mẫu của một cửa sổ hẹp
+            mà độ hẹp phụ thuộc LƯU LƯỢNG — và lưu lượng thì không ai kiểm khi viết JQL.
+
+          Hệ quả trực tiếp cho phép đếm này: nếu tập nguyên nhân thay đổi theo phiên bản
+          sản phẩm (gần như chắc chắn có — mỗi bản vá đóng lại một nhóm nguyên nhân và
+          mở ra nhóm khác) thì mẫu 24 ngày cho con số **cận dưới rất xa**.
+
+          ✅ Đã sửa: `scripts/jira-export/sample_spread.py` chia khoảng thành từng tháng
+          và lấy đều 12 case mỗi tháng. Đo được ngay, và kết quả NGƯỢC DỰ ĐOÁN:
+
+            mẫu                      case  evidence  mẩu dùng được/case  case rỗng
+            24 ngày gần nhất          150       345                1,46   26 (17%)
+            12 tháng rải đều          144       528                2,26   39 (27%)
+
+          Case CŨ HƠN **giàu** nội dung hơn, không nghèo hơn. Nhưng cũng nhiều case rỗng
+          hẳn hơn — nên phân bố **lệch hơn**, không phải tốt hơn đều. Cả hai con số đều
+          quan trọng: trung bình cao hơn nói rằng có case đáng gom, còn 27% case rỗng nói
+          rằng một phần tư corpus không dùng được dù đã lọc đúng chủ đề và đúng trạng thái.
+
        Vì sao không đếm được từ corpus 32 case: hai vòng phân tích đọc CÙNG dữ liệu ra
        hai kết luận NGƯỢC NHAU — một bên đếm 12 nguyên nhân trên 12 kết luận, độ dốc
        tích luỹ đúng bằng 1.0, suy ra "chưa bão hoà, con số thật có thể >10"; bên kia
