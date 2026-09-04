@@ -28,4 +28,5 @@ scripts/jira-export/dry-run-*.json
 # của chủ dữ liệu, không phải một thao tác kỹ thuật — nên mặc định là KHÔNG.
 # Ai cần fixture thì chạy make_fixture.py trên bản dry-run của chính mình.
 scripts/jira-export/fixture-*.json
+scripts/jira-export/spread-*.json
 __pycache__/
