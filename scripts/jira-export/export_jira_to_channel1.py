@@ -46,6 +46,7 @@ import base64
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -121,23 +122,56 @@ def read_config() -> Config:
     )
 
 
-def http_json(url: str, headers: dict[str, str], body: object | None = None) -> dict:
+class LoiThoangQua(Exception):
+    """Lỗi có thể hết sau khi thử lại: timeout, mất kết nối, 429, 5xx."""
+
+
+def http_json(url: str, headers: dict[str, str], body: object | None = None,
+              so_lan_thu: int = 3) -> dict:
+    """Gọi HTTP, THỬ LẠI với lỗi thoáng qua.
+
+    ⚠ Sinh ra từ một lần vấp thật 2026-09-04. Kéo 150 issue là ~380 request liên tiếp;
+    ở request thứ ~380 Jira không trả lời (`WinError 10060`) và bản trước của hàm này
+    gọi `die()` ngay — **mất trắng 6 phút gọi mạng và 328 mẩu evidence đã đọc xong**.
+    Một script gọi hàng trăm request qua mạng phải chịu được MỘT request lỗi; không thì
+    xác suất chạy trọn một lô giảm theo số request, và nó giảm nhanh.
+
+    Lỗi 4xx (trừ 429) thì KHÔNG thử lại — sai JQL hay sai khoá thì thử mười lần cũng
+    vẫn sai, và thử lại chỉ làm thông báo lỗi đến muộn hơn.
+    """
     data = None
     if body is not None:
         data = json.dumps(body, ensure_ascii=False).encode("utf-8")
         headers = {**headers, "Content-Type": "application/json; charset=utf-8"}
     req = urllib.request.Request(url, data=data, headers=headers,
                                  method="POST" if body is not None else "GET")
-    try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        # Body lỗi của cả Jira lẫn app đều nói rõ sai ở đâu (app trả ValidationProblem
-        # chỉ đích danh phần tử lỗi) — nuốt nó đi là bắt người chạy đoán mò.
-        detail = e.read().decode("utf-8", errors="replace")
-        die(f"HTTP {e.code} từ {url}\n{detail}")
-    except urllib.error.URLError as e:
-        die(f"không gọi được {url}: {e.reason}")
+
+    for lan in range(1, so_lan_thu + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as ex:
+            # Body lỗi của cả Jira lẫn app đều nói rõ sai ở đâu (app trả ValidationProblem
+            # chỉ đích danh phần tử lỗi) — nuốt nó đi là bắt người chạy đoán mò.
+            detail = ex.read().decode("utf-8", errors="replace")
+            if ex.code == 429 or 500 <= ex.code < 600:
+                if lan < so_lan_thu:
+                    cho = 2 ** lan
+                    print(f"    HTTP {ex.code}, thử lại sau {cho}s ({lan}/{so_lan_thu - 1})")
+                    time.sleep(cho)
+                    continue
+                raise LoiThoangQua(f"HTTP {ex.code} sau {so_lan_thu} lần thử: {url}")
+            die(f"HTTP {ex.code} từ {url}" + chr(10) + detail)
+        except (urllib.error.URLError, TimeoutError, OSError) as ex:
+            ly_do = getattr(ex, "reason", ex)
+            if lan < so_lan_thu:
+                cho = 2 ** lan
+                print(f"    mạng lỗi ({ly_do}), thử lại sau {cho}s ({lan}/{so_lan_thu - 1})")
+                time.sleep(cho)
+                continue
+            raise LoiThoangQua(f"không gọi được sau {so_lan_thu} lần thử: {url}: {ly_do}")
+
+    raise LoiThoangQua(f"không gọi được: {url}")
 
 
 # ---------------------------------------------------------------- đọc từ Jira
@@ -216,6 +250,7 @@ def iso(ts: str | None) -> str | None:
 def build_signals(cfg: Config, issues: list[dict]) -> tuple[list[dict], list[dict]]:
     cases: list[dict] = []
     evidence: list[dict] = []
+    bo_qua: list[tuple[str, str]] = []
 
     for i, issue in enumerate(issues, 1):
         key = issue["key"]
@@ -239,7 +274,20 @@ def build_signals(cfg: Config, issues: list[dict]) -> tuple[list[dict], list[dic
             "sourceResolvedAt": iso(fields.get("resolutiondate")),
         })
 
-        description, created = fetch_description(cfg, key)
+        # ⚠ Bọc riêng phần gọi mạng của MỘT issue. Trước 2026-09-04 một timeout ở
+        # issue thứ 141 làm mất trắng 140 issue đã đọc xong. Bỏ qua issue lỗi thì
+        # corpus thiếu vài case — chấp nhận được cho phép đếm; mất cả lô thì không.
+        # ⚠ Bỏ qua phải NÓI RA và ĐẾM: một corpus thiếu case mà người dùng tưởng đủ
+        # sẽ làm mọi tỉ lệ tính trên nó sai, và sai im lặng.
+        try:
+            description, created = fetch_description(cfg, key)
+            comments = fetch_comments(cfg, key)
+        except LoiThoangQua as ex:
+            bo_qua.append((key, str(ex)))
+            print(f"  ⚠ BỎ QUA {key}: {ex}")
+            cases.pop()  # đã thêm ở trên; bỏ luôn case để không có case rỗng nội dung
+            continue
+
         if description and description.strip():
             evidence.append({
                 "caseSourceReference": case_ref,
@@ -254,7 +302,7 @@ def build_signals(cfg: Config, issues: list[dict]) -> tuple[list[dict], list[dic
                 "machineReadability": "High",
             })
 
-        for c in fetch_comments(cfg, key):
+        for c in comments:
             body = c.get("body") or ""
             if not body.strip():
                 continue  # evidence rỗng nghĩa là rác trong kho gom — endpoint cũng sẽ 400
@@ -268,6 +316,13 @@ def build_signals(cfg: Config, issues: list[dict]) -> tuple[list[dict], list[dic
 
         if i % 20 == 0 or i == len(issues):
             print(f"  đọc nội dung: {i}/{len(issues)} issue, {len(evidence)} mẩu evidence")
+
+    if bo_qua:
+        print(f"{chr(10)}  ⚠ ĐÃ BỎ QUA {len(bo_qua)}/{len(issues)} issue vì lỗi mạng:")
+        for key, ly_do in bo_qua:
+            print(f"      {key}")
+        print("    Corpus THIẾU những case này. Chạy lại script để lấy nốt — cả hai")
+        print("    endpoint idempotent nên gửi lại vô hại.")
 
     return cases, evidence
 

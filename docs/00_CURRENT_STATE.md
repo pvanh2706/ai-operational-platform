@@ -54,6 +54,61 @@
 > 3  ĐẾM nguyên nhân trên corpus 12 tháng TRƯỚC khi chốt kiến trúc tìm      → R-K4
 >    kiếm. ~1 ngày công, chặn được quyết định đắt nhất còn lại (vector DB).
 > ```
+> ---
+> ### 🔄 CẬP NHẬT CUỐI NGÀY 2026-09-04 — đã chạy thật trên Jira, hai quyết định có kết quả
+>
+> **Quyết định 2 (sub-tenant) BỊ CHẶN — không có nguồn nào dùng được.** Chạy
+> `scripts/jira-export/discover_fields.py` trên Jira thật rồi đo lại trên đúng 32 case
+> của corpus: trường `Mã khách sạn` [customfield_12710] **TỒN TẠI, phủ 100%, và bằng
+> `-1.0` ở 32/32 case** — kiểu number, giá trị -1 là sentinel "chưa xác định", tức nó
+> được thiết kế có ý định rồi không bao giờ được điền. `Tên khách sạn / Resort` thì 25/32
+> rỗng và 7 case còn lại ghi "ezCloud - Customer Support" (tên TEAM). `C247ExtentionID`
+> là extension tổng đài của NHÂN VIÊN. Chi tiết + hai nhánh xử lý ở `07` §5 `AR-l`.
+>
+> 🛑 **MẪU LỖI LẶP HAI LẦN TRONG MỘT NGÀY — điều đáng mang đi nhất của phiên này.**
+> `machineReadability` = High ở 128/128 (`AR-k`) và `Mã khách sạn` = -1.0 ở 32/32
+> (`AR-l`) là **cùng một hình dạng**: một trường phủ 100% với MỘT giá trị duy nhất.
+> Nó tệ hơn trường rỗng, vì trường rỗng thì ai cũng thấy là thiếu, còn trường
+> phủ-100%-một-giá-trị thì **trông như đã có dữ liệu** — mọi phép kiểm *"trường này có
+> được điền không?"* đều trả lời CÓ.
+> → **LUẬT:** với mọi trường dùng làm ranh giới hay bộ lọc, **đếm số giá trị PHÂN BIỆT,
+>   không đếm độ phủ.** Một giá trị = coi như rỗng. Đã thành phép kiểm chạy được:
+>   `scripts/jira-export/check_corpus.py` (trả mã thoát ≠ 0, cắm được vào CI).
+>
+> **Quyết định 3 (đếm R-K4): corpus ĐÃ VỀ, và cơ sở ước lượng cũ sai 20 lần.**
+> Đếm thật bằng JQL: **2 723** case chủ đề hoá đơn đã đóng trong 12 tháng (ước cũ ~140),
+> **38 451** case toàn project, 896 case khoá từ. Lý do sai: corpus 4 ngày lọc thêm
+> `"Kỹ thuật phụ trách" is not EMPTY` — một tập con rất nhỏ. **Đừng ngoại suy quy mô từ
+> một mẫu mà chính mình đã lọc.**
+> → Đã xuất **mẫu 150 case / 345 evidence** (`MAX_ISSUES=150`, `ORDER BY resolved DESC`).
+>   ⚠ Mẫu THIÊN LỆCH VỀ THỜI GIAN, không rải đều 12 tháng. Phép đếm nguyên nhân là
+>   việc CÒN LẠI, chưa làm.
+>
+> 🛑 **CORPUS 12 THÁNG XÁC NHẬN ĐỘC LẬP phát hiện "cờ đã xong đi ngược hàm lượng tri
+> thức" — và mạnh hơn dự kiến.** Corpus mới có **100% case đã đóng** (150/150), nhưng
+> chỉ **1,6 mẩu dùng được mỗi case** — MỎNG HƠN corpus 4 ngày (2,5), vốn chỉ có 22% case
+> đã đóng. Và **38/150 case (25%) có 0 mẩu dùng được.** Case đóng lâu hơn không giàu
+> tri thức hơn; nó nghèo hơn.
+>
+> ⚠ **Corpus mới mang thêm bí mật, gồm một loại chưa từng thấy.** Phép kiểm bắt 14 chỗ:
+> một **JWT token thật** (`ES-338386#comment-789479`), `Pass: KKlai123`
+> (`ES-342304`), `pass: 92255` (`ES-343712`), `pass: 17106` (`ES-346584`), và 7 ID
+> Ultraviewer. JWT là loại `AR-j` chưa liệt kê — nó không có hình dạng số nào cả.
+>
+> ✅ **Luật che đã được ĐO recall, không chỉ được viết.** Dùng danh sách 13 credential
+> đã xác định tay trong `make_fixture.py` làm đáp án: luật theo-DÒNG bắt **11%**, luật
+> theo-NGỮ-CẢNH bản đầu bắt **23%**, bản sửa theo BỐN HÌNH DẠNG thật bắt **92%** (12/13)
+> với **0 lần ăn nhầm** dữ liệu cần giữ. ⚠ Con số 92% đo trên CHÍNH corpus mà luật được
+> sửa theo, nên nó là **cận TRÊN**, không phải ước lượng đúng cho corpus khác.
+> → Một luật che chưa đo recall là một luật tạo ra sự an tâm giả.
+>
+> ⚠ **Và script export có một lỗ đã sửa:** kéo 150 issue là ~380 request liên tiếp; một
+> timeout ở request thứ ~380 làm **mất trắng 6 phút và 328 mẩu đã đọc xong**, vì hàm gọi
+> HTTP `die()` ngay. Giờ có retry với backoff, và một issue lỗi thì BỎ QUA issue đó rồi
+> nói ra + đếm, thay vì mất cả lô. Chạy lại: **150/150 issue, 0 bỏ qua.**
+>
+> ---
+>
 > **VIỆC KẾ TIẾP theo đúng thứ tự ba quyết định trên:** (1) người dùng chạy JQL 12 tháng
 > chủ đề hoá đơn — có sẵn trong `scripts/jira-export/jira-config.example.bat`;
 > (2) thiết kế sub-tenant rồi sinh migration; (3) đếm nguyên nhân trên corpus mới.
