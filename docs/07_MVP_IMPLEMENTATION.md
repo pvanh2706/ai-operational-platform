@@ -1041,6 +1041,18 @@ R-K4   ✅ ĐÃ ĐẾM 2026-09-04. Kết quả đầy đủ: `docs/09_RK4_DEM_NG
                tiền không vào việc duy nhất làm con số tiến lên.
           Rủi ro bất đối xứng có lợi: pgvector là thứ CỘNG THÊM vào cùng Postgres.
 
+       ✅ **CHỐT 2026-09-05 bởi người dùng — ĐƠN VỊ ĐẾM: "một nguyên nhân" = "một SOP
+          DÙNG ĐƯỢC" = mức 19 nhóm.** KHÔNG phải lớp kiến trúc (6), KHÔNG phải cách sửa
+          cụ thể (66).
+          Lý do chọn: đó là đơn vị mà sản phẩm THỰC SỰ SINH RA (bản nháp SOP), và là mức
+          duy nhất trong ba mức cho ra phân phối có đầu-đuôi thật — tức nó đang đo DỮ
+          LIỆU chứ không đo tiêu chí.
+          → **Con số kế hoạch: 18-30 SOP cho MỘT chủ đề**, nhân với số chủ đề. Không
+            phải 5-10 cho toàn nền tảng.
+          → Và nó đóng luôn một tranh luận sẽ tái diễn: từ nay "bao nhiêu nguyên nhân"
+            có một nghĩa duy nhất trong dự án này. Ghi ở đây vì `§6.9` đã cho thấy bệnh
+            "từ vựng song song" tái phát 3 lần trong một workstream.
+
        ⚠ PHÉP THỬ ĐỂ ĐỔI Ý, chạy được trong một buổi, không hạ tầng mới:
          lấy TIN NHẮN ĐẦU của 88 case có nguyên nhân, tra bằng từ khoá/mã lỗi, đo tỉ lệ
          nhóm SOP đúng nằm trong top-3. **Dưới ~60-70% thì embedding đáng thử; trên mức
