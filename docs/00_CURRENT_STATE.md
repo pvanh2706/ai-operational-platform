@@ -53,6 +53,9 @@
 >    này — rò xảy ra ở khâu XUẤT BẢN SOP, không ở khâu truy vấn hàng.
 > 3  ĐẾM nguyên nhân trên corpus 12 tháng TRƯỚC khi chốt kiến trúc tìm      → R-K4
 >    kiếm. ~1 ngày công, chặn được quyết định đắt nhất còn lại (vector DB).
+>    ✅ ĐÃ ĐẾM 2026-09-04, và phép thử retrieval đã chạy 2026-09-05.
+>    ⚠ HẠ CẤP 2026-09-05: kết quả là PHÉP ĐO TRÊN MỘT NGUỒN, KHÔNG phải quyết
+>      định kiến trúc — xem 07 §5 R-K4. Một khách, một nguồn, một chủ đề.
 > ```
 > ---
 > ### 🔄 CẬP NHẬT CUỐI NGÀY 2026-09-04 — đã chạy thật trên Jira, hai quyết định có kết quả

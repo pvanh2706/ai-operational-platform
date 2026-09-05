@@ -18,6 +18,12 @@
 
 # Kết luận `R-K4` — Một loại vấn đề có bao nhiêu nguyên nhân?
 
+> ⚠️ **ĐỌC TRƯỚC — PHẠM VI CỦA TÀI LIỆU NÀY.** Mọi con số ở đây đo trên **một khách
+> (ezCloud), một nguồn (Jira), một chủ đề (hoá đơn điện tử)**. Chúng dùng được để
+> **thiết kế** và để **bác một giả định cũ không có bằng chứng**; chúng KHÔNG dùng được
+> để chốt kiến trúc cho sản phẩm. Xem `07` §5 `R-K4` về `G1`/`G12` và về phân biệt
+> *"dữ liệu thật để tìm lỗi"* (n=1 đủ) với *"để chốt kiến trúc"* (n=1 không đủ).
+
 ## 1. Câu trả lời một dòng
 
 **HỮU HẠN — có cấu trúc lặp lại thật, không phải "mở, hàng trăm" — nhưng KHÔNG NHỎ như giả định đang đứng: cỡ 19 nhóm (khoảng 18–30) cho MỘT chủ đề, và đó là cận dưới, đo trên 59% corpus.**
@@ -67,7 +73,21 @@ Ba hệ quả:
 
 Một chỉnh sửa phương pháp: thứ tự 150 dòng **không** theo thời gian. Điều này **không** phá đường bão hoà — trộn thứ tự đúng là cách chuẩn để hỏi "thêm dữ liệu có thêm nhóm không". Nó chỉ phá các phát biểu về **xu hướng thời gian**. Đừng dùng corpus này để nói "lỗi mới đang sinh thêm theo thời gian".
 
-## 5. Quyết định kiến trúc: **KHÔNG dựng vector DB / RAG. Postgres full-text search là đủ.**
+## 5. Phép đo trên MỘT nguồn: trên corpus này, Postgres FTS là đủ
+
+> 🛑 **HẠ CẤP 2026-09-05.** Mục này ban đầu mang tiêu đề *"Quyết định kiến trúc: KHÔNG
+> dựng vector DB"*. Đó là vượt quá dữ liệu: bằng chứng là MỘT khách, MỘT nguồn, MỘT chủ
+> đề. `G1` nói Jira là connector chứ không phải product boundary; `G12` nói đặc điểm dữ
+> liệu của một khách là THAM SỐ chứ không phải hằng số thiết kế. Lập luận dưới đây giữ
+> nguyên vì nó **không sai** — nó chỉ **hẹp hơn** cách nó được viết ra.
+>
+> **Phát biểu đúng phạm vi:** trên nguồn Jira của ezCloud, chủ đề hoá đơn, tín hiệu văn
+> bản đo được AUC 0,61 — quá yếu để retrieval theo văn bản là cơ chế chính. **Chưa đo
+> trên nguồn nào khác.** CRM có trường có kiểm soát (stage, giá trị, ngành) nên hình
+> dạng dữ liệu khác hẳn; kết luận này không mang sang được.
+>
+> → `AR4` vốn viết đúng: *"FTS trước, pgvector khi ĐO ĐƯỢC là không đủ"* — đó là một
+>   **điều kiện chạy lại được**, không phải cánh cổng đóng một lần.
 
 Nói trước cho rõ: **tôi đang bác chính luật quyết định của `R-K4`, không phải điền số vào nó.** Đo được ~19–30/chủ đề, tức KHÔNG phải 5–10 — nhưng kết luận vẫn là "không dựng RAG". Vì con số chưa bao giờ là phép thử đúng.
 

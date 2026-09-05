@@ -1021,8 +1021,51 @@ R-K4   ✅ ĐÃ ĐẾM 2026-09-04. Kết quả đầy đủ: `docs/09_RK4_DEM_NG
          THIẾT KẾ, không phải phát hiện); lượt 66 gần như toàn singleton (đã đập vỡ cái
          đầu). Nên 19 là mức duy nhất đang ĐO DỮ LIỆU.
 
-       🛑 **QUYẾT ĐỊNH KIẾN TRÚC: KHÔNG dựng vector DB / RAG. Postgres FTS là đủ.**
-          ⚠ Và lưu ý cách đi tới kết luận này: nó **BÁC chính luật quyết định của R-K4**
+       ⚠️ **PHÉP ĐO TRÊN MỘT NGUỒN — KHÔNG PHẢI QUYẾT ĐỊNH KIẾN TRÚC.**
+          🛑 **HẠ CẤP 2026-09-05 sau phản biện của người dùng.** Bản trước của mục này
+             viết *"QUYẾT ĐỊNH KIẾN TRÚC: KHÔNG dựng vector DB"*. Đó là **vượt quá dữ
+             liệu**, và nó vi phạm hai guardrail của chính dự án:
+
+             · `G1` — Jira là **connector**, không phải product boundary. Bằng chứng
+               đứng sau kết luận là MỘT khách, MỘT nguồn, MỘT chủ đề, 88 case có nhãn.
+               Viết ra một quyết định áp cho *sản phẩm* từ đó là biến connector thành
+               ranh giới sản phẩm.
+             · `G12` — đặc điểm dữ liệu của một khách là **THAM SỐ**, không phải hằng số
+               thiết kế. Kết luận cũ đóng nó thành hằng số.
+             · Và `D1` nói khách không dùng Jira vẫn phải dùng được. Một deal trong CRM
+               có **trường có kiểm soát** (stage, giá trị, ngành); một ticket Jira là
+               văn xuôi tự do. AUC đo trên văn xuôi tự do KHÔNG nói gì về CRM.
+
+          **Phát biểu đúng phạm vi:** *trên nguồn Jira của ezCloud, chủ đề hoá đơn, tín
+          hiệu văn bản đo được ở mức **AUC 0,61** — quá yếu để retrieval theo văn bản là
+          cơ chế chính. **CHƯA ĐO trên nguồn nào khác.***
+
+          → Hệ quả về cách làm việc, và đây là phần mang đi được: `AR4` vốn viết đúng —
+            *"Postgres FTS trước, pgvector khi ĐO ĐƯỢC là không đủ"*. Câu đó là một
+            **điều kiện chạy lại được**, không phải một cánh cổng đóng một lần. Phiên
+            này đã đọc nó thành "đã đo xong, kết thúc" — đó là chỗ trượt.
+          → Nên `thu_retrieval.py` phải là **phép đo chuẩn chạy lúc onboard mỗi khách**,
+            không phải một script chạy một lần. "Khách này cần vector hay không" là một
+            **con số đo được**, đúng tinh thần `G12`.
+
+          🛑 **PHÂN BIỆT ĐÃ LÀM MỜ TRONG PHIÊN NÀY — ghi để không lặp lại:**
+            ```text
+            dữ liệu thật để TÌM LỖI TRONG CODE     n=1 là ĐỦ
+                 (bug 500 timezone · trường hằng số · luật che bắt 11% ·
+                  lỗi lấy mẫu "N case gần nhất")
+                 → phát biểu về SỰ TỒN TẠI. Một mẫu chứng minh được.
+
+            dữ liệu thật để CHỐT KIẾN TRÚC          n=1 KHÔNG đủ
+                 (có cần vector DB không · tập nguyên nhân lớn cỡ nào)
+                 → phát biểu về PHÂN BỐ. Cần đại diện.
+            ```
+            Phiên này dùng CÙNG một corpus cho cả hai và trình bày với CÙNG độ chắc
+            chắn. Đó là chỗ trượt thật.
+
+          Lập luận gốc vẫn giữ nguyên dưới đây vì nó không sai — nó chỉ **hẹp hơn** cách
+          nó được viết ra:
+
+          ⚠ Lưu ý cách đi tới kết luận này: nó **BÁC chính luật quyết định của R-K4**
             chứ không điền số vào luật đó. Luật cũ nói "≤10 thì phân loại, >100 thì tìm
             kiếm"; đo được ~19-30 là ở giữa, nhưng bốn lý do dưới đây không cái nào dựa
             vào con số:
@@ -1081,10 +1124,14 @@ R-K4   ✅ ĐÃ ĐẾM 2026-09-04. Kết quả đầy đủ: `docs/09_RK4_DEM_NG
                giống **65%** với `ES-346303` *"CHỈNH LẠI ĐÚNG NGÀY HÓA ĐƠN"* (nhóm **Ngày
                làm việc/kiểm toán**). Cùng từ vựng, khác cơ chế hoàn toàn.
 
-          🛑 **KẾT LUẬN: KHÔNG dựng vector DB — và lý do bây giờ MẠNH HƠN lúc chưa đo.**
-             AUC 60,9% là **trần của MỌI phương pháp đọc văn bản của case**, không riêng
-             FTS. Embedding đọc đúng cái văn bản đó; nó nắm được đồng nghĩa nên có thể
-             nhích vài điểm, nhưng không thể tạo ra tín hiệu không có trong dữ liệu.
+          ⚠️ **KẾT LUẬN, ĐÚNG PHẠM VI (sửa 2026-09-05): trên nguồn này, embedding cũng
+             không cứu được — nhưng đó là phát biểu về NGUỒN NÀY, không về sản phẩm.**
+             AUC 60,9% là **trần của MỌI phương pháp đọc văn bản của case NÀY**, không
+             riêng FTS. Embedding đọc đúng cái văn bản đó; nó nắm được đồng nghĩa nên có
+             thể nhích vài điểm, nhưng không thể tạo ra tín hiệu không có trong dữ liệu.
+             ⚠ Nguồn khác có thể có AUC cao hơn hẳn, và lúc đó câu trả lời đổi. Đây là
+               lý do phép đo phải chạy lại mỗi khách chứ không chốt một lần — xem đầu
+               mục `R-K4` về `G1`/`G12`.
              → Ngưỡng "dưới 60% thì embedding đáng thử" **giả định ngầm rằng trần cao**.
                Giả định đó sai ở corpus này. Một phép thử tốt vẫn có thể hỏi sai câu, và
                cách phát hiện là đo thêm BASELINE và TRẦN — hai thứ mà ngưỡng gốc không có.
