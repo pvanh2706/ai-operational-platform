@@ -96,7 +96,7 @@ Tìm: mật khẩu, tài khoản kèm mật khẩu, API key, token, chuỗi kế
 số, chứng thư, mã OTP, đường dẫn kèm credential, cấu hình có secret, thông tin đăng nhập
 hệ thống thuế/hoá đơn điện tử, thông tin thẻ ngân hàng.
 
-Đã biết chắc có ít nhất MỘT: trong jira:ES-346481#comment-802977 có "ACpass":"Vnpt@2026".
+Đã biết chắc có ít nhất MỘT: mẩu jira:ES-346481#comment-802977 chứa một cặp "Account"/"ACpass" nguyên văn.
 Tìm cho HẾT phần còn lại — đừng dừng ở cái đã biết.
 
 Với mỗi phát hiện, trích đúng đoạn (che bớt phần nhạy cảm nếu quá dài) và nói rõ vì sao

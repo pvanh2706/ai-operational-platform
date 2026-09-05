@@ -94,8 +94,8 @@
 > tri thức hơn; nó nghèo hơn.
 >
 > ⚠ **Corpus mới mang thêm bí mật, gồm một loại chưa từng thấy.** Phép kiểm bắt 14 chỗ:
-> một **JWT token thật** (`ES-338386#comment-789479`), `Pass: KKlai123`
-> (`ES-342304`), `pass: 92255` (`ES-343712`), `pass: 17106` (`ES-346584`), và 7 ID
+> một **JWT token thật** (`ES-338386#comment-789479`), ba mật khẩu dạng
+> `Pass: <giá trị>` (`ES-342304`, `ES-343712`, `ES-346584`), và 7 ID
 > Ultraviewer. JWT là loại `AR-j` chưa liệt kê — nó không có hình dạng số nào cả.
 >
 > ✅ **Luật che đã được ĐO recall, không chỉ được viết.** Dùng danh sách 13 credential
@@ -108,9 +108,10 @@
 > 🛑 **CREDENTIAL KHÔNG PHẢI CA CÁ BIỆT — NÓ LÀ MẪU HÀNH VI.** Luật che chạy trên
 > corpus 150 case bắt **40 chỗ trên 18/345 mẩu = 5,2%**, tức **cứ ~19 mẩu evidence có
 > một mẩu chứa credential**. Phần lớn là CẶP ID + mật khẩu Ultraviewer, gửi thành hai
-> tin nhắn liên tiếp: `214 250 580`/`17106` · `23 996 795`/`01551` ·
-> `110 143 652`/`13333` · `79 053 771`/`0279` · `111 444 028`/`86846` và 10 cặp nữa.
-> Cộng hai JWT token và `Pass: KKlai123`.
+> tin nhắn liên tiếp — hình dạng `<nn nnn nnn>` rồi `<4-5 chữ số>`, 15 cặp như vậy.
+> ⚠ Giá trị nguyên văn KHÔNG ghi ở đây có chủ đích: chúng là credential còn sống của
+> khách hàng, và tài liệu này đi theo git. Tra lại bằng `check_corpus.py` trên corpus.
+> Cộng hai JWT token và ba mật khẩu dạng `Pass: <giá trị>`.
 > → Đây không phải một sự cố của `ES-346481` mà là **cách support team làm việc**: xin
 >   Ultraviewer để remote vào máy khách. `AR-j` vì thế không giải được bằng cách xử lý
 >   vài mẩu — nó cần một luật chạy mỗi lần nạp. Đã có: `check_corpus.py`.

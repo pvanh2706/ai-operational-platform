@@ -883,7 +883,7 @@ AR-j   Dữ liệu vận hành thật mang theo BÍ MẬT SỐNG. Che bằng lu�
          LỌC THEO TỪ KHOÁ CÙNG DÒNG KHÔNG DÙNG ĐƯỢC. Đo thật trên corpus:
          với luật `ultraview|teamview|anydesk|mật khẩu|password|pass|pw|acpass`,
          tỉ lệ bắt được các dòng chứa dãy số dạng ID là **2/17 = 11%**.
-         Ca tệ nhất (ES-346406): khách gõ "107 293 745" rồi "55663" ở HAI tin nhắn
+         Ca tệ nhất (ES-346406): khách gõ một dãy 9 số rồi một dãy 5 số ở HAI tin nhắn
          liên tiếp, còn chữ "Ultraview" nằm ở lượt nói TRƯỚC ĐÓ của nhân viên. Không
          từ khoá nào trong phạm vi dòng. Bộ lọc mù, nhưng model đọc thì thừa ngữ cảnh
          để hiểu đúng đó là ID/PW — mù đúng chiều xấu nhất.

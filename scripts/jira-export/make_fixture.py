@@ -19,9 +19,14 @@ CÁCH LÀM: thay giá trị thật bằng giá trị GIẢ GIỮ NGUYÊN HÌNH D
 cùng cách nhóm, cùng vị trí trong câu. Luật che nhìn thấy y hệt, còn bí mật thì không
 đi theo.
 
-⚠ Thay bằng danh sách TƯỜNG MINH, không phải regex. Cố ý: regex trên dữ liệu thật vừa
-bỏ sót (đo được 11%) vừa ăn nhầm dữ liệu cần giữ — `80771` là số đặt phòng và
-`0304746657` là mã số thuế, cả hai PHẢI ở lại. Danh sách tay thì review được từng dòng.
+⚠ Thay bằng danh sách ĐƯỢC NGƯỜI SOÁT, không phải regex chạy mù. Cố ý: regex trên dữ
+liệu thật vừa bỏ sót (luật theo dòng đo được 11%) vừa ăn nhầm dữ liệu CẦN GIỮ — mã số
+thuế và số đặt phòng đều là dãy số trần. Danh sách được soát thì review được từng dòng.
+
+⚠ NHƯNG DANH SÁCH ĐÓ NẰM NGOÀI REPO (`redact-list.json`, .gitignore), vì cột giá trị
+thật của nó CHÍNH LÀ credential. Bản trước ghi nó trong file này và đã bị commit vào
+git history — xem khối chú thích ở `nap_danh_sach`. Chưa có file thì script tự sinh
+ứng viên bằng luật rồi DỪNG để người dùng soát.
 
 Chạy:  python scripts/jira-export/make_fixture.py
 Ra:    scripts/jira-export/fixture-cases.json + fixture-evidence.json
@@ -31,6 +36,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 
 # Windows: khi output bi chuyen huong (pipe, ghi file, hoac chay tu trinh khac), Python
@@ -49,36 +55,61 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 # (giá trị thật, giá trị giả cùng hình dạng, mô tả để in ra và để review)
 # Nguồn: vòng quét corpus 2026-09-04, đã phản biện đối kháng từng cái.
-THAY_THE = [
-    # --- Bộ nguy hiểm nhất: hoá đơn điện tử VNPT, ES-346481 ---
-    ("Vnpt@2026",   "Xxxx@0000", "mật khẩu VNPT (dùng cho CẢ HAI tài khoản)"),
-    ("ketoankhachsan", "taikhoanmau", "tài khoản dịch vụ VNPT"),
-    ("4500621073sv", "0000000000sv", "tài khoản portal VNPT (= MST + 'sv')"),
-    # MST 4500621073 KHÔNG thay: nó là định danh công khai của doanh nghiệp, và nó là
-    # thứ luật che PHẢI học cách bỏ qua. Thay nó đi là dạy luật sai.
+# ⚠⚠ DANH SÁCH CHE NẰM NGOÀI REPO, VÀ ĐÂY LÀ LÝ DO — đọc trước khi "gọn hoá" lại.
+#
+# Bản trước ghi danh sách này TƯỜNG MINH trong file này, cột đầu là GIÁ TRỊ THẬT:
+# mật khẩu VNPT, tài khoản, ID và mật khẩu Ultraviewer của sáu khách sạn. Nó đã bị
+# commit vào git history — phát hiện 2026-09-05 khi quét repo TRƯỚC LÚC PUSH lên GitHub.
+#
+# Nghịch lý đáng ghi: một script viết ra để **không nhân bản bí mật** lại tự trở thành
+# bản sao thứ hai của đúng những bí mật đó. Lý do nó xảy ra rất dễ lặp: danh sách tay
+# **review được từng dòng** (ưu điểm thật, xem ghi chú cũ ở docstring), và "review được"
+# kéo theo "nằm trong file", rồi "nằm trong file" kéo theo "nằm trong git".
+#
+# Giờ danh sách ở `redact-list.json` (.gitignore). Không có nó thì script TỰ SINH bằng
+# luật quét đã đo recall (`check_corpus.quet_bi_mat`), rồi dừng lại để người dùng soát —
+# vì một danh sách che sinh tự động mà chưa ai đọc thì có thể vừa bỏ sót vừa ăn nhầm.
 
-    # --- Năm bộ điều khiển từ xa. ID gắn cứng theo máy nên nguy hơn mật khẩu ---
-    ("24235840",    "10000001", "Ultraviewer ID — Osaka hotel (ES-346661)"),
-    ("46169",       "10001",    "Ultraviewer mật khẩu — Osaka hotel"),
-    ("70 761 691",  "10 000 002", "Ultraviewer ID — The One Hotel 2 (ES-346602)"),
-    ("64467",       "10002",    "Ultraviewer mật khẩu — The One Hotel 2"),
-    ("78 726 060",  "10 000 003", "Ultraviewer ID — Eden Star Saigon (ES-346425)"),
-    ("22297",       "10003",    "Ultraviewer mật khẩu — Eden Star Saigon"),
-    ("107 293 745", "100 000 004", "Ultraviewer ID — ANCARINE (ES-346406)"),
-    ("55663",       "10004",    "Ultraviewer mật khẩu — ANCARINE"),
-    ("50439160",    "10000005", "Ultraviewer ID — Sơn Tiên (ES-346405)"),
-    ("21548",       "10005",    "Ultraviewer mật khẩu — Sơn Tiên"),
+DANH_SACH = os.path.join(HERE, "redact-list.json")
 
-    # --- Email cá nhân thật của khách hàng ---
-    ("kimngocchuong1008@gmail.com", "khachhang001@example.com", "email khách hàng"),
-    ("dathoanggg17092002@gmail.com", "khachhang002@example.com", "email khách hàng"),
-    ("mirahhotel.sales@gmail.com",  "khachsan003@example.com", "email khách sạn"),
-    ("chanhvy@gmail.com",           "khachhang004@example.com", "email khách hàng"),
 
-    # --- Số điện thoại cá nhân ---
-    ("0708095465",  "0900000001", "số điện thoại khách sạn (ES-346425)"),
-    ("0982 048 187", "0900 000 002", "di động trong chữ ký email (ES-346759)"),
-]
+def nap_danh_sach(evidence: list) -> list:
+    """Trả [(giá trị thật, giá trị giả, mô tả)]. Sinh lần đầu, sau đó đọc lại từ file."""
+    if os.path.exists(DANH_SACH):
+        with open(DANH_SACH, encoding="utf-8") as f:
+            d = json.load(f)
+        return [(m["that"], m["gia"], m["moTa"]) for m in d["muc"]]
+
+    # Chưa có: sinh bằng luật, rồi DỪNG. Không tự chạy tiếp với một danh sách chưa ai
+    # đọc — đó đúng là cách một luật che biến thành sự an tâm giả.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("cc", os.path.join(HERE, "check_corpus.py"))
+    cc = importlib.util.module_from_spec(spec)
+    sys.modules["cc"] = cc
+    spec.loader.exec_module(cc)
+
+    ung_vien = sorted({g for _, _, g in cc.quet_bi_mat(evidence)}, key=len, reverse=True)
+    muc = []
+    for i, v in enumerate(ung_vien, 1):
+        # Giá trị giả GIỮ NGUYÊN HÌNH DẠNG: mỗi chữ số thành 0, giữ nguyên khoảng trắng
+        # và độ dài, rồi gắn số thứ tự để hai mục khác nhau không thành cùng một giá trị.
+        # Luật che nhìn thấy y hệt, còn bí mật thì không đi theo.
+        gia = re.sub(r"\d", "0", v) + f"-{i}" if any(c.isdigit() for c in v) \
+            else f"gia-tri-mau-{i}"
+        muc.append({"that": v, "gia": gia, "moTa": "TỰ SINH — CẦN NGƯỜI SOÁT"})
+    with open(DANH_SACH, "w", encoding="utf-8") as f:
+        json.dump({"_ghiChu": "TỰ SINH bằng check_corpus.quet_bi_mat. CẦN NGƯỜI SOÁT.",
+                   "muc": muc}, f, ensure_ascii=False, indent=1)
+    print("\n".join([
+        f"Chưa có danh sách che. Đã TỰ SINH {len(muc)} mục ứng viên vào:",
+        f"  {DANH_SACH}",
+        "",
+        "⚠ DỪNG LẠI ĐỂ BẠN SOÁT. Luật quét vừa bỏ sót được vừa ăn nhầm được:",
+        "  · bỏ sót   -> credential đi thẳng vào fixture",
+        "  · ăn nhầm  -> mất dữ liệu CẦN GIỮ (mã số thuế và số đặt phòng đều là dãy số)",
+        "Sửa cột `gia`/`moTa` cho đúng, xoá mục nào không phải bí mật, rồi chạy lại.",
+    ]), file=sys.stderr)
+    sys.exit(3)
 
 # Cặp trùng byte đã xác nhận bằng hash — giữ lại CẢ HAI trong fixture, cố ý.
 # Fixture phải chứa được cả ca xấu, nếu không thì luật khử trùng không có gì để bắt.
@@ -107,6 +138,7 @@ def main() -> None:
               file=sys.stderr)
         sys.exit(2)
 
+    THAY_THE = nap_danh_sach(evidence)
     dem = {mo_ta: 0 for _, _, mo_ta in THAY_THE}
     cham_vao = set()
 

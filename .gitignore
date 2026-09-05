@@ -29,4 +29,7 @@ scripts/jira-export/dry-run-*.json
 # Ai cần fixture thì chạy make_fixture.py trên bản dry-run của chính mình.
 scripts/jira-export/fixture-*.json
 scripts/jira-export/spread-*.json
+# Danh sách che: cột giá trị THẬT là credential + PII của khách hàng.
+# make_fixture.py tự sinh lại được bằng luật quét (check_corpus.quet_bi_mat).
+scripts/jira-export/redact-list.json
 __pycache__/

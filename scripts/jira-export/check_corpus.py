@@ -99,7 +99,7 @@ def quet_bi_mat(evidence: list) -> list[tuple[str, str, str]]:
     """
     CONG_CU = r"(?i)ultra ?view|utlatra|teamview|anydesk"
     # ⚠ Dấu tiếng Việt phải liệt kê ĐỦ: "khẩu" là kh-ẩ-u, không phải kh-â-u. Bản đầu
-    # thiếu chữ 'ẩ' và vì thế trượt đúng một credential ("Mật khẩu: 46169").
+    # thiếu chữ 'ẩ' và vì thế trượt đúng một credential (dạng "Mật khẩu: <5 số>").
     NHAN = (r"(?i)(?:m[aậâạ][tj]?\s*kh[aâẩ]u|matkhau|pass(?:word)?|pw|pwd"
             r"|ID(?:\s*c[uủ]a\s*b[aạ]n)?)")
     SO = r"\d{2,3}[ ]\d{3}[ ]\d{3}|\d{4,9}"
@@ -168,10 +168,10 @@ def kiem_bi_mat(evidence: list) -> None:
     chỉ in. Muốn đo một thứ thì thứ đó phải trả về dữ liệu.
 
     Bốn hình dạng, tất cả đều lấy nguyên văn từ corpus:
-      1  `ID của bạn: 24235840` / `Mật khẩu: 46169`     nhãn + giá trị CÙNG DÒNG
-      2  `Ultraview: 70 761 691    //    64467`          NHIỀU giá trị cùng dòng
-      3  `107 293 745` rồi `55663` ở hai tin nhắn        dãy số TRẦN, cách nhau vài dòng
-      4  `"Account": "ketoankhachsan"`                   key JSON, key KHÔNG phải password
+      1  `ID của bạn: <9 chữ số>` / `Mật khẩu: <5 số>`  nhãn + giá trị CÙNG DÒNG
+      2  `Ultraview: <nn nnn nnn>  //  <5 số>`           NHIỀU giá trị cùng dòng
+      3  `<nnn nnn nnn>` rồi `<5 số>` ở hai tin nhắn     dãy số TRẦN, cách nhau vài dòng
+      4  `"Account": "<tên tài khoản>"`                  key JSON, key KHÔNG phải password
     """
     muc("3. BÍ MẬT - quét theo BỐN HÌNH DẠNG thật (AR-j)")
     bat = quet_bi_mat(evidence)
