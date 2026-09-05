@@ -1002,7 +1002,77 @@ AR-k   `machineReadability` đang là HẰNG SỐ. Trường vô nghĩa đang g�
          chốt kiểm: sau mỗi lần export, nếu MỘT nhãn chiếm ≥95% thì coi như hỏng.
          Một trường phân loại mà không phân loại được gì thì tệ hơn không có trường.
 
-R-K4   "Một loại vấn đề có 5-10 nguyên nhân" — VẪN CHƯA ĐẾM ĐƯỢC.
+R-K4   ✅ ĐÃ ĐẾM 2026-09-04. Kết quả đầy đủ: `docs/09_RK4_DEM_NGUYEN_NHAN.md`.
+       🛑 **GIẢ ĐỊNH "5-10 NGUYÊN NHÂN" BỊ KHAI TỬ.** Đo trên 150 case hoá đơn đã đóng:
+          cỡ **19 nhóm (khoảng 18-30) cho MỘT chủ đề**, và đó là CẬN DƯỚI vì chỉ đo được
+          trên 59% corpus. Không phải 5-10, và không phải cho toàn nền tảng mà cho MỘT
+          chủ đề — nhân với số chủ đề.
+
+       ⚠ Nhưng phép đếm **thành công một nửa và thất bại một nửa**, phải nói cả hai:
+         · THẤT BẠI: không cho ra "một con số". Cùng 88 case, ba tiêu chí gộp ra
+           **6 / 19 / 66**, hai phản biện ra **18 / 78** — lệch 13 lần. Theo đúng luật
+           đặt TRƯỚC khi chạy: con số phụ thuộc TIÊU CHÍ, không phụ thuộc dữ liệu.
+         · THÀNH CÔNG: đủ để khai tử 5-10, đủ để đo trần chất lượng nguồn (41%), và đủ
+           để chốt kiến trúc — vì mọi cách cắt đều nằm CÙNG MỘT PHÍA của quyết định.
+
+       ⚠ Một thứ trong đó LÀ thuộc tính của dữ liệu chứ không của tiêu chí: chỉ ở mức
+         "một SOP dùng được" (19) mới có **phân bố đầu-đuôi thật** — 6 nhóm lớn nhất phủ
+         53% case, 10 nhóm phủ 75%. Lượt 6 phẳng đều (dấu hiệu của một phân hoạch được
+         THIẾT KẾ, không phải phát hiện); lượt 66 gần như toàn singleton (đã đập vỡ cái
+         đầu). Nên 19 là mức duy nhất đang ĐO DỮ LIỆU.
+
+       🛑 **QUYẾT ĐỊNH KIẾN TRÚC: KHÔNG dựng vector DB / RAG. Postgres FTS là đủ.**
+          ⚠ Và lưu ý cách đi tới kết luận này: nó **BÁC chính luật quyết định của R-K4**
+            chứ không điền số vào luật đó. Luật cũ nói "≤10 thì phân loại, >100 thì tìm
+            kiếm"; đo được ~19-30 là ở giữa, nhưng bốn lý do dưới đây không cái nào dựa
+            vào con số:
+            1) Câu trả lời LIỆT KÊ ĐƯỢC, và corpus tự chứng minh: nhân viên đã gõ tay
+               trọn một SOP có B1/B2 kèm nhánh điều kiện ngay trong chat (ES-346396).
+               Cái gì con người liệt kê được tại chỗ thì liệt kê được vào BẢNG. RAG có
+               giá trị khi KHÔNG liệt kê được — điều kiện đó sai hẳn ở đây.
+            2) Đường vào là MÃ LỖI, không phải văn xuôi: ERR.1518, Status 5000,
+               InvalidInvoiceDate, HOTEL_NOT_FOUND. Embedding không thêm gì trên mã lỗi.
+            3) NẶNG NHẤT — ở case khó, thông tin phân biệt KHÔNG CÓ TRONG VĂN BẢN. Cùng
+               triệu chứng "không chọn được ký hiệu hoá đơn" ứng với BA cơ chế, và thứ
+               phân biệt là một PHÉP KIỂM ("danh sách ký hiệu có rỗng không?"), không
+               phải từ nào trong lời khách báo. Không công nghệ tìm kiếm nào chữa được.
+               Thứ cần là CÂY QUYẾT ĐỊNH CÓ BƯỚC KIỂM — đúng cái bản nháp SOP phải chứa.
+            4) Nút cổ chai thật là 41% không ghi nguyên nhân. Tiền vào stack vector là
+               tiền không vào việc duy nhất làm con số tiến lên.
+          Rủi ro bất đối xứng có lợi: pgvector là thứ CỘNG THÊM vào cùng Postgres.
+
+       ⚠ PHÉP THỬ ĐỂ ĐỔI Ý, chạy được trong một buổi, không hạ tầng mới:
+         lấy TIN NHẮN ĐẦU của 88 case có nguyên nhân, tra bằng từ khoá/mã lỗi, đo tỉ lệ
+         nhóm SOP đúng nằm trong top-3. **Dưới ~60-70% thì embedding đáng thử; trên mức
+         đó thì đóng câu hỏi này lại.** Corpus có bằng chứng cả hai chiều.
+
+       🛑 **ĐIỀU BẤT NGỜ NHẤT, và nó giải thích vì sao vòng n=32 thất bại:**
+          **CASE JIRA KHÔNG PHẢI MỘT ĐƠN VỊ CỦA GÌ CẢ.** Trong cùng 150 case:
+            · ES-332789 một mình chứa **≥6 cơ chế** — chính bộ phận hỗ trợ phải đóng nó
+              lại vì "các issue đang trùng lặp dễ gây nhầm lẫn... sẽ TÁCH RIÊNG"
+            · ES-337454 / ES-338386 / ES-340759 là **cùng một khách, cùng một việc**,
+              đóng trong **52 giây**
+          Một ticket chứa 6 nguyên nhân, ba ticket chứa 1 nguyên nhân — cùng bộ dữ liệu.
+          Nên mọi phép đếm "nguyên nhân trên số case" đang chia cho một mẫu số là **ĐỘ
+          SẠCH TICKET CỦA JIRA**, không phải cấu trúc của hệ thống.
+          → **Tăng n KHÔNG sửa được một đơn vị đo sai.** Muốn con số ổn định thì phải
+            đếm trên đơn vị khác: MỘT CƠ CHẾ = MỘT DÒNG, cho phép một case sinh nhiều
+            dòng. Corpus đã chỉ rõ nhu cầu: 7 case ghi ≥2 cơ chế, 6 case cần 2 SOP, và
+            ít nhất 6 họ cơ chế KHÔNG có nhóm nào trong cả ba lượt.
+
+       ⚠ 41,3% (62/150) KHÔNG XÁC ĐỊNH ĐƯỢC NGUYÊN NHÂN — quan trọng hơn con số, và nó
+         nói về NGUỒN chứ không về tập nguyên nhân. Ba xác nhận độc lập trong corpus:
+         26/150 case tự ghi bước "remote vào máy"; chỉ 15/150 có bước "tra log"; và tỉ
+         lệ đang **XẤU ĐI** (50% ở 30 case mới nhất vs 27% ở 30 case cũ nhất).
+         → Đếm thêm case ĐÃ ĐÓNG cùng loại sẽ KHÔNG nâng độ tin.
+         → Và 41% này lệch CÓ HỆ THỐNG: cơ chế nào viết được bằng một dòng thì còn lại,
+           cơ chế nào phải điều tra mới biết thì mất. Hệ quả nặng: **bộ phân loại huấn
+           luyện trên corpus này sẽ tự tin nhất ở đúng chỗ ít cần nhất.**
+         ✅ Điểm sáng: kỷ luật giữ được — 84/88 case có nguyên nhân là "evidence nói rõ",
+           chỉ 4 case (4,5%) là suy ra. Sai số KHÔNG đến từ việc bịa nguyên nhân.
+
+       Ghi chú cũ, giữ lại vì lập luận vẫn đúng:
+       "Một loại vấn đề có 5-10 nguyên nhân" — VẪN CHƯA ĐẾM ĐƯỢC (tính tới 2026-09-03).
        ✅ QUYẾT ĐỊNH 3 CHỐT 2026-09-04: **ĐẾM TRƯỚC khi chốt kiến trúc tìm kiếm.**
           Chạy JQL 12 tháng chủ đề hoá đơn (~140 case đã đóng, ước từ chính corpus
           này), đọc và đếm nguyên nhân bằng tay. Ước 1 ngày công.
