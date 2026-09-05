@@ -8,6 +8,33 @@
 
 ---
 
+## 0. ⚠ REPO NÀY PHẢI Ở CHẾ ĐỘ PRIVATE
+
+**Git history chứa credential còn sống của khách hàng.** Cụ thể: hai commit `ec1ce50` và
+`3a15f3b` có mật khẩu tài khoản hoá đơn điện tử VNPT, một tài khoản dịch vụ, và 15 cặp
+ID + mật khẩu Ultraviewer của các khách sạn khách hàng.
+
+Chúng **đã được bỏ khỏi working tree** ngày 2026-09-05 (commit `0e602c3`) và không còn
+trong bất kỳ file nào đang được theo dõi — nhưng git giữ lịch sử, nên `git log -p` vẫn
+đọc được. Chủ dữ liệu đã chọn **push nguyên trạng** thay vì viết lại history.
+
+Hệ quả phải biết:
+
+```text
+· ĐỪNG chuyển repo sang public khi chưa viết lại history.
+· ĐỪNG thêm collaborator không được phép xem dữ liệu khách hàng.
+· Ultraviewer ID gắn cứng theo MÁY và không xoay được — chỉ đổi được mật khẩu
+  cố định trên chính máy đó.
+· Mật khẩu VNPT thì xoay được, và việc đó đã được nêu từ 2026-09-04. Nếu đã xoay
+  thì giá trị trong history thành vô hại — đó là cách rẻ nhất để đóng lỗ này.
+```
+
+Muốn dọn history về sau: `git filter-repo --replace-text <file>` với danh sách giá trị
+lấy từ `scripts/jira-export/redact-list.json` (file đó nằm ngoài repo, xem §3). Sau khi
+dọn thì mọi SHA đổi, nên phải force-push và mọi bản clone khác phải clone lại.
+
+---
+
 ## 1. Thứ gì KHÔNG nằm trong git — đọc mục này trước tiên
 
 Repo giữ code, tài liệu, script và kết quả phân tích. Bốn thứ dưới đây **không** có
