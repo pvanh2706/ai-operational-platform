@@ -979,6 +979,46 @@ AR-l   Ranh giới KHÁCH SẠN A ↔ KHÁCH SẠN B có phải ranh giới bả
          · evidence không thuộc khách sạn nào (việc nội bộ ezCloud) biểu diễn thế nào?
          · cấp thứ ba (khách CỦA khách sạn) có cần chỗ riêng, hay chỉ là dữ liệu phải che?
 
+AR-m   Nội dung ĐÃ BỊ NGƯỜI GỬI RÚT LẠI — chưa có chỗ nào đánh dấu.      ← MỚI
+       Ghi 2026-09-05. CHƯA CHỌN HƯỚNG. ⚠ Phải quyết TRƯỚC khi chốt cách cắt transcript.
+
+       Ca thật, đã đọc nguyên văn: `ES-346661#description` chứa một đoạn giải thích
+       nguyên nhân overbooking đầy đủ, kèm hai mã booking OTA (Trip.com và Expedia).
+       **Mười sáu phút sau**, cùng người gửi viết: *"dạ anh/chị bỏ qua giúp em tin nhắn
+       trên ạ, em gửi nhầm nội dung"*. Và tiêu đề case là *"lỗi không sinh mã đặt phòng"*
+       — không dính gì tới overbook. Đoạn kia là nội dung của một case KHÁC.
+
+       ⚠ VÌ SAO HÔM NAY CHƯA HỎNG, VÀ VÌ SAO NGÀY MAI SẼ HỎNG:
+         hôm nay cả đoạn sai lẫn câu đính chính nằm CHUNG một mẩu 1 916 ký tự, nên model
+         đọc mẩu đó sẽ thấy câu đính chính và tự bỏ qua. Đó là **may**, không phải thiết kế.
+         Ngày nào pipeline cắt transcript thành nhiều mẩu — việc rất có thể sẽ làm, vì
+         `AR-h` đã đo rằng mẩu dài đè bẹp xếp hạng 29:1 — thì đoạn đã bị rút sẽ vào
+         `evidence_item` **không mang dấu hiệu gì**, và Path A sẽ gom nó như một quan sát
+         thật. Nguyên nhân overbooking của khách A sẽ xuất hiện trong SOP về mã đặt phòng.
+
+       → Cần một cột ở TẦNG MẨU (đề xuất `RetractedAt` + `RetractedReason`), và cần
+         quyết trước khi chốt cách chunk — vì sau khi đã cắt thì không ghép lại được.
+       ⚠ Chỗ khó thật: ai đánh dấu? Người gửi rút lại bằng CÂU CHỮ ("bỏ qua giúp em"),
+         không bằng một nút bấm. Suy ra từ câu chữ là đoán — trái `G6`/`AP3`. Nhưng
+         không suy thì không có tín hiệu nào cả. Đây là câu hỏi domain, không phải code.
+
+AR-n   Dữ liệu của BÊN THỨ BA và dữ liệu THƯƠNG MẠI trong evidence.        ← MỚI
+       Ghi 2026-09-05. CHƯA CHỌN HƯỚNG. Hai loại, cùng một gốc: ranh giới hai cấp
+       (ezCloud → khách sạn) không mô tả hết những gì thật sự nằm trong ticket.
+
+       · BÊN THỨ BA: `ES-346481#comment-802977` chứa payload hoá đơn với khối `<NMua>` —
+         tên một đơn vị sự nghiệp nhà nước, mã số thuế, địa chỉ đầy đủ, 8 dòng dịch vụ và
+         tổng tiền. Đó không phải dữ liệu ezCloud, cũng không phải dữ liệu khách sạn — là
+         dữ liệu **khách CỦA khách sạn**, một pháp nhân chưa từng đồng ý xuất hiện ở đâu.
+         Che credential xong vẫn còn công bố một khoản chi lưu trú của một tổ chức có tên.
+         → `AR-l` chốt ranh giới hai cấp; đây là **cấp thứ ba** mà nó chưa mô tả.
+
+       · THƯƠNG MẠI: `ES-346608#comment-803265` ghi rõ giá hợp đồng theo năm của một khách
+         sạn cụ thể, hạn hợp đồng, và ý định ngừng dùng để chuyển sang PMS tự xây. Giá và
+         ý định rời bỏ của một khách hàng không nên hiện cho mọi nhân viên qua một bản SOP.
+         → Đây KHÔNG phải bí mật kỹ thuật nên `AR-j` (luật che credential) không bắt được
+           nó, và cũng không có hình dạng nào để bắt bằng regex. Cần một cơ chế khác.
+
 AR-k   `machineReadability` đang là HẰNG SỐ. Trường vô nghĩa đang gác cổng. ← MỚI
        Ghi 2026-09-04. ⚠ ĐÂY LÀ BUG THẬT, KHÔNG PHẢI CÂU HỎI THIẾT KẾ.
        Đo: 128/128 mẩu đều mang nhãn `High`, KỂ CẢ mẩu 5 ký tự chỉ chứa "80771",
