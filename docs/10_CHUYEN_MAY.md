@@ -26,6 +26,14 @@ Database kp_dev + dữ liệu      MẤT               dev-db-setup.sql rồi n�
 
 Bộ nhớ của agent               MẤT               ⚠ ĐÃ CHÉP VÀO §5 CỦA FILE NÀY
 (~/.claude/.../memory/)                          — đó là lý do §5 tồn tại
+
+Công cụ máy: .NET SDK,        MẤT               §2 bước 0 và 1b. dotnet-ef KHÔNG
+dotnet-ef, PostgreSQL, Python                    đi theo git — nhưng .config/
+                                                 dotnet-tools.json thì có, nên
+                                                 `dotnet tool restore` lo phiên bản
+
+Định nghĩa các workflow        KHÔNG mất         ĐÃ ĐƯA VÀO scripts/workflows/
+đã chạy                        (từ 2026-09-05)   ~4,7 triệu token, chạy lại rất đắt
 ```
 
 ⚠ **Thứ đắt nhất KHÔNG mất, vì đã được đưa vào repo hôm nay:** kết quả của hai workflow
@@ -46,6 +54,9 @@ pip install -r scripts/jira-export/requirements.txt
 # 1. Database. Cần superuser MỘT LẦN.
 psql -U postgres -h localhost -f scripts/dev-db-setup.sql
 
+# 1b. Công cụ EF. KHÔNG đi theo git; phiên bản do .config/dotnet-tools.json giữ.
+dotnet tool restore
+
 # 2. Build + schema
 dotnet build src/KnowledgePlatform.slnx
 dotnet ef database update --project src/KnowledgePlatform.Infrastructure \
@@ -56,7 +67,19 @@ psql -U kp_app -h localhost -d kp_dev -f scripts/dev-seed-tenant.sql
 
 # 4. Kiểm — phải 105/105 xanh
 dotnet test src/KnowledgePlatform.slnx
+
+# 5. Kiểm THẬT SỰ: app khởi động được và thấy kp_dev
+dotnet run --project src/KnowledgePlatform.Api --launch-profile http
+#    rồi ở cửa sổ khác:
+curl localhost:5119/health/ready               # DB sống + ranh giới tenant còn nguyên
+curl localhost:5119/internal/tenant-boundary   # đếm bằng SQL thô, KHÔNG có điều kiện tenant
 ```
+
+🛑 **BƯỚC 5 KHÔNG THỪA — bước 4 có thể XANH GIẢ.** `dotnet test` không đọc `kp_dev` lấy
+một dòng: bộ Infrastructure trỏ vào `kp_test`, bộ API trỏ vào `kp_api_test`, cả hai **tự
+chạy migration** và bộ API còn **tự tạo tenant riêng**. Nên bỏ qua hoặc làm hỏng bước 2
+và bước 3 thì bước 4 **vẫn 105/105**. Chỉ bước 5 mới chạm vào thứ ba bước đầu vừa dựng.
+Nếu bước 3 bị bỏ, app sẽ **từ chối khởi động** — đó là hành vi cố ý, không phải lỗi.
 
 ⚠ **Ba chỗ vấp đã đo trên máy cũ, sẽ lặp lại trên máy mới:**
 
@@ -85,7 +108,18 @@ cmd /c "call scripts\jira-export\jira-config.bat && python scripts\jira-export\s
 
 # Kiểm TRƯỚC KHI nạp (trả mã thoát ≠ 0 nếu có phát hiện chặn)
 python scripts/jira-export/check_corpus.py
+
+# Dựng fixture (thay credential thật bằng giá trị GIẢ giữ nguyên hình dạng) rồi nạp
+python scripts/jira-export/make_fixture.py     # ⚠ mã thoát 1 = còn credential, ĐỌC KỸ
+dotnet run --project src/KnowledgePlatform.Api --launch-profile http   # cửa sổ khác
+python scripts/jira-export/load_fixture.py
 ```
+
+🛑 **`make_fixture.py` mang một danh sách credential XÁC ĐỊNH BẰNG TAY trên corpus của
+2026-09-04.** Chạy nó trên corpus khác thì danh sách đó lỗi thời — đo thật trên corpus
+150 case: 16/19 mục không khớp, và **36 chỗ credential mới đi thẳng qua**. Script giờ tự
+hỏi ngược bằng luật che (`check_corpus.quet_bi_mat`) và **thoát với mã 1** nếu còn; nó
+vẫn ghi file ra để bạn xem, nhưng **đừng chia sẻ fixture đó**.
 
 ⚠ **Cạm bẫy đã vấp thật, đừng vấp lại:** `ORDER BY resolved DESC` + `MAX_ISSUES=150` KHÔNG
 cho mẫu của 12 tháng — nó cho mẫu của **24 ngày**, vì project có ~2 723 case hoá đơn đã
@@ -120,6 +154,39 @@ python scripts/jira-export/thu_retrieval.py     # cần corpus ở §3 trước
 
 Script tự tìm taxonomy ở `docs/ket-qua-phan-tich/`, không cần đặt biến. Đặt `TAXONOMY`
 chỉ khi muốn đo trên một taxonomy khác.
+
+⚠ **Taxonomy trong repo gán nhãn cho corpus `dry-run-*`, KHÔNG phải `spread-*`.** Khớp
+88/88 với cái đầu và **0/144** với cái sau. Nên dù §3 khuyên dùng `spread` cho phép đếm,
+`thu_retrieval.py` mặc định đọc `dry-run-*` — và nó **chặn trước** nếu hai bên không giao
+nhau, thay vì chạy nửa chừng rồi chết. Muốn đo trên corpus khác thì phải có taxonomy của
+chính corpus đó: chạy lại `scripts/workflows/dem-nguyen-nhan-rk4.js` trên nó.
+
+```bash
+python scripts/jira-export/thu_retrieval.py spread-cases.json spread-evidence.json
+```
+
+---
+
+### 4b. Định nghĩa các workflow — `scripts/workflows/`
+
+Ba workflow đã chạy trong hai ngày 2026-09-04/05, tổng ~4,7 triệu token. Chúng nằm ở
+`scripts/workflows/` từ 2026-09-05; trước đó chúng chỉ sống trong thư mục phiên của
+Claude và **sẽ mất khi đổi máy**.
+
+| File | Làm gì | Đã sinh ra |
+|---|---|---|
+| `audit-jira-corpus.js` | quét corpus 9 lăng kính + phản biện đối kháng, 28 agent | `AR-j` `AR-k` `AR-l` `AR-m` `AR-n`, đo lại `AR-h` |
+| `dem-nguyen-nhan-rk4.js` | đếm nguyên nhân: 10 lượt rút → 3 lượt GỘP độc lập → 2 phản biện, 16 agent | `docs/09`, taxonomy 19 nhóm |
+| `kiem-handoff-chuyen-may.js` | 8 agent đóng vai người mới trên máy trắng đi tìm chỗ bàn giao thiếu | 61 phát hiện, 21 mức chặn — phần lớn file này |
+
+Chạy lại: mở lại bằng công cụ Workflow với nội dung file tương ứng. Nhớ rằng chúng đọc
+dữ liệu từ **thư mục tạm của phiên cũ** — đường dẫn trong script phải sửa theo máy mới.
+
+⚠ Thiết kế đáng giữ lại của `dem-nguyen-nhan-rk4.js`: **ba lượt gộp độc lập theo ba tiêu
+chí ĐẶT TRƯỚC**. Vòng đếm trước đó thất bại vì hai lượt phân tích tự chọn độ mịn rồi
+lập luận trên đó và ra hai kết luận ngược nhau. Có ba tiêu chí đặt trước thì **độ phân
+kỳ giữa chúng trở thành dữ liệu** — và nó cho biết con số phụ thuộc tiêu chí chứ không
+phụ thuộc dữ liệu.
 
 ---
 
