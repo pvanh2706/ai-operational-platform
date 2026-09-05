@@ -134,6 +134,49 @@ def main() -> None:
         print(f"  {trang_thai:<22} {mo_ta}")
     print(f"\n  Tổng {tong} chỗ, trên {len(cham_vao)} mẩu.")
 
+    # ⚠⚠ PHÉP KIỂM QUAN TRỌNG NHẤT CỦA FILE NÀY — thêm 2026-09-05.
+    # Danh sách THAY_THE ở trên được xác định BẰNG TAY trên corpus của 2026-09-04. Chạy
+    # script này trên một corpus KHÁC thì danh sách đó lỗi thời, và bản trước vẫn
+    # `exit 0` như thể đã che sạch — đúng loại thất bại im lặng mà cả dự án chống.
+    # Nên ở đây hỏi ngược lại bằng LUẬT (check_corpus.quet_bi_mat, recall đã đo), chứ
+    # không tin vào danh sách tay.
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "cc", os.path.join(HERE, "check_corpus.py"))
+        cc = importlib.util.module_from_spec(spec)
+        sys.modules["cc"] = cc
+        spec.loader.exec_module(cc)
+        # Bỏ chính các giá trị GIẢ vừa thay vào: luật không biết chúng là giả nên vẫn
+        # bắt, và nếu đếm cả chúng thì mọi lần chạy đều báo "còn credential" — một cảnh
+        # báo luôn kêu là một cảnh báo không ai đọc.
+        gia = {g for _, g, _ in THAY_THE}
+        con_lai = [x for x in cc.quet_bi_mat(evidence)
+                   if not any(g in x[2] or x[2] in g for g in gia)]
+    except Exception as e:                                    # noqa: BLE001
+        print(f"\n  ⚠ Không chạy được phép kiểm ngược ({e}). "
+              "KHÔNG coi fixture này là đã che sạch.", file=sys.stderr)
+        con_lai = None
+
+    if con_lai:
+        print("\n" + "=" * 66)
+        print(f"🛑 CÒN {len(con_lai)} CHỖ NGHI LÀ CREDENTIAL SAU KHI THAY")
+        print("=" * 66)
+        for ref, loai, gt in con_lai[:15]:
+            print(f"      [{loai:<11}] {ref}: {gt[:46]}")
+        if len(con_lai) > 15:
+            print(f"      ... và {len(con_lai) - 15} chỗ nữa")
+        print("\n  Danh sách THAY_THE trong file này được xác định bằng tay trên corpus")
+        print("  của 2026-09-04. Corpus bạn đang chạy KHÁC nó, nên danh sách đã lỗi thời.")
+        print("  → Bổ sung các giá trị trên vào THAY_THE rồi chạy lại, HOẶC chấp nhận")
+        print("    fixture này CHƯA sạch và đừng chia sẻ nó.")
+        print("  Fixture VẪN được ghi ra để bạn xem — nhưng mã thoát là 1.")
+    elif con_lai is not None:
+        n_chet = sum(1 for _, _, m in THAY_THE if dem[m] == 0)
+        print(f"\n  ✅ Phép kiểm ngược: 0 chỗ nghi credential còn lại."
+              f"  ({n_chet}/{len(THAY_THE)} mục trong THAY_THE không khớp corpus này —"
+              f" bình thường nếu corpus đã đổi.)")
+
     # Kiểm ngược: những thứ PHẢI Ở LẠI thì phải còn nguyên. Không có phép kiểm này
     # thì một luật che quá tay sẽ đi qua mà không ai biết.
     print("\n" + "=" * 66)
@@ -169,6 +212,11 @@ def main() -> None:
 
     print("\nNạp vào kp_dev (app phải đang chạy):")
     print("  python scripts/jira-export/load_fixture.py")
+
+    # Mã thoát ≠ 0 khi phép kiểm ngược còn thấy credential, để cắm được vào CI và để
+    # người chạy không lướt qua cảnh báo ở giữa màn hình.
+    if con_lai:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

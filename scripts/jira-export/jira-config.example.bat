@@ -34,8 +34,14 @@ rem la 7/7 case da dong chi ghi "het trieu chung", con nguyen nhan that nam o ca
 rem CON MO. Sau khi lay ve phai loc them o tang nap. Xem 00_CURRENT_STATE muc 2026-09-04.
 rem
 rem GHI LAI THOI DIEM CHAY JQL, khong chi ghi cau JQL.
+rem
+rem ⚠ DUNG NGAY TUONG DOI (-365d), KHONG dung ngay cung. Ban truoc ghi cung
+rem    resolutiondate < "2026-09-01" va no CHAN MAT chinh bang chung then chot cua
+rem    du an: ES-346396 dong luc 2026-09-01T23:14 nen roi ra ngoai cua so, cung 4/10
+rem    case cua nhom SOP lon nhat. Mot cua so cung se lang le nghe di theo thoi gian,
+rem    va cai no bo mat luon la phan MOI NHAT.
 
-set "JIRA_JQL=project = ES AND resolutiondate >= "2025-09-01" AND resolutiondate < "2026-09-01" AND resolution not in (Duplicate, "Cannot Reproduce", "Won't Do", Incomplete) AND summary !~ "CLONE" AND (summary ~ "hóa đơn" OR summary ~ "hoá đơn" OR summary ~ "HĐĐT" OR summary ~ "invoice" OR summary ~ "VNPT") ORDER BY resolutiondate DESC"
+set "JIRA_JQL=project = ES AND resolved >= -365d AND resolution not in (Duplicate, "Cannot Reproduce", "Won't Do", Incomplete) AND summary !~ "CLONE" AND (summary ~ "hóa đơn" OR summary ~ "hoá đơn" OR summary ~ "HĐĐT" OR summary ~ "invoice" OR summary ~ "VNPT") ORDER BY resolutiondate DESC"
 
 rem --- Doi menh de summary de lay chu de khac. MOI CHU DE MOT CORPUS RIENG ---
 rem khoa tu:  (summary ~ "khóa từ" OR summary ~ "khoá từ" OR summary ~ "thẻ từ")
@@ -48,4 +54,9 @@ rem set "JIRA_PASS=mat-khau"
 rem --- Tuy chon, mac dinh da dung cho may dev ---
 set "APP_BASE_URL=http://localhost:5119"
 set "APP_SIGNAL_KEY="
-set "MAX_ISSUES=0"
+rem MAX_ISSUES: tran so issue keo ve. 0 = KHONG TRAN.
+rem ⚠ DE 150, KHONG de 0. Do that tren project ES: chu de hoa don co ~2723 case da
+rem dong trong 12 thang, nen MAX_ISSUES=0 keo ve ~2723 case = ~7000 request len Jira
+rem production va mat ~2 gio, thay vi ~6 phut. §8.2 noi n=50-200 la du cho phep dem.
+rem De 0 chi khi that su can toan bo, va biet minh dang lam gi.
+set "MAX_ISSUES=150"

@@ -104,15 +104,22 @@ def main() -> None:
         for k in n["caseKeys"]:
             nhom_cua[k] = i
 
-    # ⚠ Cùng lý do với make_fixture.py: clone sạch rồi chạy thì bản trước chết bằng
-    # traceback, và người mới không đoán được rằng file thiếu là CỐ Ý.
+    # Corpus nhận từ tham số dòng lệnh, mặc định là bản dry-run.
+    # ⚠ KHÔNG ghi cứng `dry-run-*.json` như bản trước: taxonomy trong repo gán nhãn cho
+    # 88 case của corpus `dry-run`, và 0/144 case của corpus `spread` — trong khi
+    # `docs/10` §3 lại khuyên dùng `spread` cho mọi phép đếm. Ai làm theo lời khuyên đó
+    # sẽ chạy script này trên một corpus không giao nhau với nhãn nào cả.
+    f_case = sys.argv[1] if len(sys.argv) > 1 else "dry-run-cases.json"
+    f_ev = sys.argv[2] if len(sys.argv) > 2 else "dry-run-evidence.json"
     try:
-        cases = json.load(io.open(os.path.join(HERE, "dry-run-cases.json"), encoding="utf-8"))
-        ev = json.load(io.open(os.path.join(HERE, "dry-run-evidence.json"), encoding="utf-8"))
+        cases = json.load(io.open(os.path.join(HERE, f_case), encoding="utf-8"))
+        ev = json.load(io.open(os.path.join(HERE, f_ev), encoding="utf-8"))
     except FileNotFoundError as e:
         print(f"Chưa có {os.path.basename(e.filename)}.\n"
               "File này KHÔNG nằm trong repo (dữ liệu vận hành của khách, xem .gitignore).\n"
-              "Lấy corpus trước — xem docs/10_CHUYEN_MAY.md §3.", file=sys.stderr)
+              "Lấy corpus trước — xem docs/10_CHUYEN_MAY.md §3.\n"
+              f"Dùng corpus khác: python {os.path.basename(__file__)} <cases.json> <evidence.json>",
+              file=sys.stderr)
         sys.exit(2)
 
     subj = {c["sourceReference"].split(":", 1)[1]: c["subject"] for c in cases}
@@ -124,8 +131,24 @@ def main() -> None:
 
     # Chỉ lấy case CÓ NHÃN — 62 case "không xác định được" không có nhóm nên không chấm được.
     mau = [k for k in nhom_cua if k in subj]
-    print(f"Case có nhãn nhóm: {len(mau)} / {len(cases)}")
+    print(f"Case có nhãn nhóm: {len(mau)} / {len(cases)}   (corpus: {f_case})")
     print(f"Nhóm: {len(ten_nhom)}\n")
+
+    # ⚠ Taxonomy và corpus phải NÓI VỀ CÙNG MỘT TẬP CASE. Không giao nhau thì mọi phép
+    # chia sau đây là chia cho 0, và bản trước chết bằng `ZeroDivisionError` ở tận cuối
+    # — sau khi đã nạp xong cả kho vào Postgres. Kiểm ở đây, trước khi tốn công.
+    if not mau:
+        print(f"KHÔNG có case nào của corpus `{f_case}` mang nhãn trong taxonomy.\n"
+              f"  taxonomy gán nhãn cho {len(nhom_cua)} case\n"
+              f"  corpus có {len(cases)} case\n"
+              f"  giao nhau: 0\n"
+              "Taxonomy trong repo được sinh trên corpus `dry-run-*`. Muốn đo trên corpus\n"
+              "khác thì phải có taxonomy của chính corpus đó — chạy lại workflow\n"
+              "scripts/workflows/dem-nguyen-nhan-rk4.js trên nó.", file=sys.stderr)
+        sys.exit(2)
+    if len(mau) < len(nhom_cua) * 0.5:
+        print(f"⚠ Chỉ {len(mau)}/{len(nhom_cua)} case có nhãn khớp corpus này — "
+              f"con số đo được sẽ dựa trên chưa tới nửa tập nhãn.\n")
 
     with psycopg.connect(DSN, autocommit=True) as conn:
         cur = conn.cursor()

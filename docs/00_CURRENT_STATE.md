@@ -287,12 +287,57 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
                Tuyến tính, KHÔNG nhánh. Giá trị nằm trọn ở bước cuối,
                và đó là bước duy nhất không ai ghi lại.
 
+5-10  ❌ ĐÃ BỊ BÁC 2026-09-04. Đo thật trên 150 case: ~19 nhóm (18-30) cho MỘT
+               chủ đề, và đó là CẬN DƯỚI. Xem docs/09_RK4_DEM_NGUYEN_NHAN.md.
+               Giữ dòng dưới đây vì nó là GIẢ ĐỊNH CŨ mà cả 04 §3.5 đứng trên —
+               đọc nó như lịch sử, không như sự thật hiện hành.
 5-10           Số loại nguyên nhân của first use case.  ⚠ n=1, chưa xác nhận.
                → kho tri thức ~10 record, không phải 500.
                → toàn bộ 04 §3.5 đứng trên con số này. Xem R-K4.
 ```
 
 ## Việc tiếp theo
+
+> 🛑 **ĐỌC KHỐI NÀY, ĐỪNG ĐỌC PHẦN NGAY DƯỚI NÓ.** Cập nhật 2026-09-05.
+> Phần `text` phía dưới là **bản của 2026-08-30** và đã chết: nó ghi việc (a)/(b) là
+> "việc kế tiếp" trong khi cả hai đã xong, và (c) FTS đã bị lùi lại sau phép đếm.
+> Giữ nguyên vì lập luận trong đó vẫn giải thích được **vì sao** thứ tự từng là như vậy —
+> nhưng đừng làm theo nó.
+>
+> **Ba câu ĐANG CHỜ NGƯỜI DÙNG QUYẾT:**
+> ```text
+> AR-l   sub-tenant — BỊ CHẶN. Jira không có trường nào dùng được (`Mã khách sạn`
+>        = -1.0 ở 32/32 case). Hai nhánh đều NGOÀI code: ezCloud điền trường đó
+>        cho thật, hoặc lùi quyết định và ghi rõ ranh giới khách sạn CHƯA được
+>        thực thi. → 07 §5 AR-l
+> R-K4   Q2 — có mở phép đếm sang case CÒN MỞ và bắt ghi nguyên nhân lúc remote
+>        không? Đây là việc DUY NHẤT làm con số 41% tiến lên; đọc thêm case đã
+>        đóng thì không, vì tỉ lệ đang xấu đi. → docs/09 §7
+> AR-k   luật gán nhãn thay cho `machineReadability` hằng số. → 07 §5 AR-k
+> ```
+>
+> **Việc LÀM ĐƯỢC NGAY, không chờ ai:** dựng **cây quyết định có bước kiểm** cho nhóm
+> SOP lớn nhất (*Phân quyền & ký hiệu hoá đơn*, 10 case). Nguyên liệu: `docs/ket-qua-phan-tich/`.
+> ⚠ Nhưng biết trước hai chỗ thiếu: (1) repo có 10 mã case + nguyên nhân một dòng nhưng
+> **KHÔNG có bước kiểm nào** — mà bước kiểm chính là thứ cây quyết định phải chứa;
+> (2) bằng chứng then chốt `ES-346396` phải kéo lại từ Jira (JQL trong
+> `jira-config.example.bat` giờ dùng `resolved >= -365d` nên nó lọt vào cửa sổ).
+>
+> **Đã xong trong hai ngày 2026-09-04/05** (đừng làm lại):
+> ```text
+> ✅ (a) nạp evidence · (b) xuất Jira thật — cả hai XONG
+> ✅ R-K4 ĐÃ ĐẾM: ~19 nhóm/chủ đề, giả định 5-10 bị bác  → docs/09
+> ✅ phép thử retrieval ĐÃ CHẠY: AUC 0,61, FTS 34% vs đoán mù 31%
+> ⚠ (c) FTS LÙI LẠI SAU phép đếm — và phép đếm cho thấy retrieval theo văn bản
+>       không phải cơ chế chính trên nguồn này. Xem 07 §5 R-K4 trước khi build.
+> ```
+>
+> 📌 **Tài liệu sinh ra trong hai ngày đó, chưa có trong danh sách đọc ở §1:**
+> `docs/09_RK4_DEM_NGUYEN_NHAN.md` (phép đếm nguyên nhân) ·
+> `docs/10_CHUYEN_MAY.md` (dựng lại trên máy khác) ·
+> `docs/ket-qua-phan-tich/` (taxonomy + nguyên nhân 150 case) ·
+> `scripts/workflows/` (định nghĩa 3 workflow đã chạy).
+
 
 ```text
 1  Workstream 07 — tiếp slice Path A. Nền móng, host VÀ Kênh 1 ĐÃ XONG (07 §2).
