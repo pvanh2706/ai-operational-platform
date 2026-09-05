@@ -1,0 +1,275 @@
+{
+ "nhom": [
+  {
+   "ten": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "moTa": "Thao tác phát hành bị chặn (báo đỏ / \"Validation form error\") hoặc màn phát hành không có ký hiệu để chọn, vì một trong bốn thứ: user quên chọn ký hiệu; user chưa được thêm/phân quyền trên ezInvoice; role PMS thiếu quyền (vd \"Thêm hoá đơn\"); site/MST mới chưa được khai báo ký hiệu cho từng cơ sở. MỘT SOP duy nhất xử lý cả bốn: triệu chứng vào là như nhau, và tài liệu chỉ cần một checklist 4 bước (đã chọn ký hiệu chưa → danh sách rỗng thì kiểm tra phân quyền user + phân quyền ký hiệu trên admin.ezinvoice.vn → kiểm tra quyền hoá đơn trong role PMS → nếu site/MST mới thì kiểm tra khai báo cho từng cơ sở), kết thúc tại đúng một màn quản trị.",
+   "caseKeys": [
+    "ES-343662",
+    "ES-341317",
+    "ES-346647",
+    "ES-346396",
+    "ES-346065",
+    "ES-343733",
+    "ES-344424",
+    "ES-341290",
+    "ES-346039",
+    "ES-346559"
+   ]
+  },
+  {
+   "ten": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "moTa": "Lệnh phát hành đi tới nhà cung cấp và bị trả về kèm mã lỗi/thông báo, hoá đơn dừng ở nháp hoặc treo \"đang xử lý\": CCCD thừa số/sai định dạng, MST thừa dấu cách hoặc không hợp lệ (Status 5000), ID trùng số hộ chiếu, SĐT còn +84 và dấu ngoặc (SDThoai), ngày hoá đơn 0001-01-01 (InvalidInvoiceDate), ERR:1518/ERR.1518 trường giấy tờ, số hoá đơn không liên tục. MỘT SOP duy nhất: bảng tra mã lỗi → trường/dòng bị từ chối → sửa tại hồ sơ khách hoặc trên hoá đơn nháp → phát hành lại và xác nhận đã có số. Các dòng của bảng khác nhau về trường nhưng giống hệt nhau về thao tác và về điều kiện đóng case.",
+   "caseKeys": [
+    "ES-346136",
+    "ES-346027",
+    "ES-345623",
+    "ES-343348",
+    "ES-342328",
+    "ES-344862",
+    "ES-345257",
+    "ES-345813",
+    "ES-345857",
+    "ES-343712"
+   ]
+  },
+  {
+   "ten": "Kênh kết nối tới NCC mất hiệu lực (mật khẩu/token/chứng thư/NCC gián đoạn)",
+   "moTa": "Hệ thống ĐANG chạy được rồi đột nhiên không phát hành/không lấy được PDF, vì thông tin xác thực hai bên lệch nhau hoặc hết hiệu lực: khách sạn tự đổi mật khẩu trang NCC mà ezFolio giữ thông tin cũ, token VNPT mất hiệu lực, chứng thư số Viettel mới chưa kích hoạt, cổng MISA gián đoạn (UnAuthorize/MisaIdError), hoặc chỉ là cập nhật SĐT/email/địa chỉ site. MỘT SOP duy nhất vì mọi bước đều diễn ra trong đúng một màn \"Cấu hình kết nối hoá đơn điện tử\" cộng một cuộc gọi cho NCC: đối chiếu tài khoản/token PMS với phía NCC → cập nhật → kiểm tra chứng thư còn hiệu lực → kiểm tra cổng NCC có đang lỗi → phát hành thử.",
+   "caseKeys": [
+    "ES-342304",
+    "ES-343837",
+    "ES-343686",
+    "ES-345990",
+    "ES-345284",
+    "ES-345855",
+    "ES-342137"
+   ]
+  },
+  {
+   "ten": "Chưa được cấp/kích hoạt — đấu nối mới, module, thuê bao, đào tạo",
+   "moTa": "Chức năng chưa từng chạy được ở khách sạn đó, không phải hỏng: chưa mua/kích hoạt module ezInvoice, chưa hoàn tất đào tạo–triển khai nên kết nối chưa cấu hình xong, thuê bao đến hạn cần cấp key, đấu nối NCC mới nên chưa có token/endpoint, firewall khách sạn chưa mở IP ezCloud và service URL gõ tay sai. MỘT SOP duy nhất dạng checklist provisioning (module đã mua → thuê bao còn hạn → endpoint/service URL đúng → firewall mở IP → token/chứng thư đã cấp → đã đào tạo), và luôn kết thúc bằng chuyển sale/triển khai/kỹ thuật hạ tầng chứ không phải supporter tự đóng.",
+   "caseKeys": [
+    "ES-345508",
+    "ES-345684",
+    "ES-343247",
+    "ES-340759",
+    "ES-338386"
+   ]
+  },
+  {
+   "ten": "Lệch cấu hình tiền/thuế/định dạng số giữa PMS – ezInvoice.Admin – NCC",
+   "moTa": "Hoá đơn phát hành được nhưng con số trên đó không khớp với PMS: thuế về 0% vì chưa bật lại tuỳ chọn sau khi đổi cấu hình thuế/phí, loại hoá đơn lệch (VNPT bán hàng vs PMS VAT), chiết khấu cấu hình khác nhau hai phía cộng bug không áp cấu hình, số chữ số thập phân chỉ khai một phía, thiếu phương thức hiển thị VAT 10%, TaxAmount 2 số thập phân bị NCC làm tròn, amount8 map từ TaxAmount thay vì tổng tiền, đơn giá làm tròn số chẵn nên lệch 20,8đ. MỘT SOP duy nhất: bảng đối chiếu cấu hình tiền của ba nơi (PMS / ezInvoice.Admin / NCC) theo từng cột tiền, đi từ cột lệch ra chỗ khai sai; thao tác luôn là so khớp rồi sửa cấu hình (hoặc chốt là bug mapping để chuyển dev).",
+   "caseKeys": [
+    "ES-342493",
+    "ES-341296",
+    "ES-344307",
+    "ES-344027",
+    "ES-344810",
+    "ES-344141",
+    "ES-342309",
+    "ES-343367"
+   ]
+  },
+  {
+   "ten": "Trạng thái đặt phòng/phòng chưa thoả điều kiện của chức năng hoá đơn",
+   "moTa": "Chức năng hoá đơn có tiền đề về trạng thái mà booking chưa đạt, nên màn xuất không lấy được dữ liệu hoặc bị khoá sửa: chưa check-out ở căn/chi nhánh đích, phát hành có điều chỉnh chỉ lấy phòng đã check-out, đoàn chỉ xuất được sau check-in (phải check-in → xuất → undo), đoàn check-out hai thời điểm nên hoá đơn chung thiếu phòng, muốn một hoá đơn tổng phải check-out phòng lẻ mà không tích xuất hoá đơn, hoá đơn khu kinh doanh đã thanh toán/đã xử lý hàng tiêu thụ nên phải hủy trả chỗ mới sửa được. MỘT SOP duy nhất: bảng \"chức năng nào cần phòng ở trạng thái nào\" + cách đưa booking về trạng thái đó (check-in/check-out/undo/hủy trả chỗ) rồi thao tác lại. Nhánh \"nếu là đoàn\" chỉ là một mục trong cùng tài liệu, không đổi bước.",
+   "caseKeys": [
+    "ES-342433",
+    "ES-342418",
+    "ES-346452",
+    "ES-341377",
+    "ES-342377",
+    "ES-342044",
+    "ES-344717"
+   ]
+  },
+  {
+   "ten": "Ngày làm việc/kiểm toán quyết định ngày trên hoá đơn",
+   "moTa": "Ngày hoá đơn lệch ngày thực tế vì hoá đơn lấy ngày làm việc của khách sạn/khu kinh doanh chứ không lấy ngày thật: chưa chạy kiểm toán nên vẫn là ngày hôm trước, quên chạy kiểm toán khu kinh doanh nên doanh thu 12/8 vào ngày 11/8, hoặc kiểm toán chạy sớm nên hoá đơn nhảy sang ngày sau. MỘT SOP duy nhất vì cách xử lý chỉ có một mạch: xác định ngày làm việc hiện tại của khu/khách sạn → đối chiếu giờ phát hành với giờ chạy kiểm toán → chạy/hoãn kiểm toán đúng thời điểm và sửa lại ngày hoá đơn bằng tay cho các hoá đơn đã sai.",
+   "caseKeys": [
+    "ES-342305",
+    "ES-346303",
+    "ES-342284"
+   ]
+  },
+  {
+   "ten": "Phát hành không hoàn tất — nháp treo hoặc sinh hoá đơn/số trùng",
+   "moTa": "Không có mã lỗi dữ liệu nào; phiên phát hành bị cắt giữa đường hoặc thao tác bị lặp, hệ quả là hoá đơn chỉ nằm ở nháp, hoặc một booking có hai hoá đơn: kết nối NCC–ezInvoice gián đoạn nên PMS không nhận kết quả rồi khách phát hành lại thành hai số, sửa hoá đơn nháp trên ezInvoice lại sinh thêm hoá đơn mới trên site NCC, cùng một user tạo hoá đơn hai lần (một từ PMS một trên ezInvoice), phiên gián đoạn nên chỉ còn nháp để phát hành lại. MỘT SOP duy nhất, và điểm sống còn của nó là thứ tự: kiểm tra bên NCC đã có số hoá đơn chưa TRƯỚC KHI phát hành lại → nếu chưa thì phát hành lại từ chính bản nháp → nếu đã trùng thì xử lý bản dư qua luồng huỷ/thay thế.",
+   "caseKeys": [
+    "ES-332789",
+    "ES-345357",
+    "ES-341316",
+    "ES-345237"
+   ]
+  },
+  {
+   "ten": "Sửa hoá đơn đã phát hành — thay thế/điều chỉnh và hệ quả khi thao tác sai",
+   "moTa": "Hoá đơn đã phát hành bị chặn sửa trực tiếp nên mọi thay đổi phải đi qua nghiệp vụ thay thế/điều chỉnh, và đây là chỗ thao tác sai gây hư dữ liệu: khách chưa biết nghiệp vụ thay thế, thao tác thay thế nhầm/không hoàn tất làm trạng thái hoá đơn thành \"Bị thay thế\" lệch thực tế, thay thế sai sinh bản ghi trùng vẫn giữ số cũ và phải nhờ kỹ thuật xoá/khôi phục, đã ký trên hệ thống NCC rồi ký lại từ ezCloud nên NCC trả code 99, và hiện chưa có quyền riêng để phân quyền lễ tân thao tác thay thế/điều chỉnh. MỘT SOP duy nhất: điều kiện & quyền trước khi thay thế → các bước đúng → dấu hiệu thao tác lỗi giữa đường → khi nào phải chuyển kỹ thuật sửa trạng thái/dữ liệu.",
+   "caseKeys": [
+    "ES-344754",
+    "ES-341308",
+    "ES-341528",
+    "ES-343982",
+    "ES-345232"
+   ]
+  },
+  {
+   "ten": "Xoá hoá đơn nháp trên ba hệ thống",
+   "moTa": "Nhu cầu chỉ là xoá một hoá đơn nháp, nhưng nó vướng ba thứ khác nhau về bản chất: khách chưa biết nút xoá nằm ngay trên hoá đơn nháp (thiếu kiến thức), NCC MISA không hỗ trợ xoá nháp qua ezInvoice nên phải xoá trên phần mềm MISA (giới hạn NCC), và việc xoá không đồng bộ giữa NCC – ezAdmin – PMS nên xoá một nơi không xoá hai nơi (lỗi đồng bộ). MỘT SOP duy nhất vì nếu tài liệu chỉ dạy một trong ba thì case không đóng được: người dùng bấm xoá rồi thấy hoá đơn vẫn còn ở nơi khác. Tài liệu \"Xoá hoá đơn nháp\" buộc phải chứa cả ba mục — đây chính là ví dụ tiêu chí SOP gộp cái mà phân loại theo cơ chế sẽ tách.",
+   "caseKeys": [
+    "ES-345424",
+    "ES-341581",
+    "ES-342165"
+   ]
+  },
+  {
+   "ten": "Bản in & mẫu hoá đơn hiển thị không như mong đợi",
+   "moTa": "Hoá đơn/bản in ra không giống dữ liệu trong hệ thống, nhưng dữ liệu không sai: tuỳ chọn \"Không in giá\" đang được tích nên mẫu ẩn cột giá/số dư, tuỳ chọn trên màn in ẩn tiền phòng, mẫu khai chiều rộng bảng bằng %/vh nên render PDF cắt mất lề phải (đặt mm/cm là hết), và khách chưa biết nút in hoá đơn bán hàng nằm ở đâu. MỘT SOP duy nhất: đi từ triệu chứng \"bản in thiếu/sai\" → kiểm tra tuỳ chọn trên màn in → kiểm tra đang dùng mẫu nào và đơn vị chiều rộng trong mẫu → chỉ chỗ bấm in. Cùng một người xử lý, cùng một cụm màn hình.",
+   "caseKeys": [
+    "ES-345531",
+    "ES-345407",
+    "ES-343947",
+    "ES-343138"
+   ]
+  },
+  {
+   "ten": "Thông tin người mua lấy từ trường nào, áp cho ai",
+   "moTa": "Không có lỗi và cũng không có mã lỗi NCC; vấn đề là phạm vi trường dữ liệu không như người dùng tưởng: thông tin hoá đơn trên màn giao dịch phát sinh phải nhập ở tab \"Thông tin khác\" chứ không tự kéo từ khách đã check-in, bản mới chỉ lấy CCCD/hộ chiếu từ tab đó và chỉ cho chọn một nguồn khách hoặc công ty, cấu hình \"Tên người mua hàng\" chỉ áp cho khách lẻ không lấy hoá đơn còn tên/mã đoàn có dấu * chỉ vào booking. MỘT SOP duy nhất dạng bản đồ trường: trường nào trên hoá đơn lấy từ đâu, ai được áp, giới hạn hiện tại — và luôn kết thúc bằng hướng dẫn nhập/giải thích, không có vòng phát hành lại.",
+   "caseKeys": [
+    "ES-343605",
+    "ES-344185",
+    "ES-345844"
+   ]
+  },
+  {
+   "ten": "Hoá đơn tự phát hành ngoài ý muốn",
+   "moTa": "Hoá đơn được xuất mà người dùng không chủ ý: tuỳ chọn mặc định tự tích \"xuất hoá đơn\" khi trả phòng, và lỗi sản phẩm là bỏ tích \"yêu cầu xuất HĐĐT\" không xoá thông tin hoá đơn đã nhập nên tới lúc phát hành hệ thống vẫn dựa vào dữ liệu còn lưu mà xuất (dev ghi nhận sửa ở version tới). MỘT SOP duy nhất vì triệu chứng khách báo giống hệt nhau (\"hệ thống tự xuất hoá đơn\") và tài liệu phải nói cả hai mới trả lời đúng: tắt tuỳ chọn mặc định, và cảnh báo rằng bỏ tích không đủ cho tới bản vá — phải xoá thông tin hoá đơn đã nhập.",
+   "caseKeys": [
+    "ES-343522",
+    "ES-343415"
+   ]
+  },
+  {
+   "ten": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "moTa": "Hoá đơn phát hành được nhưng nội dung dòng hàng/đối tượng không như mong muốn vì danh mục trong PMS chưa khai: mã giá OTA1 chưa gán sản phẩm nên hoá đơn rơi về DICHVUKHAC đơn vị \"Dịch vụ\", món mới chưa nằm trong nhóm dịch vụ bổ sung nên không hiện chi tiết, chưa thêm công ty vào danh mục nên công nợ chỉ hiện một công ty, giá ngày/tiền phòng no-show/mẫu gộp ăn sáng đều sửa được trong cấu hình, và cấu hình được đọc tại thời điểm xuất chứ không lưu theo booking nên booking cũ tự ăn cấu hình mới. MỘT SOP duy nhất: bản đồ \"nội dung này trên hoá đơn đến từ danh mục/cấu hình nào\" + đường dẫn menu để khai + lưu ý phạm vi hiệu lực theo thời điểm xuất.",
+   "caseKeys": [
+    "ES-342326",
+    "ES-343033",
+    "ES-346026",
+    "ES-344106",
+    "ES-343423"
+   ]
+  },
+  {
+   "ten": "Khoản giảm trừ/giao dịch âm trong folio",
+   "moTa": "Cách khách sạn sửa giá hoặc giảm trừ bằng cách post thêm một giao dịch âm vào folio, và hoá đơn không tiêu hoá được dòng âm đó: khoản giảm trừ thành dịch vụ 'Rebate' giá trị âm bị NCC từ chối (BAD_REQUEST_ITEM_VALUES_NEGATIVE), hoá đơn hiện hai dòng vì xuất theo từng giao dịch được chọn, tiền phòng đã về 0 mà dòng chiết khấu vẫn khác 0 nên folio không cân và chặn check-out. MỘT SOP duy nhất vì cách xử lý luôn nằm ở folio và luôn cùng một nội dung: đừng dùng giao dịch âm để sửa giá — sửa/hoàn giao dịch gốc hoặc chọn đúng một giao dịch, đưa các dòng liên quan về cân, rồi mới xuất/check-out.",
+   "caseKeys": [
+    "ES-341243",
+    "ES-345386",
+    "ES-342306"
+   ]
+  },
+  {
+   "ten": "Hoá đơn đoàn lớn/nhiều giao dịch — timeout, treo Đang xử lý",
+   "moTa": "Yêu cầu hợp lệ nhưng khối lượng vượt sức chịu của luồng phát hành: đặt phòng có quá nhiều giao dịch làm request tạo hoá đơn timeout và treo trạng thái \"Đang xử lý\"; xuất tuỳ chỉnh hoá đơn cho đoàn 20 phòng trả 504 vì không lấy được chi tiết. MỘT SOP duy nhất và nó KHÁC hẳn SOP nháp treo: phát hành lại không giúp gì. Tài liệu phải đo trước (số phòng/số giao dịch), đưa phương án tách hoá đơn hoặc giảm tải, rồi chuyển kỹ thuật kèm log — chứ không phải nhấn lại.",
+   "caseKeys": [
+    "ES-344891",
+    "ES-346025"
+   ]
+  },
+  {
+   "ten": "Giới hạn tính năng/lỗi sản phẩm — xác nhận rồi chuyển dev hoặc nâng bản",
+   "moTa": "Nhu cầu nằm ngoài khả năng hiện tại của sản phẩm, supporter không có bước nào để đóng case bằng cấu hình: chưa có chức năng tự động phát hành và xuất hoá đơn điều chỉnh còn chờ thi công, hệ thống không cho sửa username, bản PMS đang dùng không cho chọn MST nên một PMS không xuất được cho nhiều chi nhánh khác MST (chỉ ezOne có), ezFolio chưa hỗ trợ ký Sun e-Invoice bằng USB Token (chỉ HSM), hoá đơn thu hộ không tra được theo mã đặt phòng (đã vá ở v5.35.0). MỘT SOP duy nhất vì đây là tài liệu quy trình chứ không phải tài liệu sửa lỗi: đối chiếu tài liệu tính năng/phiên bản → xác nhận là giới hạn → nêu phương án thay thế (nâng bản, đăng ký HSM, nâng version có bản vá) → ghi nhận backlog → trả lời khách.",
+   "caseKeys": [
+    "ES-342695",
+    "ES-344465",
+    "ES-342420",
+    "ES-337454",
+    "ES-338878"
+   ]
+  },
+  {
+   "ten": "Xung đột phiên do nhiều tài khoản trên cùng một trình duyệt",
+   "moTa": "Đăng nhập nhiều tài khoản khác nhau trên cùng một trình duyệt gây xung đột phiên trên admin.ezinvoice.vn nên không truy cập/phát hành được; xử lý là log-out rồi vào lại (hoặc dùng cửa sổ riêng). Đứng riêng vì SOP của nó là một tài liệu 3 dòng thao tác ở phía máy người dùng, không có bước nào ở màn quản trị — nếu gộp vào SOP phân quyền thì người xử lý sẽ đi gán quyền cho một tài khoản vốn đã có đủ quyền. Trong corpus này không có case thứ hai nào chia sẻ tài liệu đó (ES-341290 có nhắc cùng cơ chế nhưng phần chặn chính của nó là phân quyền).",
+   "caseKeys": [
+    "ES-343036"
+   ]
+  },
+  {
+   "ten": "Phòng no-show không đi qua luồng hoá đơn",
+   "moTa": "Theo hướng dẫn nội bộ, khoản no-show được ghi nhận bằng dịch vụ bổ sung và không phát hành hoá đơn — nên \"không xuất được hoá đơn cho phòng no-show\" là đúng quy định, không phải sự cố. Đứng riêng vì SOP của nó là một tài liệu quy định nghiệp vụ (khoản nào được/không được phát hành hoá đơn và ghi nhận thế nào), không có bước kiểm tra cấu hình hay trạng thái nào; trả lời sai hướng thì người xử lý sẽ đi tìm lỗi hệ thống không tồn tại.",
+   "caseKeys": [
+    "ES-345487"
+   ]
+  }
+ ],
+ "soNhom": 19,
+ "lyDoRanhGioi": "TIÊU CHÍ TÔI THỰC SỰ ÁP (để có thể kiểm lại được): một SOP = MỘT tài liệu, vào bằng MỘT triệu chứng, mà người hỗ trợ tuyến 1 chạy hết được các bước tới lúc đóng case, với CÙNG một chỗ sửa (cùng màn hình/hệ thống) và CÙNG một người thực hiện. Suy ra hai luật: (a) GỘP khi thao tác sửa và điều kiện đóng case giống nhau, dù cơ chế khác hẳn nhau về bản chất; (b) TÁCH khi bước cuối đổi màn hình, đổi hệ thống hoặc đổi người làm — vì lúc đó không tài liệu nào kết thúc được cả hai.\n\nQUYẾT ĐỊNH GỘP (cơ chế khác nhau nhưng một tài liệu là đủ):\n1. Nhóm \"Xoá hoá đơn nháp\" gộp ES-345424 (khách chưa biết nút xoá — thiếu kiến thức), ES-341581 (MISA không hỗ trợ xoá qua ezInvoice — giới hạn NCC) và ES-342165 (xoá không đồng bộ ba hệ thống — lỗi đồng bộ). Phân loại theo cơ chế sẽ tách thành ba lớp khác nhau. Nhưng nếu tài liệu chỉ dạy một trong ba, case KHÔNG đóng: người dùng bấm xoá xong vẫn thấy hoá đơn ở nơi khác. Tiêu chí \"dùng được\" bắt buộc gộp.\n2. Nhóm \"Phân quyền & ký hiệu\" gộp \"user quên chọn ký hiệu\" (ES-343662, ES-341317) với \"admin chưa phân quyền ký hiệu cho user\" (ES-346396, ES-344424, ES-346039) và \"site/MST mới chưa khai báo ký hiệu\" (ES-346559). Ba cơ chế, một triệu chứng vào (\"không có/không chọn được ký hiệu, không phát hành được\"), và một checklist bốn bước đóng được cả ba.\n3. Nhóm \"Tự phát hành ngoài ý muốn\" gộp một case cấu hình (ES-343522, tuỳ chọn mặc định tự tích) với một bug sản phẩm (ES-343415, bỏ tích không xoá dữ liệu nên vẫn tự xuất). Nếu tách, tài liệu cấu hình sẽ trả lời sai cho khách đã bỏ tích rồi mà hoá đơn vẫn ra.\n\nQUYẾT ĐỊNH TÁCH (rất giống nhau nhưng không thể chung một tài liệu):\n1. ES-345813 (lỗi 5000 do MST/tên người mua không hợp lệ) vs ES-343837 (đổi mật khẩu NCC, ezFolio giữ thông tin cũ → Status 5000 / THIRD_PARTY_SPECIFIC_ERROR). CÙNG MỘT MÃ LỖI của NCC, nhưng một cái sửa ở hồ sơ khách/hoá đơn nháp do lễ tân, một cái sửa ở Cấu hình kết nối và cần thông tin đăng nhập của khách sạn. Một SOP khoá theo mã lỗi sẽ đẩy người xử lý sang màn sai. Đây là lý do nhóm 2 và nhóm 3 buộc phải là hai nhóm.\n2. ES-342304 (khách tự đổi mật khẩu — đồng bộ lại ba bước, làm ngay được) vs ES-340759 / ES-338386 (đấu nối FPT/Sun mới — mở firewall cho IP ezCloud, dò lại service URL, cấp token). Triệu chứng khách báo y hệt: \"không xuất được hoá đơn\". Nhưng một cái là sửa hỏng, một cái là provisioning cần kỹ thuật ezCloud + IT khách sạn; không tài liệu nào kết thúc được cả hai.\n3. ES-338386 vs ES-337454 — CÙNG một tích hợp Sun e-Invoice, gần như cùng một khách. Một cái vào SOP đấu nối (firewall/URL/token), một cái vào SOP giới hạn tính năng (chưa hỗ trợ USB Token, khách phải chuyển HSM hoặc chờ code). Sự gần nhau về chủ đề không phải tiêu chí; chỗ sửa mới là tiêu chí.\n4. CẶP KHÓ NHẤT — nhóm 2 vs nhóm 8, cả hai cùng kết thúc ở \"hoá đơn nằm ở nháp\". Tôi đã cân nhắc gộp thành một tài liệu \"hoá đơn không có số\" với nhánh đầu là \"có mã lỗi NCC hay không\". Tôi TÁCH, vì hai nhánh dạy hai hành động NGƯỢC NHAU tại cùng một triệu chứng: nhóm 2 là \"sửa trường rồi phát hành lại\", còn ở nhóm 8 chính việc phát hành lại là thứ sinh ra hoá đơn trùng (ES-341316, ES-332789) nên bước đầu tiên phải là \"kiểm tra bên NCC đã có số chưa TRƯỚC KHI phát hành lại\". Một tài liệu gộp sẽ tạo ra lỗi trùng số.\n5. Nhóm 16 (timeout đoàn lớn) vs nhóm 17 (giới hạn/lỗi sản phẩm): cả hai đều kết thúc bằng chuyển dev, nhưng nhóm 17 là câu trả lời \"chưa hỗ trợ\" phẳng, còn nhóm 16 có đo lường (số phòng/số giao dịch) và có workaround (tách hoá đơn) trước khi escalate.\n6. Nhóm 2 vs nhóm 12: cả hai đều về thông tin người mua. Tách vì nhóm 2 vào bằng một mã lỗi từ chối và đóng bằng \"phát hành lại thành công\", nhóm 12 không có lỗi nào và đóng bằng giải thích phạm vi trường — không có vòng phát hành lại nào để hướng dẫn.\n\nHAI ĐIỀU LÀM SỐ NÀY KHÔNG SẠCH, cần nói rõ cho bước so sánh:\n- 6/88 case cần HAI SOP, không phải một: ES-346025 (chưa chọn ký hiệu + 504 đoàn 20 phòng), ES-341290 (phân quyền + xung đột phiên), ES-344810 (thiếu cấu hình hiển thị VAT + token PMS lệch token ezInvoice Admin), ES-344862 (CCCD sai + tiền âm do ghi nhận thêm thanh toán), ES-343712 (NCC từ chối vì số không liên tục + bug tìm kiếm theo số hoá đơn), ES-332789 (sửa nháp sinh hoá đơn trùng + phụ thu late check-out). Luật \"mỗi case đúng một nhóm\" buộc tôi chọn cơ chế chặn chính; nếu đếm theo NGUYÊN NHÂN thay vì theo CASE thì con số cao hơn 19.\n- Độ nhạy của tiêu chí: nếu gộp nhóm 2 + nhóm 8 thì ra 18; nếu tách nhóm 17 thành từng câu trả lời theo vùng sản phẩm (tự động phát hành / username / MST đa chi nhánh / USB Token / bug thu hộ) thì ra 23. Tức tiêu chí \"một SOP dùng được\" định vị câu trả lời trong khoảng 18–23, tâm ở 19 — chứ không phải một con số duy nhất.",
+ "daBaoHoa": false,
+ "giaiThich": "CHƯA BÃO HOÀ, và 19 là CẬN DƯỚI. Bằng chứng, theo đúng cách kiểm được yêu cầu (vị trí xuất hiện lần đầu của mỗi nhóm trong thứ tự 150 dòng của danh sách):\n\nNhóm 2 ở vị trí 3, nhóm 9 ở 6, nhóm 1 ở 10, nhóm 17 ở 13, nhóm 7 ở 14, nhóm 6 ở 15, nhóm 8 ở 21, nhóm 5 ở 28, nhóm 3 ở 29, nhóm 4 ở 34, nhóm 11 ở 35, nhóm 19 ở 50, nhóm 14 ở 53, nhóm 12 ở 64, nhóm 15 ở 65, nhóm 16 ở 93, nhóm 10 ở 102, nhóm 13 ở 110, nhóm 18 ở 131.\n\n1. 20% CUỐI (vị trí 121–150) VẪN SINH NHÓM MỚI: nhóm 18 (xung đột phiên, ES-343036) xuất hiện lần đầu ở vị trí 131. Theo đúng tiêu chuẩn đã đặt trong yêu cầu, như vậy là chưa bão hoà. 30% cuối sinh hai nhóm mới (nhóm 13 ở 110, nhóm 18 ở 131). Tốc độ sinh nhóm có chậm rõ (13/19 nhóm đã lộ trong 35% đầu, nhóm cuối cùng của nửa đầu là nhóm 15 ở vị trí 65) nhưng chưa về 0.\n2. CẤU TRÚC ĐUÔI CŨNG NÓI CHƯA HẾT: 4/19 nhóm chỉ có ≤2 case (nhóm 13, 16, 18, 19); trong đó 2 nhóm có đúng 1 case và 2 nhóm có đúng 2 case. Ước lượng Chao1 = 19 + 1²·2/(2·2)… cụ thể f1=2, f2=2 → 19 + 4/4 = 20, tức ngay cả khi coi 88 case có nguyên nhân là mẫu ngẫu nhiên thì vẫn còn khoảng ≥1 nhóm chưa gặp. Sự tồn tại của các nhóm cỡ 1 chính là dấu hiệu còn lớp chưa thấy.\n3. GIỚI HẠN NẶNG HƠN CẢ SATURATION CURVE — 62/150 case (41,3%) KHÔNG XÁC ĐỊNH ĐƯỢC, và đây không phải mẫu ngẫu nhiên bị thiếu. Đúng như sự thật đã đo về corpus: case đã đóng thường chỉ ghi \"hết triệu chứng\", bước kết luận xảy ra qua điện thoại/remote desktop. Nghĩa là những lớp nguyên nhân LUÔN được xử lý theo kiểu đó (điển hình: kỹ thuật vào sửa dữ liệu/DB, dựng lại phiên trên máy khách) bị mất một cách CÓ HỆ THỐNG, không phải mất ngẫu nhiên. Không có cách nào từ 88 case còn ghi nguyên nhân mà chặn trên được số nhóm thật. Tôi không ép nguyên nhân cho 62 case đó và cũng không suy số nhóm từ chúng.\n4. LƯU Ý VỀ PHÉP KIỂM: thứ tự 150 dòng được đưa vào không đơn điệu theo mã ES (các mã đan xen nhau, ví dụ 346652 → 346354 → 346136 → 344754 → 345244), nên nó không chắc là thứ tự thời gian. Đường cong bão hoà ở trên đo theo thứ tự đọc của corpus như được cung cấp; muốn kết luận bão hoà chắc chắn thì phải sắp lại theo ngày tạo rồi vẽ lại — dữ liệu hiện có không cho làm việc đó.\n5. HỆ QUẢ CHO R-K4 THEO ĐÚNG PHẦN VIỆC CỦA TÔI (không giành phần cân bằng của bước sau): với tiêu chí \"một SOP dùng được\", MỘT chủ đề duy nhất (hoá đơn điện tử) đã cần 19 tài liệu SOP khác nhau — vượt mốc 5–10 mà giả định hiện tại của dự án đang đứng trên. Nhưng nó cũng không phải \"mở, hàng trăm\": các nhóm đều đóng lại được thành checklist hữu hạn, tái xuất hiện nhiều lần (nhóm 1 và 2 mỗi nhóm 10 case), và không có case nào tôi phải tạo nhóm riêng vì nó độc nhất về cơ chế. Điều cần cảnh báo là con số 19 này là CHO MỘT CHỦ ĐỀ; số SOP toàn nền tảng sẽ là 19 nhân số chủ đề, không phải 19.",
+ "khongXacDinhDuoc": [
+  "ES-346652",
+  "ES-346354",
+  "ES-345579",
+  "ES-345244",
+  "ES-345033",
+  "ES-344096",
+  "ES-328513",
+  "ES-346024",
+  "ES-345569",
+  "ES-345163",
+  "ES-344977",
+  "ES-344680",
+  "ES-344189",
+  "ES-343926",
+  "ES-346584",
+  "ES-346490",
+  "ES-346134",
+  "ES-344512",
+  "ES-344182",
+  "ES-343811",
+  "ES-342998",
+  "ES-346593",
+  "ES-346108",
+  "ES-345359",
+  "ES-341279",
+  "ES-346587",
+  "ES-345258",
+  "ES-344149",
+  "ES-342529",
+  "ES-346484",
+  "ES-346342",
+  "ES-345723",
+  "ES-343737",
+  "ES-344110",
+  "ES-342533",
+  "ES-342142",
+  "ES-345502",
+  "ES-344786",
+  "ES-344023",
+  "ES-346481",
+  "ES-346273",
+  "ES-345043",
+  "ES-344318",
+  "ES-344024",
+  "ES-343132",
+  "ES-342190",
+  "ES-341560",
+  "ES-346230",
+  "ES-345373",
+  "ES-345268",
+  "ES-344992",
+  "ES-344242",
+  "ES-344018",
+  "ES-343124",
+  "ES-341613",
+  "ES-346185",
+  "ES-345234",
+  "ES-344990",
+  "ES-344068",
+  "ES-343084",
+  "ES-317720",
+  "ES-342232"
+ ],
+ "_ghiChu": "Taxonomy 19 nhóm nguyên nhân, chủ đề hoá đơn điện tử, nguồn Jira ezCloud. Sinh 2026-09-04 bởi workflow dem-nguyen-nhan-rk4 (16 agent). ĐƠN VỊ ĐÃ CHỐT 2026-09-05: 'một nguyên nhân' = 'một SOP dùng được'. ⚠ PHẠM VI: một khách, một nguồn, một chủ đề — xem 07 §5 R-K4 về G1/G12."
+}

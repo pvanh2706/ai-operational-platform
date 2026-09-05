@@ -460,6 +460,7 @@ trong đó có **đường nhận tín hiệu** tạo Case.
 ## Đọc tài liệu theo thứ tự nào
 
 ```
+0  docs/10_CHUYEN_MAY.md              CHỈ khi đổi máy: dựng lại ngữ cảnh
 1  docs/00_CURRENT_STATE.md            trạng thái + việc đang làm. ĐỌC TRƯỚC.
 2  AGENT.md                            cách làm việc trong dự án, các guardrail
 3  docs/PROJECT_CONTEXT.md             khảo sát + tầm nhìn sản phẩm

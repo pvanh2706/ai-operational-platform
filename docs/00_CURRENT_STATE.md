@@ -387,6 +387,17 @@ Nền      D1-D6, G1-G12              → AGENT.md §3, §4, §4B
 Metrics  M1-M4 (Q-E)                4 quyết định   → 02_SUCCESS_METRICS_V1.md §5
 ```
 
+# 0. ĐANG CHUYỂN MÁY? → `docs/10_CHUYEN_MAY.md`
+
+Bốn thứ KHÔNG nằm trong git và sẽ mất khi đổi máy: corpus Jira, `jira-config.bat` (có
+PAT), database `kp_dev`, và **bộ nhớ của agent**. File `10` nói cách dựng lại từng cái,
+và đã **chép sẵn phần bộ nhớ thuộc về dự án** vào chính nó — đó là lý do file đó tồn tại.
+
+⚠ Kết quả hai workflow của 2026-09-04/05 (~3,7 triệu token, chạy lại tốn hàng giờ) ĐÃ
+được đưa vào repo ở `docs/ket-qua-phan-tich/` nên KHÔNG mất.
+
+---
+
 # 1. Đọc gì, theo thứ tự nào
 
 ```text

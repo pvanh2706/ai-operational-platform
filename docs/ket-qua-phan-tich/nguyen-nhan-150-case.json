@@ -1,0 +1,1340 @@
+{
+ "_ghiChu": "Nguyên nhân rút từ 150 case hoá đơn đã đóng, mỗi case một dòng. Sinh 2026-09-04 bởi 10 agent độc lập, mỗi agent 15 case. ⚠ Trường  (nguyên văn evidence của khách hàng) ĐÃ BỎ có chủ đích: nó là dữ liệu vận hành thật, và .gitignore của repo đặt nguyên tắc rằng đưa nội dung nghiệp vụ của khách vào repo là quyết định của chủ dữ liệu, không phải thao tác kỹ thuật. Muốn có lại thì chạy lại export + workflow.",
+ "_phanBo": {
+  "evidence-noi-ro": 84,
+  "khong-xac-dinh-duoc": 62,
+  "toi-suy-ra": 4
+ },
+ "cases": [
+  {
+   "key": "ES-346584",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "remote vào máy"
+   ]
+  },
+  {
+   "key": "ES-346490",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-346134",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-345508",
+   "nguyenNhan": "Không phải lỗi: khách sạn chưa mua/kích hoạt module hoá đơn điện tử ezInvoice nên trên PMS không có chức năng xuất hoá đơn, case được chuyển sale tư vấn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "hướng dẫn khách",
+    "xin thông tin khách",
+    "báo sale"
+   ]
+  },
+  {
+   "key": "ES-345531",
+   "nguyenNhan": "Người dùng tích tuỳ chọn \"Không in giá\" khi in nên mẫu in ẩn cột giá/số dư, chứ không phải mẫu in sai dữ liệu.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "xin thông tin khách",
+    "kiểm cấu hình",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-344307",
+   "nguyenNhan": "Cấu hình Chiết khấu lệch giữa PMS (\"cộng vào cột đơn giá\") và ezInvoice.Admin (\"tách riêng cột tiền chiết khấu\"), cộng thêm lỗi code khiến chức năng Xem trước PDF/Phát hành hoá đơn không áp dụng cấu hình của ezInvoice.Admin, nên đơn giá hai bên chênh nhau (716 vs 774).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "tra dữ liệu",
+    "sửa cấu hình",
+    "báo dev",
+    "leo thang nội bộ",
+    "chờ bản fix",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-340759",
+   "nguyenNhan": "Không phải lỗi: khách sạn đấu nối mới HĐĐT FPT (cài trên server SunGroup) nên chưa có token/endpoint kết nối, kỹ thuật cấp token bản chính thức.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "chuyển người xử lý",
+    "cấp token"
+   ]
+  },
+  {
+   "key": "ES-344141",
+   "nguyenNhan": "ezInvoice truyền TaxAmount có 2 số thập phân (415703.7) trong khi phía nhà cung cấp tự làm tròn tiền thuế ở dòng Tổng cộng về số nguyên khi hiển thị, nên các cột tiền trên hoá đơn không khớp nhau.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "báo dev",
+    "tra dữ liệu",
+    "kiểm cấu hình",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-344512",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344182",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-343811",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "xin thông tin khách",
+    "tra dữ liệu",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-342433",
+   "nguyenNhan": "Đặt phòng chưa được check-out ở căn đích nên khi phát hành hoá đơn có điều chỉnh sang admin.ezinvoice.vn không lấy được dữ liệu booking (phải undo check-out rồi phát hành lại mới có thông tin).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "báo dev",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-342998",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-342328",
+   "nguyenNhan": "Hồ sơ khách nhập số ID và số hộ chiếu trùng nhau nên hệ thống chặn, không xuất được hoá đơn cho booking đó.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "remote vào máy",
+    "xin thông tin khách",
+    "tra dữ liệu",
+    "làm hộ khách"
+   ]
+  },
+  {
+   "key": "ES-341296",
+   "nguyenNhan": "Loại hoá đơn cấu hình lệch hai bên: trên nhà cung cấp VNPT là hoá đơn bán hàng (không thuế) còn PMS cấu hình hoá đơn VAT (bắt buộc có thuế), nên cột thuế/thành tiền xuất ra bị sai.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "tra dữ liệu",
+    "kiểm cấu hình",
+    "remote vào máy",
+    "sửa cấu hình",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346647",
+   "nguyenNhan": "Tài khoản người dùng đang dùng để xuất hoá đơn chưa được phân quyền nên thao tác phát hành bị chặn (báo đỏ).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm phân quyền",
+    "gửi phản hồi mẫu"
+   ]
+  },
+  {
+   "key": "ES-346396",
+   "nguyenNhan": "User đang đăng nhập chưa được thêm và phân quyền ký hiệu hoá đơn trên ezInvoice nên danh sách ký hiệu rỗng và không phát hành được hoá đơn điện tử.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "yêu cầu ảnh chụp",
+    "hỏi khách thông tin",
+    "kiểm phân quyền",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345623",
+   "nguyenNhan": "NCC từ chối hoá đơn với mã ERR:1518, nhân viên xác định do trường giấy tờ khách (CCCD/hộ chiếu) trong payload nhập sai.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "tra log",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346024",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-345569",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-345357",
+   "nguyenNhan": "Cùng một tài khoản người dùng tạo hoá đơn hai lần cho booking 346 — một lần từ PMS, một lần trực tiếp trên ezInvoice — nên booking có hai hoá đơn, không phải hệ thống tự sinh.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm dữ liệu",
+    "tra log"
+   ]
+  },
+  {
+   "key": "ES-345163",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344977",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344680",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344189",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "gửi phản hồi mẫu",
+    "thử tái hiện",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-343926",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "báo dev",
+    "đóng hội thoại"
+   ]
+  },
+  {
+   "key": "ES-343348",
+   "nguyenNhan": "Số CCCD của khách nhập sai nên hoá đơn không phát hành được, dừng lại ở dạng nháp chưa có số và chặn lần phát hành lại của booking.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "kiểm dữ liệu",
+    "remote vào máy",
+    "đóng hội thoại"
+   ]
+  },
+  {
+   "key": "ES-342493",
+   "nguyenNhan": "Khách sạn đổi cấu hình thuế/phí nhưng chưa bật lại tuỳ chọn tương ứng trong Cấu hình kết nối ezInvoice nên thuế tiền phòng đẩy sang hoá đơn thành 0%.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "kiểm dữ liệu",
+    "hướng dẫn khách",
+    "remote vào máy"
+   ]
+  },
+  {
+   "key": "ES-342304",
+   "nguyenNhan": "Khách sạn tự đổi mật khẩu truy cập trang NCC nhưng cấu hình kết nối ezInvoice trên ezFolio vẫn giữ thông tin đăng nhập cũ nên không xuất được hoá đơn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi khách thông tin",
+    "sửa cấu hình",
+    "xác nhận với khách"
+   ]
+  },
+  {
+   "key": "ES-341317",
+   "nguyenNhan": "Người dùng chưa chọn ký hiệu hoá đơn trước khi phát hành nên hệ thống không xuất được hoá đơn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi khách thông tin",
+    "kiểm cấu hình",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346484",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-346342",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-345857",
+   "nguyenNhan": "Ngày hoá đơn trên hoá đơn nháp không hợp lệ (payload trả về InvDate mặc định 0001-01-01) nên NCC từ chối phát hành với ErrorCode InvalidInvoiceDate; sửa lại ngày thì phát hành được.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm dữ liệu",
+    "tra log",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345723",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "kiểm dữ liệu",
+    "hỏi thêm thông tin",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-343737",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "xin remote vào máy",
+    "hướng dẫn khách",
+    "báo dev"
+   ]
+  },
+  {
+   "key": "ES-344027",
+   "nguyenNhan": "Số chữ số thập phân của cột Số lượng/Đơn giá chỉ được cấu hình một phía (PMS) chứ không cấu hình bên ezInvoice Admin, nên hoá đơn phát hành từ admin.invoice vẫn dùng mặc định 4 chữ số thập phân.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "kiểm dữ liệu",
+    "sửa cấu hình",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-343367",
+   "nguyenNhan": "Khách để đơn giá làm tròn số chẵn nên số lượng x đơn giá không tái tạo được thành tiền/tổng tiền sau thuế mong muốn (lệch 20,8đ), phải cho đơn giá 2 chữ số thập phân mới khớp.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm dữ liệu",
+    "báo dev",
+    "đối chiếu số liệu",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-344717",
+   "nguyenNhan": "Không phải lỗi hệ thống: hoá đơn khu kinh doanh đã thanh toán vào phòng và đã xử lý hàng tiêu thụ nên bị khoá sửa, khách không biết phải hủy trả chỗ rồi mới điều chỉnh được sản phẩm và thanh toán.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi thêm thông tin",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-343947",
+   "nguyenNhan": "Mẫu hoá đơn khai chiều rộng bảng bằng giá trị tương đối (%, vh) nên khi render sang PDF khổ giấy bị tính khác lúc xem/in, cắt mất nội dung lề phải; đặt chiều rộng tuyệt đối (mm, cm) thì hết.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "báo dev",
+    "sửa mẫu hoá đơn",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-344110",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-343247",
+   "nguyenNhan": "Không phải sự cố: thuê bao ezFolio/ezPos/ezBac/ezInvoice của khách sạn đến hạn nên cần cấp key gia hạn cho kỳ 20/08/2026-19/10/2027.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "cấp key gia hạn"
+   ]
+  },
+  {
+   "key": "ES-342309",
+   "nguyenNhan": "Trường amount8 trong payload gửi EasyInvoice được map từ TaxAmount của thuế 8% trong TaxSummary, còn NCC lại kỳ vọng trường này là tổng tiền, nên hoá đơn nhận sai giá trị (khách sạn cũng chưa cấu hình mục thuế).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "báo dev",
+    "làm việc với NCC",
+    "sửa map trường"
+   ]
+  },
+  {
+   "key": "ES-342533",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-342142",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "cài process in",
+    "xin remote vào máy",
+    "gọi khách"
+   ]
+  },
+  {
+   "key": "ES-341308",
+   "nguyenNhan": "Khách sạn thao tác thay thế hoá đơn nhầm/không hoàn tất nên trạng thái hoá đơn 00000006 trong phần mềm bị đặt thành \"Bị thay thế\" lệch với thực tế chưa bị thay thế, kỹ thuật phải sửa trạng thái về Gốc.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi thêm thông tin",
+    "báo dev",
+    "sửa dữ liệu"
+   ]
+  },
+  {
+   "key": "ES-346652",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-346354",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "xin remote vào máy",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346136",
+   "nguyenNhan": "Số CCCD người mua nhập trên hệ thống thừa 1 chữ số (13 số thay vì 12) nên hoá đơn không phát hành được, hệ thống chỉ báo \"đang xử lý, thử lại sau\".",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi thông báo lỗi",
+    "kiểm dữ liệu",
+    "hướng dẫn khách",
+    "xác nhận đã xong"
+   ]
+  },
+  {
+   "key": "ES-346027",
+   "nguyenNhan": "Mã số thuế người mua nhập sai (nghi thừa dấu cách phía sau) nên lệnh phát hành thất bại và hoá đơn tự rơi về trạng thái nháp.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi thông báo lỗi",
+    "kiểm dữ liệu",
+    "hướng dẫn khách",
+    "xác nhận đã xong"
+   ]
+  },
+  {
+   "key": "ES-345579",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344754",
+   "nguyenNhan": "Hoá đơn đã phát hành nên hệ thống chặn sửa trực tiếp, muốn đổi thông tin người mua phải dùng chức năng thay thế hoá đơn và khách chưa biết nghiệp vụ này (lỗi phát sinh khi thao tác thay thế thì evidence không nói rõ).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "xin remote vào máy"
+   ]
+  },
+  {
+   "key": "ES-345244",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-345033",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344096",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-343662",
+   "nguyenNhan": "Chưa chọn ký hiệu hoá đơn khi phát hành nên hệ thống không xuất được hoá đơn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "kiểm dữ liệu",
+    "xác nhận đã xong"
+   ]
+  },
+  {
+   "key": "ES-343712",
+   "nguyenNhan": "Nhà cung cấp hoá đơn (MISA) từ chối phát hành vì số hoá đơn không liên tục nên hệ thống lưu hoá đơn về nháp thay vì phát hành khi trả bàn, cộng thêm bug màn tìm kiếm không tra được theo số hoá đơn nên khách không thấy hoá đơn nháp đó.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi thông báo lỗi",
+    "hướng dẫn khách",
+    "xin remote vào máy",
+    "báo dev",
+    "tra log"
+   ]
+  },
+  {
+   "key": "ES-328513",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "chuyển team khác",
+    "trả lời mẫu cho khách"
+   ]
+  },
+  {
+   "key": "ES-342695",
+   "nguyenNhan": "Hệ thống chưa có chức năng tự động phát hành hoá đơn, và phần xuất hoá đơn có điều chỉnh vẫn đang chờ kỹ thuật thi công, nên nhu cầu của khách không thực hiện được.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "báo dev"
+   ]
+  },
+  {
+   "key": "ES-342305",
+   "nguyenNhan": "Khu kinh doanh The Palm chưa chạy kiểm toán ngày 12/8 nên ngày làm việc của khu vẫn là 11/8, mà hoá đơn phát hành từ khu kinh doanh lấy ngày theo ngày của khu nên hoá đơn ghi ngày 11/8 dù phát hành đêm 12/8.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm dữ liệu",
+    "tra log",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-342044",
+   "nguyenNhan": "Với booking đoàn, muốn ra một hoá đơn tổng thì phải check-out phòng lẻ mà không tích xuất hoá đơn, và khách chưa biết thao tác này nên lo hệ thống tách thành 2 hoá đơn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "xin remote vào máy",
+    "kiểm dữ liệu",
+    "thao tác hộ trên admin"
+   ]
+  },
+  {
+   "key": "ES-346593",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "gọi khách"
+   ]
+  },
+  {
+   "key": "ES-346303",
+   "nguyenNhan": "Kiểm toán (audit) được chạy sớm nên hoá đơn lấy ngày hệ thống sau khi đã chuyển ngày, thành 30/08 thay vì 29/08; phải sửa lại ngày hoá đơn bằng tay.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346108",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "remote vào máy"
+   ]
+  },
+  {
+   "key": "ES-345684",
+   "nguyenNhan": "Phần hoá đơn của khách sạn chưa hoàn tất đào tạo/triển khai nên kết nối ezCloud–Misa chưa được cấu hình xong, không phải lỗi kết nối kỹ thuật.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "chuyển bộ phận khác"
+   ]
+  },
+  {
+   "key": "ES-345487",
+   "nguyenNhan": "Phòng no-show không đi qua luồng xuất hoá đơn: theo hướng dẫn nội bộ khoản no-show được ghi nhận bằng dịch vụ bổ sung và không phát hành hoá đơn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi nội bộ",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345359",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-338386",
+   "nguyenNhan": "Firewall khách sạn chưa mở cho IP ezCloud (171.244.129.67/.65) tới server Sun einvoice nên không kết nối được; thêm nữa service URL được gõ tay sai nên phải dò lại link đúng rồi mới cấp token.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "kiểm cấu hình",
+    "chuyển bộ phận khác",
+    "cấp token",
+    "sửa dữ liệu"
+   ]
+  },
+  {
+   "key": "ES-343423",
+   "nguyenNhan": "Cấu hình hoá đơn điện tử được đọc tại thời điểm xuất chứ không lưu theo từng booking, nên booking cũ tự động ăn cấu hình mới và không có/không cần thao tác cập nhật đồng loạt.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "nhắc khách phản hồi"
+   ]
+  },
+  {
+   "key": "ES-344465",
+   "nguyenNhan": "Hệ thống không cho phép sửa username của tài khoản nên yêu cầu đổi username không thực hiện được.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-343733",
+   "nguyenNhan": "Tài khoản FO thiếu quyền \"Thêm hoá đơn\" nên không mở được màn kế toán/xuất hoá đơn; thêm quyền vào role là vào được.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "remote vào máy",
+    "kiểm cấu hình",
+    "sửa phân quyền",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-343686",
+   "nguyenNhan": "Thông tin đăng nhập tài khoản hoá đơn điện tử bị thay đổi nhưng chưa cập nhật lại trong phần mềm nên không phát hành được hoá đơn.",
+   "mucChacChan": "toi-suy-ra",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "remote vào máy"
+   ]
+  },
+  {
+   "key": "ES-342418",
+   "nguyenNhan": "Đặt phòng chưa được check-out tại căn/chi nhánh đích nên chưa đủ điều kiện để màn xuất hoá đơn có điều chỉnh trên ezInvoice lấy được dữ liệu đặt phòng đó.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "báo dev",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-342420",
+   "nguyenNhan": "Bản PMS khách đang dùng không cho chọn mã số thuế khi phát hành nên 1 PMS không xuất được hoá đơn cho nhiều chi nhánh khác MST; tính năng chọn MST chỉ có trên bản ezOne.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "báo dev",
+    "chuyển bộ phận khác"
+   ]
+  },
+  {
+   "key": "ES-342326",
+   "nguyenNhan": "Đây là vấn đề cấu hình chứ không phải lỗi: giá ngày, tính tiền phòng no-show và mẫu hoá đơn gộp ăn sáng đều sửa/tắt được trong Cấu hình > Phòng và giá > Đơn giá và ở mẫu hoá đơn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "remote vào máy",
+    "hướng dẫn khách",
+    "gọi khách"
+   ]
+  },
+  {
+   "key": "ES-341279",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346587",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-346452",
+   "nguyenNhan": "Chức năng phát hành hoá đơn (có điều chỉnh) chỉ lấy được dữ liệu của phòng đã check-out, nên đoàn nhiều phòng còn ở trạng thái check-in thì không có dữ liệu đẩy sang ezInvoice Admin.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "báo dev",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346065",
+   "nguyenNhan": "Tài khoản chưa được phân quyền nên không thực hiện được thao tác xuất hoá đơn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm phân quyền"
+   ]
+  },
+  {
+   "key": "ES-345844",
+   "nguyenNhan": "Không có lỗi hệ thống, chỉ là chưa rõ phạm vi trường dữ liệu: cấu hình \"Tên người mua hàng\" đúng là áp cho khách lẻ không lấy hoá đơn, còn tên khách/mã đoàn có dấu * chỉ ghi nhận vào booking chứ không vào thông tin hoá đơn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "chuyển team khác",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345386",
+   "nguyenNhan": "Hoá đơn điện tử xuất theo từng giao dịch được chọn, nên cách sửa giá bằng post thêm giao dịch âm làm hoá đơn hiện 2 dòng (có dòng âm); chọn đúng 1 giao dịch thì hệ thống gộp lại thành 1 dòng.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "làm rõ yêu cầu",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345258",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-337454",
+   "nguyenNhan": "ezFolio chưa hỗ trợ ký hoá đơn Sun e-Invoice bằng USB Token (chỉ chạy được với ký số HSM), nên tích hợp bị chặn cho tới khi khách đăng ký HSM hoặc team sửa code cho phép chọn loại chữ ký.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "chuyển team khác",
+    "làm rõ yêu cầu",
+    "xin tài liệu",
+    "báo dev",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-344862",
+   "nguyenNhan": "Hoá đơn đoàn không lên vì số CCCD nhập sai định dạng nên nhà cung cấp trả lỗi ERR.1518 (đổi sang hộ chiếu thì xuất được); còn số tiền âm ở phòng 401 là do khách sạn ghi nhận thêm một khoản thanh toán 2.250k trên tiền phòng đã thanh toán đủ.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "tra log",
+    "sửa dữ liệu",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-344424",
+   "nguyenNhan": "Ký hiệu hoá đơn không tự nhảy khi đồng bộ mà phải được phân quyền sử dụng cho từng tài khoản, cập nhật trên trang admin.ezinvoice.vn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-344149",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-343605",
+   "nguyenNhan": "Trên màn giao dịch phát sinh, thông tin hoá đơn lấy từ tab \"Thông tin khác\" và phải nhập tại đó chứ không tự kéo từ thông tin khách đã check-in; riêng khách lẻ thì trường địa chỉ hiện đang map cho khách công ty nên hệ thống còn phải update theo quy định mới.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "làm rõ yêu cầu",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-332789",
+   "nguyenNhan": "Mỗi lần lưu nháp rồi sửa hoá đơn trên ezInvoice, hệ thống lại tạo thêm một hoá đơn mới trên site nhà cung cấp nên khách sạn thấy 2 hoá đơn 700k trùng nhau (hoá đơn 650k thì do cấu hình phụ thu late check-out 150k cộng vào 500k tiền phòng, không phải hoá đơn sai cần xoá).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "làm rõ yêu cầu",
+    "xin ảnh chụp",
+    "kiểm cấu hình",
+    "tra log",
+    "báo dev",
+    "sửa dữ liệu",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-342529",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "làm rõ yêu cầu",
+    "báo dev",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-342306",
+   "nguyenNhan": "Tiền phòng đã về 0 nhưng dòng chiết khấu vẫn khác 0 nên folio không cân và hệ thống chặn check-out; phải hoàn tiền/sửa dịch vụ về 0 hoặc xoá dịch vụ.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "làm rõ yêu cầu",
+    "xin ảnh chụp",
+    "remote vào máy",
+    "sửa dữ liệu"
+   ]
+  },
+  {
+   "key": "ES-341290",
+   "nguyenNhan": "Tài khoản lễ tân chưa được phân quyền người dùng trên ezInvoice và chưa được phân quyền ký hiệu hoá đơn nên không chọn được ký hiệu, form phát hành báo \"Validation form error\"; lỗi lệch số thập phân thì do dùng 2 tài khoản trên cùng 1 trình duyệt gây xung đột phiên.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm phân quyền",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346026",
+   "nguyenNhan": "Khách chưa biết đường cấu hình: món mới phải được tạo trong một nhóm dịch vụ bổ sung (dvbs) rồi mới gán được và mới hiển thị chi tiết trên hoá đơn — thiếu kiến thức thao tác, không phải lỗi hệ thống.",
+   "mucChacChan": "toi-suy-ra",
+   "buocXuLy": [
+    "remote vào máy",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346230",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-345813",
+   "nguyenNhan": "Hệ thống hoá đơn trả lỗi 5000 do mã số thuế hoặc tên người mua trên hoá đơn không hợp lệ nên hoá đơn không ký/phát hành được.",
+   "mucChacChan": "toi-suy-ra",
+   "buocXuLy": [
+    "xin thông tin từ khách",
+    "kiểm tra dữ liệu",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345424",
+   "nguyenNhan": "Khách chưa biết thao tác xoá hoá đơn nháp (chỉ cần bấm nút xoá hoá đơn ngay trên hoá đơn nháp) — thiếu kiến thức thao tác, không có lỗi hệ thống.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345373",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-345268",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344992",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "remote vào máy"
+   ]
+  },
+  {
+   "key": "ES-343415",
+   "nguyenNhan": "Bỏ tích 'yêu cầu xuất HĐĐT' không xoá thông tin hoá đơn đã nhập trước đó, nên tới thời điểm phát hành hệ thống vẫn dựa vào dữ liệu còn lưu và tự động xuất hoá đơn (lỗi sản phẩm, dev ghi nhận sửa ở version tới).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "báo dev",
+    "hướng dẫn khách",
+    "đóng case không phản hồi"
+   ]
+  },
+  {
+   "key": "ES-344242",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344018",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "xác nhận với khách"
+   ]
+  },
+  {
+   "key": "ES-343036",
+   "nguyenNhan": "Đăng nhập nhiều tài khoản khác nhau trên cùng một trình duyệt gây xung đột phiên tài khoản trên admin.ezinvoice.vn nên không truy cập/phát hành được, phải log-out rồi vào lại.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "remote vào máy",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-343124",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-342137",
+   "nguyenNhan": "Không phải lỗi: khách yêu cầu cập nhật SĐT/email/địa chỉ site trong 'Cấu hình kết nối hóa đơn điện tử' và ezCloud sửa hộ phần cấu hình đó.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "sửa cấu hình",
+    "xác nhận với khách"
+   ]
+  },
+  {
+   "key": "ES-341613",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "remote vào máy",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-341243",
+   "nguyenNhan": "Khoản giảm trừ bị post thành một dịch vụ riêng tên 'Rebate' mang giá trị âm, mà hoá đơn gốc phía nhà cung cấp không nhận dòng giá trị âm (BAD_REQUEST_ITEM_VALUES_NEGATIVE) nên payload bị từ chối, hoá đơn không phát hành được.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "tra log",
+    "kiểm tra dữ liệu",
+    "phối hợp nhà cung cấp",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346481",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "tra log",
+    "gửi lại hóa đơn"
+   ]
+  },
+  {
+   "key": "ES-346273",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344810",
+   "nguyenNhan": "Cấu hình hóa đơn thiếu phương thức hiển thị cho thuế VAT 10% và token kết nối ở PMS khác token ở ezInvoice Admin (gây HOTEL_NOT_FOUND), nên thuế suất 10% không được truyền đúng sang NCC.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "tra log",
+    "cập nhật token",
+    "sửa cấu hình",
+    "xuất lại hóa đơn",
+    "báo khách kiểm tra",
+    "liên hệ NCC"
+   ]
+  },
+  {
+   "key": "ES-345257",
+   "nguyenNhan": "Số điện thoại người mua được kéo tự động từ booking ở dạng có mã +84 và dấu ngoặc, PMS không validate theo rule riêng của NCC nên VNPT từ chối payload ở trường SDThoai.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "tra log",
+    "hướng dẫn khách",
+    "báo khách sửa dữ liệu",
+    "liên hệ NCC"
+   ]
+  },
+  {
+   "key": "ES-343522",
+   "nguyenNhan": "Hóa đơn được phát hành bởi thao tác của người dùng chứ không phải hệ thống tự xuất — khách để tùy chọn mặc định tự tích \"xuất hóa đơn\" khi trả phòng nên hóa đơn bị phát hành ngoài ý muốn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "tra log",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345237",
+   "nguyenNhan": "Phiên phát hành bị gián đoạn giữa đường nên hệ thống chỉ lưu hóa đơn ở trạng thái nháp, phải vào danh sách hóa đơn phát hành lại từ bản nháp đó.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345043",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "remote vào máy"
+   ]
+  },
+  {
+   "key": "ES-338878",
+   "nguyenNhan": "Lỗi phần mềm: hóa đơn chỉ phát hành cho giao dịch thu hộ không tra được theo mã đặt phòng nên không hiện lên danh sách hóa đơn điện tử (được vá ở v5.35.0).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "kiểm phân quyền",
+    "remote vào máy",
+    "báo dev",
+    "hướng dẫn khách",
+    "vá ở version mới"
+   ]
+  },
+  {
+   "key": "ES-344318",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344024",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-343033",
+   "nguyenNhan": "Khách chưa thêm công ty vào danh mục phân loại booking/đặt phòng nên hình thức thanh toán công nợ chỉ hiện đúng một công ty — thiếu hướng dẫn cấu hình chứ không phải lỗi hệ thống.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-343132",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "kiểm phân quyền",
+    "remote vào máy",
+    "cập nhật token",
+    "hướng dẫn khách",
+    "báo dev"
+   ]
+  },
+  {
+   "key": "ES-342284",
+   "nguyenNhan": "Khách quên chạy kiểm toán Khu kinh doanh nên hóa đơn/doanh thu ngày 12/8 vẫn được ghi nhận vào ngày làm việc 11/8.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "báo dev",
+    "sửa dữ liệu",
+    "hướng dẫn khách",
+    "báo khách kiểm tra"
+   ]
+  },
+  {
+   "key": "ES-342190",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "remote vào máy",
+    "cài lại máy in",
+    "báo khách kiểm tra"
+   ]
+  },
+  {
+   "key": "ES-341560",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-346559",
+   "nguyenNhan": "Site/mã số thuế mới (0304746657) của khách chưa được khai báo đủ cấu hình hoá đơn cho cả 2 cơ sở 1497 và 1708 nên hệ thống không tìm thấy ký hiệu hoá đơn khi xem trước PDF",
+   "mucChacChan": "toi-suy-ra",
+   "buocXuLy": [
+    "sửa cấu hình",
+    "kiểm thử lại"
+   ]
+  },
+  {
+   "key": "ES-345990",
+   "nguyenNhan": "Token kết nối xuất hoá đơn với VNPT trên hệ thống bán vé mất hiệu lực nên đơn đại lý book online không tự phát hành được hoá đơn, phải cập nhật lại token",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "sửa cấu hình",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346025",
+   "nguyenNhan": "Hai cơ chế: xem trước PDF lỗi vì chưa chọn ký hiệu hoá đơn, còn xuất tuỳ chỉnh hoá đơn đoàn 20 phòng lỗi 504 time-out vì hệ thống không lấy được chi tiết hoá đơn của đoàn lớn",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm tra hoá đơn",
+    "sửa cấu hình",
+    "hướng dẫn khách",
+    "báo dev",
+    "phương án tạm"
+   ]
+  },
+  {
+   "key": "ES-345502",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "remote vào máy",
+    "kiểm tra hoá đơn"
+   ]
+  },
+  {
+   "key": "ES-343982",
+   "nguyenNhan": "Khách sạn đã ký hoá đơn trực tiếp trên hệ thống nhà cung cấp rồi ký lại từ ezCloud, hoá đơn không còn ở trạng thái Chờ ký nên nhà cung cấp trả lỗi code 99 hoá đơn không hợp lệ để ký",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi nhà cung cấp",
+    "trả lời nghiệp vụ"
+   ]
+  },
+  {
+   "key": "ES-345232",
+   "nguyenNhan": "Hệ thống chưa có quyền/chức năng phân quyền riêng cho việc lập hoá đơn thay thế và điều chỉnh nên khách không chọn được tuỳ chọn này khi phân quyền lễ tân",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "trả lời nghiệp vụ"
+   ]
+  },
+  {
+   "key": "ES-344891",
+   "nguyenNhan": "Đặt phòng có quá nhiều giao dịch nên request tạo hoá đơn bị timeout, hệ thống treo ở trạng thái Đang xử lý",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "báo dev",
+    "phương án tạm",
+    "hướng dẫn khách",
+    "kiểm thử lại"
+   ]
+  },
+  {
+   "key": "ES-344786",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344185",
+   "nguyenNhan": "Bản mới chỉ lấy thông tin người mua (CCCD/hộ chiếu) từ tab Thông tin khác của đặt phòng và chỉ cho chọn một nguồn khách hoặc công ty, nên dữ liệu khách lưu trú không tự link sang hoá đơn điện tử",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "trả lời nghiệp vụ"
+   ]
+  },
+  {
+   "key": "ES-344023",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-343138",
+   "nguyenNhan": "Khách chưa biết vị trí nút in hoá đơn bán hàng trên phần mềm, không có lỗi hệ thống",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-341581",
+   "nguyenNhan": "Nhà cung cấp MISA không hỗ trợ thao tác xoá hoá đơn nháp qua ezInvoice nên bản ezCloud không có chức năng xoá, khách phải xoá trực tiếp trên phần mềm MISA",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hướng dẫn khách",
+    "trả lời nghiệp vụ"
+   ]
+  },
+  {
+   "key": "ES-341528",
+   "nguyenNhan": "Khách thao tác lập hoá đơn thay thế sai nên hệ thống sinh bản ghi trùng vẫn giữ số 00000006 mà không tạo số hoá đơn mới, bên nhà cung cấp cũng chưa thay thế thành công, phải nhờ kỹ thuật xoá/khôi phục dữ liệu để làm lại",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "xin thêm thông tin",
+    "báo dev",
+    "sửa dữ liệu",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-342165",
+   "nguyenNhan": "Việc xoá hoá đơn nháp không được đồng bộ giữa ba hệ thống (nhà cung cấp, ezAdmin, PMS) nên xoá ở một nơi không xoá ở hai nơi còn lại, phải xoá thủ công cả ba chỗ",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "trả lời nghiệp vụ"
+   ]
+  },
+  {
+   "key": "ES-341316",
+   "nguyenNhan": "Kết nối giữa nhà cung cấp hoá đơn điện tử và ezInvoice bị gián đoạn giữa lúc phát hành nên PMS không nhận được kết quả hoá đơn 867, khách phát hành lại và sinh hai số hoá đơn trùng cho cùng một đặt phòng",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "xin thêm thông tin",
+    "báo dev",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346039",
+   "nguyenNhan": "Tài khoản người dùng chưa được admin thêm vào phân quyền \"Ký hiệu hóa đơn\" trong ezInvoice nên màn hình xuất hóa đơn không hiện mục Ký hiệu để chọn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "xin thông tin tài khoản",
+    "kiểm cấu hình",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-346185",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-345855",
+   "nguyenNhan": "Hệ thống nhà cung cấp hóa đơn MISA đang gián đoạn nên trả UnAuthorize/MisaIdError cho request lấy PDF, không phải do khách sạn đổi tài khoản (khách xác nhận cổng meinvoice của MISA cũng đang lỗi).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi lại khách",
+    "tra log"
+   ]
+  },
+  {
+   "key": "ES-345284",
+   "nguyenNhan": "Khách sạn đổi sang chữ ký số mới bên Viettel nhưng chứng thư số mới chưa được kích hoạt phía Viettel, nên Viettel từ chối hóa đơn phát hành từ ezFolio (Viettel xử lý xong thì phát hành được).",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi lại khách",
+    "remote vào máy",
+    "báo dev",
+    "lập nhóm zalo",
+    "báo nhà cung cấp"
+   ]
+  },
+  {
+   "key": "ES-345407",
+   "nguyenNhan": "Tùy chọn trên màn hình in hóa đơn đang được tích, mà tùy chọn đó ẩn phần giá/tiền phòng trên bản in nên chỉ hệ thống mới thấy tiền phòng.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "hỏi lại khách",
+    "kiểm cấu hình",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-345234",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "gọi khách"
+   ]
+  },
+  {
+   "key": "ES-344990",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-344106",
+   "nguyenNhan": "Mã giá OTA1 dùng trong đặt phòng chưa được cấu hình sản phẩm tương ứng, mà hệ thống ưu tiên lấy sản phẩm theo mã giá của booking, nên hóa đơn rơi về sản phẩm mặc định DICHVUKHAC với đơn vị tính \"Dịch vụ\" thay vì DVP/\"Đêm\" ở cấu hình chung.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "kiểm cấu hình",
+    "báo dev"
+   ]
+  },
+  {
+   "key": "ES-344068",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-343837",
+   "nguyenNhan": "Khách sạn tự đổi mật khẩu tài khoản hóa đơn điện tử phía nhà cung cấp nhưng ezFolio vẫn giữ thông tin đăng nhập cũ, nên nhà cung cấp không xác thực được và trả Status 5000 / THIRD_PARTY_SPECIFIC_ERROR.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "tra log",
+    "báo dev",
+    "xin thông tin tài khoản",
+    "cập nhật thông tin đăng nhập"
+   ]
+  },
+  {
+   "key": "ES-343084",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "hỏi lại khách",
+    "báo nhà cung cấp"
+   ]
+  },
+  {
+   "key": "ES-317720",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": []
+  },
+  {
+   "key": "ES-342377",
+   "nguyenNhan": "Khi các phòng trong đoàn được check-out ở hai thời điểm khác nhau, lệnh \"xuất chung 1 hóa đơn\" chỉ lấy nội dung của phòng đang check-out rồi đồng bộ hóa đơn thiếu đó cho cả đoàn, nên phòng đã trả trước đó không có dữ liệu trên hóa đơn.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "báo dev",
+    "hướng dẫn khách"
+   ]
+  },
+  {
+   "key": "ES-342232",
+   "nguyenNhan": "KHÔNG XÁC ĐỊNH ĐƯỢC",
+   "mucChacChan": "khong-xac-dinh-duoc",
+   "buocXuLy": [
+    "tra log",
+    "báo dev",
+    "xin thông tin tài khoản",
+    "hỏi lại khách"
+   ]
+  },
+  {
+   "key": "ES-341377",
+   "nguyenNhan": "Với đặt phòng khách đoàn, hệ thống chỉ cho xuất hóa đơn sau khi phòng đã check-in, nên booking của khách chưa đến (dù đã trả hết tiền) không xuất được và phải check-in, xuất hóa đơn rồi undo check-in.",
+   "mucChacChan": "evidence-noi-ro",
+   "buocXuLy": [
+    "gọi khách",
+    "hướng dẫn khách"
+   ]
+  }
+ ]
+}
