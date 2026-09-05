@@ -98,7 +98,13 @@ def main() -> None:
     print(f"Phần lọc:  {loc}")
     print(f"Lấy {MOI_THANG} case × {SO_THANG} tháng = {MOI_THANG * SO_THANG} case\n")
 
-    hom_nay = date.fromisoformat(os.environ.get("SAMPLE_UNTIL", "2026-09-04"))
+    # Mốc kết thúc của cửa sổ lấy mẫu. Mặc định là HÔM NAY, không phải một ngày cứng:
+    # bản đầu ghi cứng "2026-09-04" và ai chạy lại sau đó sẽ lặng lẽ lấy mẫu của quá
+    # khứ, thiếu đúng phần mới nhất — mà `R-K4` đã đo được rằng phần mới nhất chính là
+    # phần nghèo bằng chứng nhất (41% không ghi nguyên nhân, và tỉ lệ đang xấu đi).
+    # Đặt SAMPLE_UNTIL để tái lập một phép đo cũ; bỏ trống để lấy tới hôm nay.
+    hom_nay = date.fromisoformat(os.environ["SAMPLE_UNTIL"]) \
+        if os.environ.get("SAMPLE_UNTIL") else date.today()
     tat_ca: list[dict] = []
     thong_ke: list[tuple[str, int, int]] = []
 

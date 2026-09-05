@@ -1,0 +1,13 @@
+# Phụ thuộc của scripts/jira-export/
+#
+#     pip install -r scripts/jira-export/requirements.txt
+#
+# ⚠ CHỈ MỘT script cần thư viện ngoài. Bốn script còn lại — export_jira_to_channel1.py,
+# sample_spread.py, check_corpus.py, make_fixture.py, load_fixture.py, discover_fields.py
+# — dùng THUẦN thư viện chuẩn, cố ý: chúng là đường nạp dữ liệu và phải chạy được trên
+# một máy vừa cài Python, không cần dựng môi trường.
+#
+# thu_retrieval.py là ngoại lệ vì nó đo full-text search trên PostgreSQL thật, nên phải
+# nói chuyện với database.
+
+psycopg[binary]>=3.1

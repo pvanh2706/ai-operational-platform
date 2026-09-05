@@ -39,6 +39,10 @@ tốn hàng giờ. Xem §4.
 ```bash
 git clone <repo> && cd 23.ai-operational-platform
 
+# 0. Python cho nhóm script vận hành. CHỈ thu_retrieval.py cần thư viện ngoài;
+#    các script còn lại dùng thuần stdlib có chủ đích (xem requirements.txt).
+pip install -r scripts/jira-export/requirements.txt
+
 # 1. Database. Cần superuser MỘT LẦN.
 psql -U postgres -h localhost -f scripts/dev-db-setup.sql
 
@@ -111,9 +115,11 @@ thao tác kỹ thuật. Cần trích dẫn thì chạy lại export + workflow.
 Dùng lại chúng, ví dụ cho phép thử retrieval:
 
 ```bash
-export TAXONOMY=docs/ket-qua-phan-tich/taxonomy-19-nhom-hoa-don.json
 python scripts/jira-export/thu_retrieval.py     # cần corpus ở §3 trước
 ```
+
+Script tự tìm taxonomy ở `docs/ket-qua-phan-tich/`, không cần đặt biến. Đặt `TAXONOMY`
+chỉ khi muốn đo trên một taxonomy khác.
 
 ---
 

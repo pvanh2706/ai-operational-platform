@@ -71,16 +71,31 @@ def tin_nhan_dau(noi_dung: str) -> str:
     return noi_dung[: nhan_vien.start()][:1200]
 
 
+def nap_taxonomy() -> dict:
+    """Tìm taxonomy theo thứ tự: biến TAXONOMY -> chỗ mặc định trong repo.
+
+    ⚠ Đường dẫn mặc định trỏ vào `docs/ket-qua-phan-tich/` chứ không phải `docs/`.
+    Bản đầu của hàm này trỏ vào `docs/taxonomy19.json` — một chỗ file CHƯA BAO GIỜ nằm;
+    lúc đó file còn ở thư mục tạm của phiên làm việc và chỉ chạy được nhờ biến môi
+    trường. Ai clone repo về sẽ vấp ngay. Sửa 2026-09-05 khi chuẩn bị chuyển máy.
+    """
+    tu_bien = os.environ.get("TAXONOMY", "")
+    macdinh = os.path.join(HERE, "..", "..", "docs", "ket-qua-phan-tich",
+                           "taxonomy-19-nhom-hoa-don.json")
+    for p in (tu_bien, macdinh):
+        if p and os.path.exists(p):
+            return json.load(io.open(p, encoding="utf-8"))
+    print(
+        "Không tìm thấy taxonomy. Thử hai chỗ:\n"
+        f"  biến TAXONOMY = {tu_bien or '(chưa đặt)'}\n"
+        f"  mặc định      = {os.path.normpath(macdinh)}\n"
+        "File mặc định có trong repo; nếu thiếu thì repo bị cắt xén hoặc bạn đang chạy "
+        "từ ngoài cây nguồn.", file=sys.stderr)
+    sys.exit(2)
+
+
 def main() -> None:
-    tax = json.load(io.open(os.path.join(HERE, "..", "..",
-                                         "docs", "taxonomy19.json"), encoding="utf-8")) \
-        if os.path.exists(os.path.join(HERE, "..", "..", "docs", "taxonomy19.json")) else None
-    if tax is None:
-        p = os.environ.get("TAXONOMY", "")
-        if not p or not os.path.exists(p):
-            print("Thiếu taxonomy19.json — đặt biến TAXONOMY trỏ tới file.", file=sys.stderr)
-            sys.exit(2)
-        tax = json.load(io.open(p, encoding="utf-8"))
+    tax = nap_taxonomy()
 
     nhom_cua = {}
     ten_nhom = {}
