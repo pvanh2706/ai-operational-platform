@@ -1053,10 +1053,54 @@ R-K4   ✅ ĐÃ ĐẾM 2026-09-04. Kết quả đầy đủ: `docs/09_RK4_DEM_NG
             có một nghĩa duy nhất trong dự án này. Ghi ở đây vì `§6.9` đã cho thấy bệnh
             "từ vựng song song" tái phát 3 lần trong một workstream.
 
-       ⚠ PHÉP THỬ ĐỂ ĐỔI Ý, chạy được trong một buổi, không hạ tầng mới:
-         lấy TIN NHẮN ĐẦU của 88 case có nguyên nhân, tra bằng từ khoá/mã lỗi, đo tỉ lệ
-         nhóm SOP đúng nằm trong top-3. **Dưới ~60-70% thì embedding đáng thử; trên mức
-         đó thì đóng câu hỏi này lại.** Corpus có bằng chứng cả hai chiều.
+       ✅ **PHÉP THỬ ĐÃ CHẠY 2026-09-05 — và nó cho thấy CHÍNH NGƯỠNG ĐÃ HỎI SAI CÂU.**
+          `scripts/jira-export/thu_retrieval.py`. Ngưỡng đặt trước: <60% thì embedding
+          đáng thử. Kết quả: **34%** — dưới ngưỡng, tức "embedding đáng thử".
+          **Nhưng ba phép đo bổ sung cho thấy kết luận đó SAI**, và đây mới là phần đáng
+          nhớ:
+
+            1) ĐOÁN MÙ = 31%. Luôn trả 3 nhóm lớn nhất, không đọc truy vấn.
+               FTS đo được 34%. **Chênh đúng 3 điểm phần trăm.** FTS gần như không thêm
+               tín hiệu nào — nó chỉ đang tái tạo phân bố nhóm.
+
+            2) TRẦN LÝ THUYẾT = 22%, THẤP HƠN CẢ TRUY VẤN NGẮN. Dùng CẢ transcript (đã
+               chứa sẵn câu chẩn đoán) làm truy vấn lại TỆ HƠN dùng tin nhắn đầu. Điều
+               này chỉ xảy ra nếu xếp hạng bị chi phối bởi ĐỘ DÀI tài liệu — đúng
+               `AR-h` #4. Đã thử **cả 7 cờ chuẩn hoá** của `ts_rank` (chia log độ dài,
+               chia độ dài, harmonic mean, chia số từ...) và cả cách gom điểm theo NHÓM
+               trước khi cắt top-3: **mọi biến thể nằm trong 22-35%.** Không cấu hình
+               nào vượt xa đoán mù.
+
+            3) PHÉP KIỂM QUYẾT ĐỊNH — từ vựng có mang thông tin về nhóm không?
+               Đo Jaccard trên 3 828 cặp case:
+                    cặp CÙNG nhóm  trung bình 0,2206
+                    cặp KHÁC nhóm  trung bình 0,1859
+                    Cohen's d = 0,38  (|d|<0,2 = hầu như không phân biệt)
+                    P(cặp cùng nhóm giống hơn cặp khác nhóm) = **60,9%**  (50% = mù hoàn toàn)
+               Ví dụ sắc nhất: `ES-346647` *"ko xuất được hóa đơn"* (nhóm **Phân quyền**)
+               giống **65%** với `ES-346303` *"CHỈNH LẠI ĐÚNG NGÀY HÓA ĐƠN"* (nhóm **Ngày
+               làm việc/kiểm toán**). Cùng từ vựng, khác cơ chế hoàn toàn.
+
+          🛑 **KẾT LUẬN: KHÔNG dựng vector DB — và lý do bây giờ MẠNH HƠN lúc chưa đo.**
+             AUC 60,9% là **trần của MỌI phương pháp đọc văn bản của case**, không riêng
+             FTS. Embedding đọc đúng cái văn bản đó; nó nắm được đồng nghĩa nên có thể
+             nhích vài điểm, nhưng không thể tạo ra tín hiệu không có trong dữ liệu.
+             → Ngưỡng "dưới 60% thì embedding đáng thử" **giả định ngầm rằng trần cao**.
+               Giả định đó sai ở corpus này. Một phép thử tốt vẫn có thể hỏi sai câu, và
+               cách phát hiện là đo thêm BASELINE và TRẦN — hai thứ mà ngưỡng gốc không có.
+
+          → Điều này XÁC NHẬN bằng số đo cái mà kết luận `R-K4` §5 điểm 3 đã nói bằng lời:
+            *"ở case khó, thông tin phân biệt KHÔNG CÓ TRONG VĂN BẢN"*. Thứ phân biệt là
+            một **PHÉP KIỂM** (*"danh sách ký hiệu có rỗng không?"*), không phải từ nào
+            trong lời khách báo. Thứ cần là **cây quyết định có bước kiểm** — đúng cái
+            bản nháp SOP phải chứa — chứ không phải một chỉ mục tốt hơn.
+
+          ⚠ ĐIỀU SẼ LÀM ĐỔI Ý (thay cho ngưỡng cũ đã bị bác):
+            · nếu đo lại trên nhãn của một chủ đề KHÁC mà AUC > 75% thì tín hiệu văn bản
+              có thật ở chủ đề đó, và câu hỏi mở lại cho riêng chủ đề đó
+            · nếu bổ sung **kết quả của bước kiểm** vào truy vấn (không chỉ lời khách
+              báo) mà top-3 vượt 70% thì đó là bằng chứng cho cây quyết định, KHÔNG phải
+              cho embedding
 
        🛑 **ĐIỀU BẤT NGỜ NHẤT, và nó giải thích vì sao vòng n=32 thất bại:**
           **CASE JIRA KHÔNG PHẢI MỘT ĐƠN VỊ CỦA GÌ CẢ.** Trong cùng 150 case:
