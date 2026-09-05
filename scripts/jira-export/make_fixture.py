@@ -89,10 +89,23 @@ GHI_CHU_TRUNG = [
 
 
 def main() -> None:
-    with open(os.path.join(HERE, "dry-run-cases.json"), encoding="utf-8") as f:
-        cases = json.load(f)
-    with open(os.path.join(HERE, "dry-run-evidence.json"), encoding="utf-8") as f:
-        evidence = json.load(f)
+    # ⚠ Bắt FileNotFoundError và nói rõ phải làm gì. Đo được 2026-09-05 bằng cách clone
+    # sạch repo rồi chạy: bản trước chết bằng traceback, và người mới không có cách nào
+    # đoán ra rằng file bị thiếu là CỐ Ý (nó trong .gitignore vì là dữ liệu khách hàng).
+    # Một script bắt buộc phải chạy sau một script khác thì phải TỰ NÓI RA điều đó.
+    try:
+        with open(os.path.join(HERE, "dry-run-cases.json"), encoding="utf-8") as f:
+            cases = json.load(f)
+        with open(os.path.join(HERE, "dry-run-evidence.json"), encoding="utf-8") as f:
+            evidence = json.load(f)
+    except FileNotFoundError as e:
+        print(f"Chưa có {os.path.basename(e.filename)}.\n"
+              "File này KHÔNG nằm trong repo (dữ liệu vận hành của khách, xem .gitignore).\n"
+              "Chạy trước:\n"
+              '  cmd /c "call scripts\\jira-export\\jira-config.bat && '
+              'python scripts\\jira-export\\export_jira_to_channel1.py --dry-run"',
+              file=sys.stderr)
+        sys.exit(2)
 
     dem = {mo_ta: 0 for _, _, mo_ta in THAY_THE}
     cham_vao = set()

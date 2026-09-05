@@ -104,8 +104,16 @@ def main() -> None:
         for k in n["caseKeys"]:
             nhom_cua[k] = i
 
-    cases = json.load(io.open(os.path.join(HERE, "dry-run-cases.json"), encoding="utf-8"))
-    ev = json.load(io.open(os.path.join(HERE, "dry-run-evidence.json"), encoding="utf-8"))
+    # ⚠ Cùng lý do với make_fixture.py: clone sạch rồi chạy thì bản trước chết bằng
+    # traceback, và người mới không đoán được rằng file thiếu là CỐ Ý.
+    try:
+        cases = json.load(io.open(os.path.join(HERE, "dry-run-cases.json"), encoding="utf-8"))
+        ev = json.load(io.open(os.path.join(HERE, "dry-run-evidence.json"), encoding="utf-8"))
+    except FileNotFoundError as e:
+        print(f"Chưa có {os.path.basename(e.filename)}.\n"
+              "File này KHÔNG nằm trong repo (dữ liệu vận hành của khách, xem .gitignore).\n"
+              "Lấy corpus trước — xem docs/10_CHUYEN_MAY.md §3.", file=sys.stderr)
+        sys.exit(2)
 
     subj = {c["sourceReference"].split(":", 1)[1]: c["subject"] for c in cases}
     desc = {}
