@@ -326,18 +326,43 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >        — cấp thứ ba mà AR-l không mô tả.  → 07 §5 AR-n
 > ```
 >
-> ✅ **ĐÃ CHỌN 2026-09-07 làm việc kế tiếp** — cây quyết định SOP (khối ngay dưới).
-> ⚠ **Một chỗ khối dưới ghi chưa đúng, sửa 2026-09-07:** không có *một* nhóm lớn nhất —
->   **HAI nhóm cùng 10 case**: *Phân quyền & ký hiệu hoá đơn chưa sẵn sàng* và *NCC từ chối
->   payload — tra mã lỗi, sửa dứ liệu nguồn, phát hành lại*. Đếm lại bằng `caseKeys` trong
->   `taxonomy-19-nhom-hoa-don.json`. Chọn nhóm nào là một lựa chọn, không phải một hệ quả.
+> ✅ **CÂY QUYẾT ĐỊNH SOP ĐẦU TIÊN — ĐÃ LÀM XONG 2026-09-07 → `docs/11_CAY_QUYET_DINH_SOP.md`**
+> ```text
+> Nhóm  Phân quyền & ký hiệu hoá đơn (10 case). Cây: 5 bước kiểm · 6 bước sửa.
+>       Bản máy đọc được: docs/ket-qua-phan-tich/cay-quyet-dinh-phan-quyen-ky-hieu.json
+>       Phép kiểm chạy được: nhom_sop.py --kiem-cay (5/5 phép đột biến bị bắt).
 >
-> **Việc LÀM ĐƯỢC NGAY, không chờ ai:** dựng **cây quyết định có bước kiểm** cho nhóm
-> SOP lớn nhất (*Phân quyền & ký hiệu hoá đơn*, 10 case). Nguyên liệu: `docs/ket-qua-phan-tich/`.
-> ⚠ Nhưng biết trước hai chỗ thiếu: (1) repo có 10 mã case + nguyên nhân một dòng nhưng
-> **KHÔNG có bước kiểm nào** — mà bước kiểm chính là thứ cây quyết định phải chứa;
-> (2) bằng chứng then chốt `ES-346396` phải kéo lại từ Jira (JQL trong
-> `jira-config.example.bat` giờ dùng `resolved >= -365d` nên nó lọt vào cửa sổ).
+> Bốn phát hiện, xem docs/11 §3:
+>  · 1/115 khối văn bản lặp nguyên văn có chứa bước làm — "tìm text lặp thì ra SOP"
+>    có độ chính xác 0,9%.
+>  · SOP của nhóm này ĐÃ TỒN TẠI: một nhân viên gõ lại nguyên văn khối 784 ký tự ở
+>    hai case cách nhau 21 ngày. "10%" của 10/30/60 nằm trong luồng ticket.
+>  · Bốn nguyên nhân KHÔNG tách được bằng văn bản — cơ chế đứng sau AUC 0,61.
+>  · Một case mang hai nguyên nhân của hai nhóm → 19 nhóm là cận dưới thêm một lần.
+>
+> Phân bố mà S8 đòi, đo thật: bước kiểm được ghi lại ở 4/10 case (S8 lấy ví dụ
+> "14/20"). 7/13 nhánh của cây có nguồn thật, 6 nhánh là suy từ kết luận.
+> ```
+> ⚠ **Ba chỗ khối ngay dưới ghi chưa đúng, đã kiểm 2026-09-07 — xem `docs/11` §5:**
+>   (1) không có *một* nhóm lớn nhất, có **HAI** nhóm cùng 10 case (đếm bằng `caseKeys`);
+>   (2) `ES-346396` **KHÔNG** phải kéo lại từ Jira — nó đã nằm trong corpus trên đĩa;
+>   (3) repo CÓ trường `buocXuLy`, nhưng đó là **nhãn loại bước**, không phải bước kiểm
+>       có câu hỏi + nơi xem. Khoảng trống là về ĐỘ PHÂN GIẢI, không về sự tồn tại.
+>
+> **VIỆC KẾ TIẾP mà `docs/11` mở ra (§8), CHƯA làm:**
+> ```text
+> 1  Đưa cây cho MỘT người làm support thật duyệt. Đây là phép kiểm duy nhất chưa
+>    ai chạy được, và nó là baseline đầu tiên cho M2 (diff giữa nháp và bản duyệt).
+> 2  Dựng cây thứ hai cho nhóm "NCC từ chối payload" (10 case, 21 mẩu — gấp 1,5 lần
+>    vật liệu) để biết hình dạng đầu ra ở docs/11 §4 có chịu được nhóm khác không.
+> 3  Chốt hình dạng đầu ra của ISoạnNhápSOP (docs/11 §4) — hai câu cần quyết:
+>    mức chứng cứ đặt ở tầng NHÁNH hay tầng SOP; và diff(A,B) của M2 có được đọc
+>    theo nhánh-không-có-nguồn hay không.
+> ```
+>
+> **Bản gốc của khối này, giữ vì lập luận trong đó vẫn đúng:** dựng cây quyết định có
+> bước kiểm cho nhóm SOP lớn nhất; bước kiểm chính là thứ cây quyết định phải chứa, và
+> nguyên liệu nằm ở `docs/ket-qua-phan-tich/`.
 >
 > **Đã xong trong hai ngày 2026-09-04/05** (đừng làm lại):
 > ```text
@@ -351,7 +376,8 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > 📌 **Tài liệu sinh ra trong hai ngày đó, chưa có trong danh sách đọc ở §1:**
 > `docs/09_RK4_DEM_NGUYEN_NHAN.md` (phép đếm nguyên nhân) ·
 > `docs/10_CHUYEN_MAY.md` (dựng lại trên máy khác) ·
-> `docs/ket-qua-phan-tich/` (taxonomy + nguyên nhân 150 case) ·
+> `docs/11_CAY_QUYET_DINH_SOP.md` (bản nháp SOP đầu tiên, 2026-09-07) ·
+> `docs/ket-qua-phan-tich/` (taxonomy + nguyên nhân 150 case + cây quyết định) ·
 > `scripts/workflows/` (định nghĩa 3 workflow đã chạy).
 
 

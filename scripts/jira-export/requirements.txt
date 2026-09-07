@@ -2,8 +2,9 @@
 #
 #     pip install -r scripts/jira-export/requirements.txt
 #
-# ⚠ CHỈ MỘT script cần thư viện ngoài. Bốn script còn lại — export_jira_to_channel1.py,
-# sample_spread.py, check_corpus.py, make_fixture.py, load_fixture.py, discover_fields.py
+# ⚠ CHỈ MỘT script cần thư viện ngoài. BẢY script còn lại — export_jira_to_channel1.py,
+# sample_spread.py, check_corpus.py, make_fixture.py, load_fixture.py,
+# discover_fields.py, nhom_sop.py
 # — dùng THUẦN thư viện chuẩn, cố ý: chúng là đường nạp dữ liệu và phải chạy được trên
 # một máy vừa cài Python, không cần dựng môi trường.
 #

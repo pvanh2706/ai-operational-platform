@@ -1,0 +1,122 @@
+{
+  "_ghiChu": "Cây quyết định dựng TAY 2026-09-07 cho nhóm nguyên nhân lớn nhất của chủ đề hoá đơn. Đây là BẢN NHÁP MẪU — thứ mà ISoạnNhápSOP phải sinh ra được. Nó tồn tại để trả lời một câu hỏi thiết kế: một bản nháp SOP cần MANG THEO những trường nào thì người duyệt mới duyệt được? Vì thế mỗi nhánh mang theo nguồn và mức chứng cứ, KHÔNG chỉ mang nội dung. Đọc docs/11_CAY_QUYET_DINH_SOP.md trước khi dùng file này.",
+  "_canhBao": "MỌI giá trị chungCu = 'toi-suy-ra' là do người viết suy từ KẾT LUẬN của nhân viên, không phải từ một bước kiểm được ghi lại. Đừng đọc chúng như dữ liệu đã đo. Đó là 6/10 case.",
+  "_khongChuaDuLieuKhach": "File này đi theo git nên cố ý KHÔNG chứa email, mã số thuế, tên khách sạn hay mã đặt phòng. Tra nguyên văn bằng: python scripts/jira-export/nhom_sop.py --nhom \"Phân quyền\"",
+
+  "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+  "chuDe": "hoá đơn điện tử",
+  "nguonNhom": "docs/ket-qua-phan-tich/taxonomy-19-nhom-hoa-don.json",
+  "soCaseDungSau": 10,
+  "corpus": "150 case hoá đơn đã đóng, xuất 2026-09-05, trải 24 ngày (không phải 12 tháng)",
+
+  "trieuChungVao": [
+    { "moTa": "\"không xuất được hoá đơn\" kèm một ảnh chụp màn hình", "case": ["ES-343662", "ES-341317"] },
+    { "moTa": "form phát hành báo đỏ / \"Validation form error\"", "case": ["ES-341290", "ES-346647"] },
+    { "moTa": "màn phát hành KHÔNG hiện mục \"Ký hiệu hoá đơn\" để chọn, hoặc chọn thì danh sách rỗng", "case": ["ES-346039", "ES-346396"] },
+    { "moTa": "xem trước PDF trả \"Ký hiệu hoá đơn không tồn tại\"", "case": ["ES-346559"] },
+    { "moTa": "không mở được màn kế toán / xuất hoá đơn", "case": ["ES-343733"] }
+  ],
+  "_vaoCungMotCua": "Bốn nguyên nhân bên dưới có triệu chứng KHÁCH KỂ gần như trùng nhau. Không có tín hiệu văn bản nào tách được chúng — xem docs/11 §4. Thứ phân nhánh là một bước kiểm phải THỰC HIỆN, không phải một câu phải ĐỌC.",
+
+  "buocKiem": [
+    {
+      "ma": "K1",
+      "cauHoi": "Trên form phát hành của ĐÚNG đặt phòng đang lỗi, ký hiệu hoá đơn đã được chọn chưa?",
+      "noiXem": "Form phát hành hoá đơn trong PMS, tại đặt phòng khách báo lỗi",
+      "viSaoTruoc": "Rẻ nhất, và là nguyên nhân của 3/10 case. Làm được ngay trên ảnh chụp khách đã gửi.",
+      "nhanh": [
+        { "quanSat": "chưa chọn", "diToi": "S0", "case": ["ES-343662", "ES-341317", "ES-341290"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "mở ra thì danh sách ký hiệu RỖNG, không có gì để chọn", "diToi": "K2", "case": ["ES-346396", "ES-346039"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "không mở được cả màn hình đó", "diToi": "K3", "case": ["ES-343733"], "chungCu": "toi-suy-ra" },
+        { "quanSat": "đã chọn, vẫn báo lỗi", "diToi": "K4", "case": ["ES-346559"], "chungCu": "toi-suy-ra" }
+      ],
+      "nguonBuocKiem": ["ES-341290"],
+      "nguyenVan": "\"Anh chọn giúp em kí hiệu hóa đơn xem có phát hành được không ạ.\" — bước kiểm được gõ ra dưới dạng một PHÉP THỬ, không phải một câu hỏi."
+    },
+    {
+      "ma": "K2",
+      "cauHoi": "Tài khoản nào đang phát hành, và tài khoản đó đã được thêm + phân quyền ký hiệu trên trang quản trị hoá đơn chưa?",
+      "noiXem": "admin.ezinvoice.vn → Cấu hình → Quản lý người dùng, rồi Cấu hình → Ký hiệu → User truy cập/Nhóm truy cập",
+      "viSaoTruoc": "Nhánh lớn nhất: 4/10 ca CHẨN ĐOÁN, cộng ES-344424 là hỏi-đáp cùng nguyên nhân nên 5/10 case của nhóm. Và đây là BƯỚC KIỂM PHÂN NHÁNH THẬT: hai case ghi rõ nó dưới dạng một câu hỏi về TÀI KHOẢN, không về triệu chứng.",
+      "nhanh": [
+        { "quanSat": "tài khoản chưa có trong danh sách người dùng", "diToi": "S1", "case": ["ES-346396"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "có người dùng nhưng chưa được phân quyền ký hiệu", "diToi": "S2", "case": ["ES-346039", "ES-346647", "ES-346065"], "chungCu": "toi-suy-ra" },
+        { "quanSat": "danh sách ký hiệu của cả cơ sở đang rỗng", "diToi": "S3", "case": [], "chungCu": "toi-suy-ra" },
+        { "quanSat": "cả hai đều đủ", "diToi": "K3", "case": [], "chungCu": "toi-suy-ra" }
+      ],
+      "nguonBuocKiem": ["ES-346396", "ES-346039"],
+      "nguyenVan": "\"Anh phát hành bằng người dùng <…> này có phải không ạ\" (ES-346396) · \"Mình cho em email tài khoản mình đang dùng đăng nhập ạ\" (ES-346039).",
+      "bayDaVapThat": "Muốn THAO TÁC phân quyền thì phải đăng nhập bằng một tài khoản ĐÃ được phân quyền. Nhân viên phải chỉ rõ dùng tài khoản nào (ES-346396) — nếu không, khách sẽ thử bằng chính tài khoản đang bị chặn."
+    },
+    {
+      "ma": "K3",
+      "cauHoi": "Role của tài khoản trong PMS có quyền \"Thêm hoá đơn\" không?",
+      "noiXem": "Phân quyền role trong PMS — KHÔNG phải trên trang quản trị hoá đơn",
+      "viSaoTruoc": "Đây là chỗ dễ đi sai hướng nhất: triệu chứng khách kể giống hệt K2, nhưng chỗ phải sửa là MỘT MÀN QUẢN TRỊ KHÁC. Nhầm chỗ thì kiểm mãi không thấy gì sai.",
+      "nhanh": [
+        { "quanSat": "role thiếu quyền \"Thêm hoá đơn\"", "diToi": "S4", "case": ["ES-343733"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "role đủ quyền", "diToi": "K4", "case": [], "chungCu": "toi-suy-ra" }
+      ],
+      "nguonBuocKiem": [],
+      "khoangTrong": "ES-343733 KHÔNG ghi bước kiểm nào: nhân viên xin remote vào máy khách rồi sửa role tại đó. Nguyên nhân biết được, đường đi tới nó thì không. Đây là đúng mẫu \"bước kết luận xảy ra ở nơi khác\" đã đo ở docs/00."
+    },
+    {
+      "ma": "K4",
+      "cauHoi": "Đây có phải cơ sở / mã số thuế MỚI vừa được tạo không? Nếu có: đã khai cấu hình ký hiệu cho TỪNG cơ sở chưa, và tài khoản quản trị có vào được mã số thuế mới không?",
+      "noiXem": "Cấu hình hoá đơn của từng cơ sở, và thử đăng nhập trang quản trị bằng mã số thuế mới",
+      "viSaoTruoc": "1/10 case, nhưng nó là nhánh duy nhất mà mọi bước trên đều 'đúng' và vẫn lỗi.",
+      "nhanh": [
+        { "quanSat": "một trong các cơ sở chưa được khai đủ", "diToi": "S5", "case": ["ES-346559"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "tài khoản quản trị chỉ vào được mã số thuế CŨ", "diToi": "S5", "case": ["ES-346559"], "chungCu": "evidence-noi-ro" }
+      ],
+      "nguonBuocKiem": ["ES-346559"],
+      "bayDaVapThat": "\"Ký hiệu này khách vẫn đang xuất bình thường tại nhà cung cấp\" KHÔNG chứng minh ký hiệu đã được khai trong hệ thống. Trong ES-346559 chính câu đó làm phép kiểm bị bỏ qua một vòng."
+    },
+    {
+      "ma": "K5",
+      "cauHoi": "Trình duyệt đang đăng nhập nhiều tài khoản cùng lúc không?",
+      "noiXem": "Chính trình duyệt của khách",
+      "viSaoTruoc": "Bước LOẠI TRỪ, không thuộc nhóm này — nhưng phải có mặt, vì ES-341290 mang THÊM đúng nguyên nhân đó (lệch số thập phân) và nó thuộc nhóm khác. Bỏ bước này thì một case hai nguyên nhân sẽ được đóng khi mới sửa xong một nửa.",
+      "nhanh": [
+        { "quanSat": "có nhiều tài khoản trên cùng trình duyệt", "diToi": "NGOAI-PHAM-VI", "case": ["ES-341290", "ES-343036"], "chungCu": "evidence-noi-ro" }
+      ],
+      "nguonBuocKiem": ["ES-341290"]
+    }
+  ],
+
+  "buocSua": [
+    { "ma": "S0", "viec": "Chọn ký hiệu hoá đơn trên form phát hành rồi phát hành lại.", "case": ["ES-343662", "ES-341317", "ES-341290"] },
+    { "ma": "S1", "viec": "Thêm người dùng trên trang quản trị hoá đơn: Cấu hình → Quản lý người dùng → mời thêm tài khoản khác.", "case": ["ES-346396"], "nguon": "nguyên văn có trong ES-346396 và ES-341290" },
+    { "ma": "S2", "viec": "Phân quyền ký hiệu: Cấu hình → Ký hiệu → chọn ký hiệu cần phân quyền → mục User truy cập/Nhóm truy cập → chọn người dùng/nhóm → Thêm → Cập nhật.", "case": ["ES-346396", "ES-346039", "ES-341290"], "nguon": "nguyên văn có trong ES-346396 và ES-341290" },
+    { "ma": "S3", "viec": "Thêm ký hiệu nếu danh sách rỗng: Cấu hình → Ký hiệu → Danh sách ký hiệu → dấu + → nhập Ký hiệu / Mẫu hoá đơn → Lưu.", "case": ["ES-346396"], "nguon": "nhánh điều kiện do chính nhân viên gõ trong ES-346396" },
+    { "ma": "S4", "viec": "Thêm quyền \"Thêm hoá đơn\" vào role trong PMS.", "case": ["ES-343733"] },
+    { "ma": "S5", "viec": "Khai đủ cấu hình ký hiệu cho TỪNG cơ sở, và cấp quyền truy cập trang quản trị theo mã số thuế mới.", "case": ["ES-346559"] }
+  ],
+
+  "buocXacNhan": {
+    "viec": "Phát hành lại ĐÚNG đặt phòng ban đầu (hoặc xem trước PDF) và xác nhận ra được số hoá đơn.",
+    "case": ["ES-343662", "ES-341290", "ES-346559"],
+    "khoangTrong": "Trong corpus, xác nhận hầu như luôn do NHÂN VIÊN nói (\"Em thấy hoá đơn đã xuất thành công rồi ạ\"), không do khách xác nhận. Ba case kết thúc bằng khách nói \"cảm ơn\" — đó không phải xác nhận đã hết lỗi."
+  },
+
+  "phanBoBuocKiemDuocGhiLai": {
+    "_ynghia": "Trả lời trực tiếp cho S8: một bản nháp gom phải mang theo phân bố. Đây là phân bố thật của nhóm này, và phần lớn nó là phân bố của SỰ THIẾU.",
+    "ghi-ro-buoc-kiem": { "so": 4, "case": ["ES-346396", "ES-346039", "ES-341290", "ES-346559"] },
+    "suy-ra-duoc-tu-mau-nhung-khong-ghi": { "so": 2, "case": ["ES-341317", "ES-343662"] },
+    "chi-ghi-ket-luan": { "so": 2, "case": ["ES-346647", "ES-346065"] },
+    "buoc-kiem-xay-ra-ngoai-ticket": { "so": 1, "case": ["ES-343733"], "ghiChu": "qua phiên remote desktop" },
+    "khong-phai-chan-doan": { "so": 1, "case": ["ES-344424"], "ghiChu": "hỏi-đáp: ký hiệu tự nhảy hay tự điền" }
+  },
+
+  "_haiCaseLech": {
+    "ES-344424": "Thuộc nhóm nhưng KHÔNG xuất hiện ở nhánh nào — cố ý. Nó là hỏi-đáp (\"ký hiệu tự nhảy hay tự điền?\"), không phải một ca chẩn đoán. Câu trả lời của nhân viên lại là phát biểu tri thức nền của cả nhóm: ký hiệu phải được phân quyền cho từng tài khoản. Nên nó là vật liệu cho phần 'vì sao', không cho phần 'kiểm gì'.",
+    "ES-343036": "Xuất hiện ở K5 nhưng KHÔNG thuộc nhóm này — cố ý. Nó là ca thuần của nhóm 'xung đột phiên', dùng làm mốc cho bước loại trừ."
+  },
+
+  "khoangTrongPhaiBiet": [
+    "6/10 case KHÔNG ghi bước kiểm. Bốn nhánh của cây có nguồn thật; phần còn lại là suy từ kết luận.",
+    "Không case nào ghi thứ tự kiểm. Thứ tự K1→K2→K3→K4 do người viết đặt theo chi phí và tần suất, KHÔNG phải theo quy trình đã quan sát.",
+    "Cùng một trang quản trị (admin.ezinvoice.vn) được nhắc ở 6 case thuộc 3 NHÓM NGUYÊN NHÂN khác nhau — nên 'kết thúc tại một màn quản trị' không phải dấu hiệu nhận dạng nhóm này.",
+    "ES-341290 mang HAI nguyên nhân thuộc hai nhóm khác nhau, nhưng taxonomy buộc mỗi case vào đúng một nhóm. 'Một case = một nguyên nhân' là giả định của PHÉP ĐẾM, không phải của dữ liệu."
+  ]
+}
