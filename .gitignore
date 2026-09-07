@@ -32,4 +32,13 @@ scripts/jira-export/spread-*.json
 # Danh sách che: cột giá trị THẬT là credential + PII của khách hàng.
 # make_fixture.py tự sinh lại được bằng luật quét (check_corpus.quet_bi_mat).
 scripts/jira-export/redact-list.json
+
+# Bản đọc TAY của một nhóm nguyên nhân (nhom_sop.py --nhom ... --ra ...): nguyên văn
+# hội thoại với khách, kèm tên/email/mã đặt phòng. Cùng loại dữ liệu với fixture
+# ở trên, chỉ khác định dạng — nên cũng phải ở ngoài repo. Thêm 2026-09-07 sau khi
+# thấy `.gitignore` chỉ chặn `.json` mà không chặn `.txt`, trong khi `git add -A` thì
+# quét hết. `--ra` giờ còn tự hỏi `git check-ignore` và nói ra nếu file KHÔNG được chặn.
+doc-nhom-*.txt
+*.corpus.txt
+nhom*.txt
 __pycache__/

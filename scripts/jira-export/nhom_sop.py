@@ -23,6 +23,12 @@ script này làm, mỗi việc vì một chỗ đã vấp:
     python scripts/jira-export/nhom_sop.py --liet-ke
     python scripts/jira-export/nhom_sop.py --nhom "Phân quyền"
     python scripts/jira-export/nhom_sop.py --nhom "Phân quyền" --ra nhom.txt
+    python scripts/jira-export/nhom_sop.py --kiem-cay docs/ket-qua-phan-tich/<cây>.json
+
+⚠ ĐẦU RA CỤA `--nhom` LÀ DỮ LIỆU KHÁCH HÀNG (nguyên văn hội thoại, tên, email, mã
+  đặt phòng). Đặt tên file bắt đầu bằng `nhom` hoặc ghi ra ngoài repo — `.gitignore`
+  chặn `nhom*.txt`, `doc-nhom-*.txt`, `*.corpus.txt`. Script tự hỏi `git check-ignore`
+  và nói ra nếu file không được chặn, vì `git add -A` thì quét hết.
     python scripts/jira-export/nhom_sop.py --trung-lap --toi-thieu 200
 
 ⚠ Mặc định đọc `fixture-*.json` (credential đã thay bằng giá trị GIẢ giữ nguyên hình
@@ -283,6 +289,40 @@ def kiem_cay(tax, duong_dan: str) -> int:
     return len(chan)
 
 
+def canh_bao_ngoai_gitignore(duong_dan: str) -> None:
+    """Nói ra nếu file vừa ghi nằm trong repo mà KHÔNG được `.gitignore` chặn.
+
+    Vì sao có hàm này: đầu ra của `--nhom` là nguyên văn hội thoại với khách — cùng
+    loại dữ liệu với `fixture-*.json`, chỉ khác định dạng. Ngày 2026-09-07 phát hiện
+    `.gitignore` chặn `.json` nhưng không chặn `.txt`, trong khi `git add -A` thì quét hết
+    — đúng hình dạng của sự cố đã xảy ra một lần (credential thật đi vào 5 file được
+    theo dõi). Chặn bằng pattern là không đủ, vì người dùng đặt tên file gì cũng được.
+    Nên hỏi thật `git check-ignore` thay vì đoán.
+    """
+    import subprocess
+    tuyet_doi = os.path.abspath(duong_dan)
+    try:
+        trong_repo = os.path.commonpath([tuyet_doi, GOC]) == GOC
+    except ValueError:
+        # Khác ổ đĩa (C: vs D:) thì commonpath NÉM, không trả False. Đã vấp thật:
+        # scratchpad nằm ở C:, repo ở D: — tức đúng cái ca AN TOÀN nhất lại làm
+        # hàm cảnh báo tự crash sau khi đã ghi file xong.
+        trong_repo = False
+    if not trong_repo:
+        return  # ngoài repo thì không có gì phải lo
+    try:
+        ma = subprocess.run(["git", "check-ignore", "-q", tuyet_doi], cwd=GOC).returncode
+    except OSError:
+        ma = 1  # không có git thì cứ cảnh báo, thà ồn hơn là im
+    if ma == 0:
+        return
+    print("")
+    print("🛑 FILE NÀY NẰM TRONG REPO VÀ KHÔNG ĐƯỢC .gitignore CHẶN.")
+    print("   Nội dung là nguyên văn hội thoại với khách: tên, email, mã đặt phòng.")
+    print("   `git add -A` sẽ quét nó vào. Chuyển ra ngoài repo, hoặc thêm pattern")
+    print("   vào .gitignore, TRƯỚC khi commit lần tới.")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--liet-ke", action="store_true", help="đếm case của từng nhóm")
@@ -330,6 +370,7 @@ def main() -> int:
         if args.ra:
             ra.close()
             print("Đã ghi " + args.ra)
+            canh_bao_ngoai_gitignore(args.ra)
     return 0
 
 
