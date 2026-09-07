@@ -299,23 +299,38 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
-> 🛑 **ĐỌC KHỐI NÀY, ĐỪNG ĐỌC PHẦN NGAY DƯỚI NÓ.** Cập nhật 2026-09-05.
+> 🛑 **ĐỌC KHỐI NÀY, ĐỪNG ĐỌC PHẦN NGAY DƯỚI NÓ.** Cập nhật 2026-09-07.
 > Phần `text` phía dưới là **bản của 2026-08-30** và đã chết: nó ghi việc (a)/(b) là
 > "việc kế tiếp" trong khi cả hai đã xong, và (c) FTS đã bị lùi lại sau phép đếm.
 > Giữ nguyên vì lập luận trong đó vẫn giải thích được **vì sao** thứ tự từng là như vậy —
 > nhưng đừng làm theo nó.
 >
-> **Ba câu ĐANG CHỜ NGƯỜI DÙNG QUYẾT:**
+> ✅ **HAI TRONG BA CÂU ĐÃ CHỐT 2026-09-07** (lập luận đầy đủ ở `07` §5 và `docs/09` §7):
 > ```text
-> AR-l   sub-tenant — BỊ CHẶN. Jira không có trường nào dùng được (`Mã khách sạn`
->        = -1.0 ở 32/32 case). Hai nhánh đều NGOÀI code: ezCloud điền trường đó
->        cho thật, hoặc lùi quyết định và ghi rõ ranh giới khách sạn CHƯA được
->        thực thi. → 07 §5 AR-l
-> R-K4   Q2 — có mở phép đếm sang case CÒN MỞ và bắt ghi nguyên nhân lúc remote
->        không? Đây là việc DUY NHẤT làm con số 41% tiến lên; đọc thêm case đã
->        đóng thì không, vì tỉ lệ đang xấu đi. → docs/09 §7
-> AR-k   luật gán nhãn thay cho `machineReadability` hằng số. → 07 §5 AR-k
+> AR-l   ✅ CHỐT: nhánh (b) — LÙI. Nạp evidence KHÔNG có sub-tenant, KHÔNG thêm cột,
+>        và ghi rõ ranh giới khách sạn CHƯA được thực thi ở bất kỳ tầng nào.
+>        ⚠ Mở lại khi có MỘT nguồn cho ≥2 giá trị PHÂN BIỆT — và phải mở lại TRƯỚC
+>          lúc có luồng duyệt thật, vì rò xảy ra ở khâu XUẤT BẢN SOP.  → 07 §5 AR-l
+> R-K4   ✅ CHỐT Q2: CÓ — mở phép đếm sang case CÒN MỞ, bắt ghi nguyên nhân lúc
+>        remote/điện thoại. Sinh 2 việc: JQL mới KHÔNG lọc case đã đóng; chỗ để ghi
+>        nguyên nhân + phép kiểm nói ra khi nó trống.  → docs/09 §7
 > ```
+>
+> **CÒN CHỜ QUYẾT — một câu chặn, hai câu chưa chọn hướng:**
+> ```text
+> AR-k   luật gán nhãn thay cho `machineReadability` hằng số. → 07 §5 AR-k
+>        ⚠ Đây là BUG THẬT trong đường nạp vừa build, không phải câu hỏi thiết kế.
+> AR-m   nội dung ĐÃ BỊ NGƯỜI GỬI RÚT LẠI — chưa có chỗ nào đánh dấu.
+>        ⚠ Phải quyết TRƯỚC khi chốt cách cắt transcript; cắt rồi không ghép lại được.
+> AR-n   dữ liệu BÊN THỨ BA (khách của khách sạn) và dữ liệu THƯƠNG MẠI trong evidence
+>        — cấp thứ ba mà AR-l không mô tả.  → 07 §5 AR-n
+> ```
+>
+> ✅ **ĐÃ CHỌN 2026-09-07 làm việc kế tiếp** — cây quyết định SOP (khối ngay dưới).
+> ⚠ **Một chỗ khối dưới ghi chưa đúng, sửa 2026-09-07:** không có *một* nhóm lớn nhất —
+>   **HAI nhóm cùng 10 case**: *Phân quyền & ký hiệu hoá đơn chưa sẵn sàng* và *NCC từ chối
+>   payload — tra mã lỗi, sửa dứ liệu nguồn, phát hành lại*. Đếm lại bằng `caseKeys` trong
+>   `taxonomy-19-nhom-hoa-don.json`. Chọn nhóm nào là một lựa chọn, không phải một hệ quả.
 >
 > **Việc LÀM ĐƯỢC NGAY, không chờ ai:** dựng **cây quyết định có bước kiểm** cho nhóm
 > SOP lớn nhất (*Phân quyền & ký hiệu hoá đơn*, 10 case). Nguyên liệu: `docs/ket-qua-phan-tich/`.

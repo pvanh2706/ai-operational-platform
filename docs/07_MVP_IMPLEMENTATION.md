@@ -901,6 +901,10 @@ AR-j   Dữ liệu vận hành thật mang theo BÍ MẬT SỐNG. Che bằng lu�
            capability chưa ai chốt, và nó rất gần cột phải của G11 — cẩn thận.
 
 AR-l   Ranh giới KHÁCH SẠN A ↔ KHÁCH SẠN B có phải ranh giới bảo mật không? ← MỚI
+       🛑 **ĐỌC CUỐI MỤC NÀY TRƯỚC KHI LÀM THEO BA DÒNG NGAY DƯỚI.** Nửa *"thêm
+          sub-tenant NGAY BÂY GIỜ"* đã **LÙI 2026-09-07** — không phải vì đổi ý về ranh
+          giới, mà vì đo xong thì KHÔNG CÓ NGUỒN NÀO để điền trường đó. Quyết định hiện
+          hành nằm ở cuối mục. Nửa *"CÓ, đây LÀ ranh giới bảo mật"* thì VẪN ĐỨNG.
        ✅ CHỐT 2026-09-04 bởi người dùng: **CÓ. Thêm sub-tenant vào `evidence_item`
           NGAY BÂY GIỜ**, lúc bảng còn rỗng. Để sau là sửa ngược với dữ liệu đã có.
 
@@ -967,6 +971,23 @@ AR-l   Ranh giới KHÁCH SẠN A ↔ KHÁCH SẠN B có phải ranh giới bả
          (b) LÙI quyết định 2: nạp evidence KHÔNG có sub-tenant, và ghi thẳng vào tài
              liệu rằng ranh giới khách sạn CHƯA được thực thi — để sáu tháng nữa không
              ai tưởng nó đã có. Đây là nhánh trung thực nếu (a) không xảy ra sớm.
+
+       ✅ **CHỐT 2026-09-07 bởi người dùng — NHÁNH (b): LÙI, VÀ GHI RÕ LÀ CHƯA THỰC THI.**
+          Nạp evidence KHÔNG có sub-tenant. `evidence_item` KHÔNG thêm cột lúc này.
+          Lý do chọn: nhánh (a) nằm ngoài repo và ngoài tầm kiểm soát của dự án, mà corpus
+          ĐÃ xuất thì (a) không chữa được. Và thêm một cột luôn rỗng thì tự tạo ra đúng
+          hình dạng lỗi mà chính `AR-k`/`AR-l` vừa dạy: một trường TRÔNG NHƯ đã có dữ liệu.
+          → Hệ quả PHẢI ghi ra chỗ người ta đọc, không chỉ ở đây (`G6`/`AP3`):
+            **ranh giới khách sạn A ↔ B hiện KHÔNG được thực thi ở BẤT KỲ tầng nào.**
+            Đã ghi ở `README.md` §"Rủi ro đang mở" và `00_CURRENT_STATE.md` cùng ngày.
+          → Điều KHÔNG đổi vì đã đo rồi: đây vẫn LÀ ranh giới bảo mật, và **RLS không cứu
+            được kiểu rò này** — rò xảy ra ở khâu XUẤT BẢN SOP, không ở khâu truy vấn hàng.
+            Nên câu này phải MỞ LẠI trước lúc Path A có luồng duyệt thật, chứ không phải
+            trước lúc Path A gom evidence: gom thì RLS còn đủ, xuất bản thì không.
+          ⚠ Điều kiện mở lại — viết dạng CHẠY ĐƯỢC, không phải một ngày trong lịch:
+            khi có MỘT nguồn cho ra **≥2 giá trị PHÂN BIỆT** cho sub-tenant trên corpus
+            (đúng luật "đếm số giá trị phân biệt, không đếm độ phủ"). `discover_fields.py`
+            trả lời được câu đó trong một lần chạy.
        ⚠ Dù chọn nhánh nào, phần đã đo vẫn đứng: RLS không cứu được kiểu rò này, vì rò
          xảy ra ở khâu XUẤT BẢN SOP chứ không ở khâu truy vấn hàng.
 
@@ -1135,6 +1156,21 @@ R-K4   ✅ ĐÃ ĐẾM 2026-09-04. Kết quả đầy đủ: `docs/09_RK4_DEM_NG
           → Và nó đóng luôn một tranh luận sẽ tái diễn: từ nay "bao nhiêu nguyên nhân"
             có một nghĩa duy nhất trong dự án này. Ghi ở đây vì `§6.9` đã cho thấy bệnh
             "từ vựng song song" tái phát 3 lần trong một workstream.
+
+       ✅ **CHỐT 2026-09-07 bởi người dùng — Q2: CÓ. Mở phép đếm sang case CÒN MỞ, và
+          bắt ghi nguyên nhân ngay tại thời điểm remote / điện thoại.**
+          Lý do: đó là việc DUY NHẤT làm con số 41% *"không xác định được nguyên nhân"*
+          tiến lên. Đọc thêm case ĐÃ ĐÓNG thì không, vì tỉ lệ đang XẤU ĐI ở cửa sổ mới
+          nhất (50%) — thêm dữ liệu cùng loại chỉ làm con số tệ hơn, không làm nó tiến.
+          → Hai việc quyết định này sinh ra, CHƯA làm:
+            · JQL mới phải KHÔNG lọc `resolved` / status đã đóng. Mọi JQL hiện có trong
+              `jira-config.example.bat` đều lọc case đã đóng — chính chỗ làm mẫu lệch.
+            · "Bắt ghi nguyên nhân lúc remote" là thay đổi ở QUY TRÌNH CON NGƯỜI của
+              support, không phải ở repo này. Repo chỉ đỡ được nửa sau: chỗ để ghi, và
+              một phép kiểm NÓI RA khi chỗ đó trống.
+          ⚠ Nó KHÔNG chữa được corpus đã xuất — mẫu cũ vẫn lệch về case đã đóng. Quyết
+            định này chỉ làm mẫu SAU NÀY khác đi, nên đừng đếm lại trên corpus cũ rồi
+            tưởng đã thấy hiệu quả.
 
        ✅ **PHÉP THỬ ĐÃ CHẠY 2026-09-05 — và nó cho thấy CHÍNH NGƯỠNG ĐÃ HỎI SAI CÂU.**
           `scripts/jira-export/thu_retrieval.py`. Ngưỡng đặt trước: <60% thì embedding

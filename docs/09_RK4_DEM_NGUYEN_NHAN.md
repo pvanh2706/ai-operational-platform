@@ -117,7 +117,15 @@ Hai phản biện đọc **cùng evidence gốc**, cùng khai "độ tin cao", c
 
 Một ticket chứa 6 nguyên nhân, và 3 ticket chứa 1 nguyên nhân — trong cùng một bộ dữ liệu. Vậy mọi phép đếm "số nguyên nhân trên số case" đang chia cho một mẫu số là **độ sạch ticket của Jira**, không phải cấu trúc của hệ thống. Đó là lý do vòng n=32 thất bại, và **n=150 không chữa được nó** — tăng n không sửa được một đơn vị đo sai. Muốn một con số ổn định thì phải đếm trên đơn vị khác: **một cơ chế = một dòng, cho phép một case sinh nhiều dòng**. Corpus đã chỉ rõ nhu cầu đó: 7 case ghi rõ ≥2 cơ chế, 6 case cần 2 SOP, và ít nhất 6 họ cơ chế **không có nhóm nào trong cả ba lượt** (ràng buộc liên tục dải số/ngày theo ký hiệu; thuế TTĐB; kỹ thuật xoá + insert lại bản ghi; ranh giới trách nhiệm với site NCC; xoá dịch vụ không hoàn kho minibar; trễ cam kết như một đường xử lý riêng).
 
-## 7. Hai câu hỏi cần chủ dự án quyết
+## 7. Hai câu hỏi cần chủ dự án quyết — ✅ CẢ HAI ĐÃ CHỐT
+
+> ✅ **Q1 chốt 2026-09-05: CÓ** — đơn vị đếm là *"một SOP dùng được"*, mức **19 nhóm**.
+> ✅ **Q2 chốt 2026-09-07: CÓ** — mở phép đếm sang case CÒN MỞ và bắt ghi nguyên nhân
+>   lúc remote/điện thoại. Hai việc phát sinh (JQL không lọc case đã đóng; chỗ để ghi
+>   nguyên nhân + phép kiểm nói ra khi nó trống) ghi ở `07` §5 `R-K4`.
+>
+> Phần khuyến nghị bên dưới GIỮ NGUYÊN — nó là lập luận dẫn tới hai quyết định trên,
+> và nhánh "nếu KHÔNG" của Q2 vẫn đáng đọc vì nó mô tả cái giá của hướng đã không chọn.
 
 **Q1. Chốt "một nguyên nhân" = "một SOP dùng được" (mức 19), chứ không phải lớp kiến trúc (6) hay cách sửa cụ thể (66)?**
 **Khuyến nghị: CÓ.** Lý do: đó là đơn vị mà sản phẩm thực sự sinh ra (bản nháp SOP), và là **đơn vị duy nhất trong ba đơn vị cho ra phân phối có đầu-đuôi thật** — tức nó đang đo dữ liệu, không đo tiêu chí. Trả lời câu này chốt luôn con số kế hoạch: **18–30 SOP cho MỘT chủ đề, nhân với số chủ đề** — không phải 5–10 cho toàn nền tảng. Nếu không chốt, tranh luận 6-vs-66 sẽ tái diễn ở mọi workstream sau, và mỗi lần lại tốn một vòng phân tích.
