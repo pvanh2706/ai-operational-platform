@@ -202,7 +202,14 @@ def kiem_cay(tax, duong_dan: str) -> int:
                     % (cay.get("soCaseDungSau"), len(trong_nhom)))
 
     ma_dich = {b["ma"] for b in cay["buocKiem"]} | {s["ma"] for s in cay["buocSua"]}
+    # Đích không phải một bước cụ thể. `BANG` chỉ sang bảng tra (topology của nhóm 2),
+    # `K-XN` sang bước xác nhận, `NGOAI-PHAM-VI` sang một nhóm nguyên nhân khác.
     ma_dich.add("NGOAI-PHAM-VI")
+    if cay.get("buocXacNhan"):
+        ma_dich.add("K-XN")
+    bang = (cay.get("bangTraMaLoi") or {}).get("dong") or []
+    if bang:
+        ma_dich.add("BANG")
     trong_nhanh = set()
     for b in cay["buocKiem"]:
         for n in b["nhanh"]:
@@ -212,6 +219,26 @@ def kiem_cay(tax, duong_dan: str) -> int:
                             % (b["ma"], n["diToi"]))
             if n.get("chungCu") not in ("evidence-noi-ro", "toi-suy-ra"):
                 chan.append("%s: nhánh %r thiếu chungCu hợp lệ." % (b["ma"], n["quanSat"][:30]))
+
+    # Bảng tra: một DÒNG là một nhánh, nên phải qua đúng những phép kiểm như nhánh.
+    # Thêm một ràng buộc riêng: khoá của một dòng là (nhà cung cấp, mã lỗi), không phải
+    # mã lỗi một mình — hai NCC trả cùng một mã vẫn có thể trỏ tới hai trường khác nhau.
+    khoa_da_gap = set()
+    for i, d in enumerate(bang):
+        ten = "bảng dòng %d (%s/%s)" % (i + 1, d.get("ncc"), str(d.get("maLoi"))[:24])
+        trong_nhanh |= set(d.get("case") or [])
+        for truong in ("ncc", "maLoi", "truongBiTuChoi", "diToi"):
+            if not d.get(truong):
+                chan.append("%s: thiếu trường %r." % (ten, truong))
+        if d.get("diToi") and d["diToi"] not in ma_dich:
+            chan.append("%s: trỏ tới %r — không có bước nào mang mã đó." % (ten, d["diToi"]))
+        if d.get("chungCu") not in ("evidence-noi-ro", "toi-suy-ra"):
+            chan.append("%s: thiếu chungCu hợp lệ." % ten)
+        khoa = (d.get("ncc"), d.get("maLoi"))
+        if khoa in khoa_da_gap:
+            chan.append("%s: khoá (nhà cung cấp, mã lỗi) BẮT TRÙNG — hai dòng cùng khoá thì "
+                        "tra ra hai trường khác nhau, không ai biết dùng dòng nào." % ten)
+        khoa_da_gap.add(khoa)
 
     la = sorted(trong_nhanh - trong_nhom - ngoai_nhom_duoc_phep)
     if la:
@@ -242,6 +269,10 @@ def kiem_cay(tax, duong_dan: str) -> int:
     nhanh_co_nguon = sum(1 for b in cay["buocKiem"] for n in b["nhanh"]
                          if n.get("chungCu") == "evidence-noi-ro")
     tong_nhanh = sum(len(b["nhanh"]) for b in cay["buocKiem"])
+    if bang:
+        nhanh_co_nguon += sum(1 for d in bang if d.get("chungCu") == "evidence-noi-ro")
+        tong_nhanh += len(bang)
+        print("  bảng tra        : %d dòng, khoá (nhà cung cấp, mã lỗi)" % len(bang))
     print("  nhánh có nguồn  : %d/%d (còn lại là suy ra từ kết luận)" % (nhanh_co_nguon, tong_nhanh))
     if chan:
         print("\n%d PHÁT HIỆN CHẶN:" % len(chan))

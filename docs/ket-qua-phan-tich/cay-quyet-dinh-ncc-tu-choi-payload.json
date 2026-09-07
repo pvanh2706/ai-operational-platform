@@ -1,0 +1,125 @@
+{
+  "_ghiChu": "Bản nháp SOP THỨ HAI, dựng tay 2026-09-07 ngay sau bản đầu, để trả lời một câu duy nhất: hình dạng đầu ra tìm được ở nhóm 1 (docs/11 §4) có chịu được nhóm khác không? Câu trả lời: PHẦN LÕI chịu được, TOPOLOGY thì không — nhóm này KHÔNG phải cây phân nhánh lồng nhau mà là BẢNG TRA + vòng lặp 4 bước. Xem docs/11 §9.",
+  "_canhBao": "chungCu = 'toi-suy-ra' là do người viết suy từ kết luận của nhân viên, không phải từ bước kiểm được ghi lại.",
+  "_khongChuaDuLieuKhach": "Cố ý KHÔNG chứa số điện thoại, ID/mật khẩu remote, mã đặt phòng, tên khách, MST hay URL có id. Mã lỗi của nhà cung cấp thì có — nó là từ vựng kỹ thuật, không phải dữ liệu khách. Tra nguyên văn: python scripts/jira-export/nhom_sop.py --nhom \"NCC từ chối payload\"",
+
+  "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+  "chuDe": "hoá đơn điện tử",
+  "nguonNhom": "docs/ket-qua-phan-tich/taxonomy-19-nhom-hoa-don.json",
+  "soCaseDungSau": 10,
+  "corpus": "150 case hoá đơn đã đóng, xuất 2026-09-05, trải 24 ngày",
+
+  "hinhDang": {
+    "nhom1": "cây phân nhánh LỒNG NHAU — mỗi bước kiểm thu hẹp bước sau, bốn nguyên nhân là bốn tầng phân quyền",
+    "nhom2": "BẢNG TRA + vòng lặp 4 bước — lấy mã lỗi → tra ra TRƯỜNG bị từ chối → sửa trường tại nguồn → phát hành lại và xác nhận CÓ SỐ",
+    "yNghia": "Hai nhóm cùng chủ đề, cùng một sản phẩm, mà topology khác nhau. Nên đầu ra của ISoạnNhápSOP KHÔNG được cứng hoá là 'cây'."
+  },
+
+  "trieuChungVao": [
+    { "moTa": "hoá đơn dừng ở trạng thái NHÁP, bấm phát hành thì tự rơi về nháp, không báo gì", "case": ["ES-346027", "ES-343712"] },
+    { "moTa": "màn hình chỉ báo \"hệ thống đang xử lý, vui lòng thử lại sau\" — KHÔNG có mã lỗi", "case": ["ES-346136"] },
+    { "moTa": "trạng thái ghi rõ \"NCC từ chối\" kèm một mã lỗi", "case": ["ES-345623", "ES-344862"] },
+    { "moTa": "hoá đơn nháp chưa có số, và hệ thống CHẶN lần phát hành lại vì \"đã có hoá đơn nháp\"", "case": ["ES-343348"] },
+    { "moTa": "không ký/phát hành được, kèm mã lỗi dạng số", "case": ["ES-345813"] },
+    { "moTa": "báo lỗi khi xuất, phát hiện qua kênh nội bộ (triển khai báo lên)", "case": ["ES-345257"] },
+    { "moTa": "hoá đơn nháp KHÔNG TÌM THẤY trên màn danh sách", "case": ["ES-343712"] },
+    { "moTa": "hoá đơn đoàn không lên được, trong khi hoá đơn phòng lẻ bình thường", "case": ["ES-344862"] }
+  ],
+
+  "buocKiem": [
+    {
+      "ma": "K1",
+      "cauHoi": "Người đang xử lý có XEM ĐƯỢC mã lỗi mà nhà cung cấp trả về không?",
+      "noiXem": "Nhật ký → Nhật ký kết nối → Loại: Kết nối ezinvoice",
+      "viSaoTruoc": "Cả nhóm treo trên bước này: có mã lỗi thì tra bảng là xong, không có mã thì phải soát mò. Nhưng nó cũng là bước HAY BỊ CHẶN NHẤT — xem hai nhánh cuối.",
+      "nhanh": [
+        { "quanSat": "có mã lỗi", "diToi": "BANG", "case": ["ES-345623", "ES-344862", "ES-345257", "ES-345857", "ES-343712", "ES-345813"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "KHÔNG có mã nào — màn hình chỉ nói \"đang xử lý, thử lại sau\", hoặc hoá đơn im lặng rơi về nháp", "diToi": "K2", "case": ["ES-346136", "ES-346027", "ES-343348", "ES-342328"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "không có QUYỀN vào mục Nhật ký để xem mã lỗi", "diToi": "S-CHUYEN", "case": ["ES-345623"], "chungCu": "evidence-noi-ro" }
+      ],
+      "nguonBuocKiem": ["ES-345623", "ES-343712"],
+      "nguyenVan": "\"Nếu trường hợp tương tự xảy ra anh vào mục Nhật ký >> Nhật ký kết nối >> chọn Loại: Kết nối ezinvoice để kiểm tra log trước giúp em\" (ES-345623) — bước kiểm được dạy lại cho khách, đúng dạng SOP.",
+      "bayDaVapThat": "🛑 Khách trả lời ngay: \"Đâu phải ai cũng có quyền vào mục cấu hình này đâu em.\" Bước kiểm ĐẦU TIÊN của nhóm này bị chặn bởi đúng nguyên nhân của NHÓM 1 (phân quyền). Hai nhóm nguyên nhân độc lập trong taxonomy lại phụ thuộc nhau ở tầng THAO TÁC.",
+      "quyenCan": "quyền vào mục Nhật ký / cấu hình — lễ tân thường KHÔNG có"
+    },
+    {
+      "ma": "K2",
+      "cauHoi": "Không có mã lỗi thì soát bốn trường hay bị từ chối nhất, trên chính hoá đơn nháp.",
+      "noiXem": "Danh sách hoá đơn → chọn hoá đơn nháp → Xem hoá đơn",
+      "viSaoTruoc": "4/10 case KHÔNG có mã lỗi nào để tra. Với chúng, đây là bước duy nhất còn lại — và nó là soát danh sách hữu hạn, không phải đoán.",
+      "nhanh": [
+        { "quanSat": "số CCCD thừa hoặc thiếu chữ số (đúng phải 12)", "diToi": "S1", "case": ["ES-346136", "ES-343348"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "mã số thuế thừa dấu cách hoặc không hợp lệ", "diToi": "S1", "case": ["ES-346027"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "số giấy tờ và số hộ chiếu nhập TRÙNG NHAU", "diToi": "S1", "case": ["ES-342328"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "soát thấy \"đúng hết\" mà vẫn không phát hành được", "diToi": "S-REMOTE", "case": ["ES-343348"], "chungCu": "evidence-noi-ro" }
+      ],
+      "nguonBuocKiem": ["ES-346027", "ES-343348"],
+      "bayDaVapThat": "⚠ Nhánh cuối là ca THẬT, không phải phòng xa: ES-343348 khách khẳng định \"đúng mà\", nhân viên xin remote vào máy rồi kết luận đúng một dòng — \"Sai CCCD\" (8 ký tự). Khách tự soát KHÔNG thay được bước kiểm này."
+    },
+    {
+      "ma": "K3",
+      "cauHoi": "Sửa xong rồi thì phát hành LẠI từ đâu — có tìm thấy hoá đơn nháp không?",
+      "noiXem": "Danh sách hoá đơn (KHÔNG lọc theo ngày) → chọn hoá đơn nháp → Xem hoá đơn → Phát hành",
+      "viSaoTruoc": "Bước này trông như thủ tục nhưng có 2/10 case tắc ở đúng đây, và một trong hai là BUG SẢN PHẨM, không phải lỗi dữ liệu.",
+      "nhanh": [
+        { "quanSat": "tìm không thấy hoá đơn nháp vì đang lọc theo ngày hoá đơn", "diToi": "S-TIM", "case": ["ES-343712"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "tìm theo SỐ HOÁ ĐƠN không ra — màn tìm kiếm bị lỗi", "diToi": "S-TIM", "case": ["ES-343712"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "hệ thống chặn phát hành lại vì \"đã tồn tại hoá đơn nháp\"", "diToi": "S2", "case": ["ES-343348", "ES-345857"], "chungCu": "evidence-noi-ro" },
+        { "quanSat": "thấy hoá đơn nháp, sửa được", "diToi": "K-XN", "case": ["ES-346027", "ES-343712"], "chungCu": "evidence-noi-ro" }
+      ],
+      "nguonBuocKiem": ["ES-343712", "ES-346027"],
+      "nguyenVan": "\"Hoá đơn đã tạo hoá đơn nháp rồi ạ\" · \"anh/chị chọn, và ấn Xem hoá đơn, trong đó sẽ có tuỳ chọn cho phép phát hành hoá đơn\" (ES-343712)."
+    }
+  ],
+
+  "bangTraMaLoi": {
+    "_ynghia": "🛑 ĐÂY LÀ THỨ KHÁCH ĐÃ HỎI VÀ ĐƯỢC TRẢ LỜI LÀ KHÔNG CÓ. ES-345623: \"E có bảng liệt kê các mã lỗi không, nhỡ đâu có lúc không liên hệ tụi em được thì còn biết đường xử lý\" — nhân viên đáp: NCC chưa cung cấp bảng mã lỗi nên chưa gửi được cho khách sạn. Bảng dưới đây dựng từ 10 case, và nó là artefact đầu tiên sản phẩm này giao được cho nhóm này.",
+    "_khoaCuaMotDong": "(nhà cung cấp, mã lỗi) — KHÔNG phải mã lỗi một mình. Nhóm 1 không có chiều này.",
+    "dong": [
+      { "ncc": "VNPT", "maLoi": "ERR:1518 / ERR.1518", "truongBiTuChoi": "trường giấy tờ của khách (CCCD/hộ chiếu) — sai định dạng", "diToi": "S1", "case": ["ES-345623", "ES-344862"], "chungCu": "evidence-noi-ro", "ghiChu": "ES-344862: đổi sang HỘ CHIẾU thì phát hành được — một cách sửa không hiển nhiên từ mã lỗi" },
+      { "ncc": "VNPT", "maLoi": "5000", "truongBiTuChoi": "mã số thuế HOẶC tên người mua không hợp lệ", "diToi": "S1", "case": ["ES-345813"], "chungCu": "toi-suy-ra", "ghiChu": "mucChacChan của chính bản rút nguyên nhân là 'toi-suy-ra' — dòng này yếu nhất bảng" },
+      { "ncc": "VNPT", "maLoi": "SDThoai không hợp lệ", "truongBiTuChoi": "số điện thoại người mua — chứa mã quốc gia +84 và dấu ngoặc", "diToi": "S3", "case": ["ES-345257"], "chungCu": "evidence-noi-ro", "ghiChu": "Số này được KÉO TỰ ĐỘNG từ booking, nên khách không gõ sai — hệ thống điền sai. Xem phanBienNoiBo." },
+      { "ncc": "VNPT", "maLoi": "InvalidInvoiceDate", "truongBiTuChoi": "ngày hoá đơn — payload trả về ngày mặc định 0001-01-01", "diToi": "S4", "case": ["ES-345857"], "chungCu": "evidence-noi-ro", "ghiChu": "Ngày mặc định 0001-01-01 là dấu hiệu KHÔNG AI ĐIỀN ngày, không phải ai điền sai." },
+      { "ncc": "MISA", "maLoi": "số hoá đơn không liên tục", "truongBiTuChoi": "KHÔNG phải trường dữ liệu khách — thuộc dải số của nhà cung cấp", "diToi": "S-NCC", "case": ["ES-343712"], "chungCu": "evidence-noi-ro", "ghiChu": "Dòng duy nhất mà sửa dữ liệu khách KHÔNG giải quyết được. Sửa mò ở đây là mất thời gian của cả hai bên." },
+      { "ncc": "(bất kỳ)", "maLoi": "KHÔNG CÓ MÃ — chỉ \"đang xử lý, thử lại sau\" hoặc im lặng rơi về nháp", "truongBiTuChoi": "chưa biết → phải soát tay bốn trường ở K2", "diToi": "K2", "case": ["ES-346136", "ES-346027", "ES-343348", "ES-342328"], "chungCu": "evidence-noi-ro", "ghiChu": "4/10 case. Dòng đông nhất bảng lại là dòng KHÔNG CÓ THÔNG TIN." }
+    ]
+  },
+
+  "buocSua": [
+    { "ma": "S1", "viec": "Sửa trường bị từ chối tại hồ sơ khách hoặc trên hoá đơn nháp, rồi phát hành lại.", "case": ["ES-346136", "ES-346027", "ES-342328", "ES-345623", "ES-345813", "ES-343348"] },
+    { "ma": "S2", "viec": "Không tạo hoá đơn mới: mở ĐÚNG hoá đơn nháp đang tồn tại, sửa thông tin rồi phát hành từ trong đó (hoặc xoá nháp nếu sai hẳn).", "case": ["ES-343348", "ES-345857", "ES-343712"] },
+    { "ma": "S3", "viec": "Sửa số điện thoại người mua về định dạng NCC nhận: bỏ mã quốc gia +84 và mọi dấu ngoặc.", "case": ["ES-345257"] },
+    { "ma": "S4", "viec": "Sửa ngày hoá đơn trên hoá đơn nháp.", "case": ["ES-345857"] },
+    { "ma": "S-NCC", "viec": "Không sửa dữ liệu khách — chuyển sang nhà cung cấp / dev vì nguyên nhân nằm ở dải số hoá đơn.", "case": ["ES-343712"] },
+    { "ma": "S-REMOTE", "viec": "Xin phiên remote để tự soát, khi khách đã soát và khẳng định dữ liệu đúng.", "case": ["ES-343348", "ES-342328"], "ghiChu": "⚠ Đây là bước LÀM MẤT BƯỚC KIỂM: cả hai case dùng nó đều chỉ để lại kết luận, không để lại cách biết." },
+    { "ma": "S-CHUYEN", "viec": "Người đang xử lý không có quyền xem log → yêu cầu quản lý/admin phân quyền, hoặc chuyển cho support.", "case": ["ES-345623"] },
+    { "ma": "S-TIM", "viec": "Vào Danh sách hoá đơn KHÔNG lọc theo ngày; nếu tìm theo số hoá đơn không ra thì tìm bằng ô \"Thông tin khác\".", "case": ["ES-343712"], "ghiChu": "Đây là cách đi VÒNG QUA một bug của màn tìm kiếm, không phải hướng dẫn sử dụng." }
+  ],
+
+  "buocXacNhan": {
+    "viec": "Phát hành lại và xác nhận hoá đơn ĐÃ CÓ SỐ.",
+    "case": ["ES-346136", "ES-346027", "ES-344862", "ES-345857"],
+    "khoangTrong": "🛑 Điều kiện đóng phải là \"đã có SỐ hoá đơn\", KHÔNG phải \"hết báo lỗi\" — vì 4/10 case ngay từ đầu đã không có báo lỗi nào. Trong corpus, ES-343348 tự hỏi đúng câu này: \"hệ thống không cho chị phát hành lại, nói là có hoá đơn nháp rồi, trong khi hoá đơn nháp chưa có số\"."
+  },
+
+  "phanBienNoiBo": {
+    "_ynghia": "ES-345257 là case duy nhất trong hai nhóm có một cuộc PHẢN BIỆN nội bộ được ghi lại đầy đủ (6 mẩu). Nó đáng giữ vì nó là ranh giới trách nhiệm, và vì lập luận của cả hai phía đều đúng một phần.",
+    "trienKhai": "Số điện thoại được hệ thống kéo tự động từ booking, nên \"mọi booking tương tự cũng sẽ lỗi hàng loạt\" — đây phải là việc hai bên kỹ thuật thống nhất, không phải việc báo từng khách sửa.",
+    "kyThuat": "Hệ thống chưa validate theo từng NCC mà cho nhập tự do; định dạng số điện thoại có dấu ngoặc vốn đã không đúng, nên NCC từ chối là phù hợp. Đây là vấn đề dữ liệu đầu vào.",
+    "chuaAiTraLoi": "Cả hai đúng ở phạm vi của mình, và câu chưa ai trả lời là: khi hệ thống TỰ ĐIỀN một giá trị mà NCC không nhận, thì bảo khách sửa có phải cách đúng không? Ghi lại ở đây vì một SOP sinh từ case này sẽ mặc định là CÓ."
+  },
+
+  "phanBoBuocKiemDuocGhiLai": {
+    "_ynghia": "So với nhóm 1 (4/10 ghi rõ), nhóm này ghi rõ 8/10 — xem docs/11 §9 về lý do, nó KHÔNG phải vì nhóm này dễ hơn.",
+    "ghi-ro-buoc-kiem-va-co-ma-loi-nguyen-van": { "so": 5, "case": ["ES-345257", "ES-345857", "ES-345623", "ES-343712", "ES-344862"] },
+    "ghi-ro-buoc-kiem-nhung-khong-co-ma-loi": { "so": 3, "case": ["ES-346136", "ES-346027", "ES-345813"] },
+    "buoc-kiem-xay-ra-qua-remote-chi-con-ket-luan": { "so": 2, "case": ["ES-343348", "ES-342328"] }
+  },
+
+  "khoangTrongPhaiBiet": [
+    "Mã lỗi chỉ đến được người sửa qua support hoặc qua log: 4/10 case màn hình KHÔNG hiện mã nào, và mục xem log thì cần quyền mà lễ tân thường không có. Payload CÓ mang mã lỗi — hai case dán nguyên văn JSON để chứng minh — nhưng nó không tới được người có thể sửa.",
+    "Bảng tra mã lỗi hiện có 6 dòng, và 1 dòng có chứng cứ yếu (mã 5000). Bảng này chưa được nhà cung cấp xác nhận — chính nhân viên nói NCC chưa cung cấp bảng mã lỗi.",
+    "3/10 case của nhóm này mang thêm một vấn đề KHÁC không liên quan (khoản thanh toán âm · báo cáo chạy chậm · bug màn tìm kiếm). Cộng nhóm 1 là 4/20. Ranh giới 'một case = một vấn đề' vỡ ở 20% case.",
+    "Không case nào ghi thứ tự kiểm. K1→K2→K3 do người viết đặt."
+  ]
+}

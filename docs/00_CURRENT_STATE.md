@@ -326,7 +326,7 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >        — cấp thứ ba mà AR-l không mô tả.  → 07 §5 AR-n
 > ```
 >
-> ✅ **CÂY QUYẾT ĐỊNH SOP ĐẦU TIÊN — ĐÃ LÀM XONG 2026-09-07 → `docs/11_CAY_QUYET_DINH_SOP.md`**
+> ✅ **HAI BẢN NHÁP SOP ĐẦU TIÊN — ĐÃ LÀM XONG 2026-09-07 → `docs/11_CAY_QUYET_DINH_SOP.md`**
 > ```text
 > Nhóm  Phân quyền & ký hiệu hoá đơn (10 case). Cây: 5 bước kiểm · 6 bước sửa.
 >       Bản máy đọc được: docs/ket-qua-phan-tich/cay-quyet-dinh-phan-quyen-ky-hieu.json
@@ -342,6 +342,19 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >
 > Phân bố mà S8 đòi, đo thật: bước kiểm được ghi lại ở 4/10 case (S8 lấy ví dụ
 > "14/20"). 7/13 nhánh của cây có nguồn thật, 6 nhánh là suy từ kết luận.
+>
+> CÂY THỨ HAI, cùng ngày — nhóm "NCC từ chối payload" (10 case, 21 mẩu). Nó trả
+> lời câu của §4, và câu trả lời là KHÔNG: nhóm này không có hình cây mà là
+> BẢNG TRA + vòng lặp 4 bước (6 dòng, khoá = nhà cung cấp + mã lỗi). Xem §9.
+>  · Phần lõi ở §4 giữ nguyên, nhưng thiếu BA trường: nhà cung cấp là một phần
+>    của khoá · bước kiểm có thể bị chặn bởi QUYỀN · điều kiện đóng phải là
+>    "đã có SỐ hoá đơn", không phải "hết báo lỗi" (4/10 case không có báo lỗi nào).
+>  · 🛑 Bước kiểm đẦU TIÊN của nhóm 2 bị chặn bởi đúng nguyên nhân của NHÓM 1
+>    (phân quyền). Hai nhóm độc lập trong taxonomy lại phụ thuộc nhau khi THAO TÁC.
+>  · 8/10 case nhóm 2 ghi rõ bước kiểm (nhóm 1: 4/10), và phần dày lên nằm ở MẨU
+>    NỘI BỘ — thread phản biện giữa triển khai và kỹ thuật, nơi người ta dán nguyên
+>    văn payload. Bộ lọc "chỉ lấy phần khách đọc được" sẽ vứt đi 5/10 bước kiểm.
+>  · Bảng tra mã lỗi là thứ KHÁCH ĐÃ HỎI và được trả lời là KHÔNG CÓ (ES-345623).
 > ```
 > ⚠ **Ba chỗ khối ngay dưới ghi chưa đúng, đã kiểm 2026-09-07 — xem `docs/11` §5:**
 >   (1) không có *một* nhóm lớn nhất, có **HAI** nhóm cùng 10 case (đếm bằng `caseKeys`);
@@ -353,8 +366,9 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > ```text
 > 1  Đưa cây cho MỘT người làm support thật duyệt. Đây là phép kiểm duy nhất chưa
 >    ai chạy được, và nó là baseline đầu tiên cho M2 (diff giữa nháp và bản duyệt).
-> 2  Dựng cây thứ hai cho nhóm "NCC từ chối payload" (10 case, 21 mẩu — gấp 1,5 lần
->    vật liệu) để biết hình dạng đầu ra ở docs/11 §4 có chịu được nhóm khác không.
+> 2  ✅ XONG cùng ngày — cây thứ hai ở docs/11 §9. Việc MỚI nó sinh ra: sửa connector
+>    để KHÔNG BAO GIỜ lọc bỏ comment nội bộ (5/10 bước kiểm nằm ở đó), và thêm
+>    trường quyền-cần vào bước kiểm.
 > 3  Chốt hình dạng đầu ra của ISoạnNhápSOP (docs/11 §4) — hai câu cần quyết:
 >    mức chứng cứ đặt ở tầng NHÁNH hay tầng SOP; và diff(A,B) của M2 có được đọc
 >    theo nhánh-không-có-nguồn hay không.
@@ -376,7 +390,7 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > 📌 **Tài liệu sinh ra trong hai ngày đó, chưa có trong danh sách đọc ở §1:**
 > `docs/09_RK4_DEM_NGUYEN_NHAN.md` (phép đếm nguyên nhân) ·
 > `docs/10_CHUYEN_MAY.md` (dựng lại trên máy khác) ·
-> `docs/11_CAY_QUYET_DINH_SOP.md` (bản nháp SOP đầu tiên, 2026-09-07) ·
+> `docs/11_CAY_QUYET_DINH_SOP.md` (hai bản nháp SOP đầu tiên, 2026-09-07) ·
 > `docs/ket-qua-phan-tich/` (taxonomy + nguyên nhân 150 case + cây quyết định) ·
 > `scripts/workflows/` (định nghĩa 3 workflow đã chạy).
 
