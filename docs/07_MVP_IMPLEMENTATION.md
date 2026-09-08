@@ -432,6 +432,67 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-25` · Cổng che ở khâu GỬI RA — port từ luật Python, và đã ĐỐI CHIẾU trên corpus thật
+
+Hiện thực `AR-o` (2026-09-08). `SecretShapeScanner` + `EgressRedactor` ở
+`src/KnowledgePlatform.Domain/Redaction/`, **27 test**, và 5 phép đột biến đã chứng minh
+bộ test biết ĐỎ (bỏ chữ `ẩ` trong "khẩu" → 5 đỏ · không bỏ URL trước khi quét → 1 đỏ ·
+thay URL bằng `<URL>` thay vì khoảng trắng cùng độ dài → 1 đỏ · bỏ hình dạng 4 → 7 đỏ ·
+hình dạng 3 chỉ nhìn 1 dòng thay vì 6 → 2 đỏ).
+
+⚠ **Ba tính chất của cổng, mỗi cái vì một lý do đã ghi ở `AR-o`:** fail closed (che xong
+QUÉT LẠI, còn bắt được gì ngoài dấu che thì ném, không gửi) · giữ DẤU `[ĐÃ CHE]` (`G6`/`AP3`:
+người duyệt phải phân biệt "đã che" với "không có gì") · đếm được theo từng hình dạng.
+
+✅ **VÀ ĐÃ ĐỐI CHIẾU VỚI LUẬT PYTHON TRÊN CÙNG CORPUS — đây là phần đáng nhất của mục này.**
+Chạy cả hai trên `fixture-evidence.json` (345 mẩu):
+
+```text
+            mẩu có hit    tổng chỗ    nhãn+số   số trần   key JSON   công cụ+số
+Python          18           40          18        13        9          0
+C#              18           37          18        12        7          0
+```
+
+Cùng **18/345 mẩu**, cùng `nhãn+số`. Lệch **3 chỗ**, và đã truy từng chỗ:
+
+```text
+ES-346584  '17106'        Python đếm HAI lần: nhãn+số VÀ key JSON, cùng một vị trí
+ES-343712  '92255'        y như trên
+ES-345502  '110 143 652'  Python đếm HAI lần: hai dòng kích hoạt khác nhau cùng trỏ
+                          tới một dòng số trần
+```
+
+→ **Không giá trị nào lọt.** C# gộp trùng theo `(vị trí, độ dài)` CỐ Ý: bản Python chỉ cần
+ĐẾM để người đọc quyết, còn bản này phải CHE — che hai lần lên cùng một đoạn là làm hỏng
+văn bản và làm lệch mọi vị trí sau nó. Con số khác nhau vì hai luật trả lời hai câu khác nhau.
+
+⚠ **Một khác biệt thiết kế bắt buộc, không phải tuỳ chọn:** bản Python thay URL bằng
+`" <URL> "` trước khi quét; bản C# thay bằng **khoảng trắng CÙNG ĐỘ DÀI**. Bản Python không
+cần giữ offset vì nó không che; bản C# che đúng vị trí trong văn bản gốc, nên mọi phép thay
+thế trước khi quét phải giữ nguyên độ dài. Đổi độ dài là lệch âm thầm — đã có test canh
+(`URL_dai_o_truoc_khong_lam_lech_vi_tri_che`), và phép đột biến xác nhận nó biết đỏ.
+
+⚠ **Chỗ tôi CHỌN một nhánh mà `AR-o` để mở**, ghi ra để dễ đổi: bắt được bí mật thì **thay
+đúng giá trị và giữ phần còn lại của mẩu**, không bỏ cả mẩu. Theo đúng lập luận trong
+`AR-o`: bỏ cả mẩu là mất bước kiểm, vì chính mẩu xin Ultraviewer là **biên lai** của một lần
+chẩn đoán qua remote — thứ `docs/11` đo được là chỉ 4/10 case ghi lại. Đổi nhánh thì sửa
+`EgressRedactor.Redact`, một chỗ.
+
+**Cách chạy lại phép đối chiếu** (harness nằm ngoài repo, vì nó cần corpus):
+```text
+1  dotnet new console  ở một thư mục tạm, thêm <Reference> tới
+   src/KnowledgePlatform.Domain/bin/Debug/net10.0/KnowledgePlatform.Domain.dll
+2  đọc fixture-evidence.json, gọi SecretShapeScanner.Scan cho từng content,
+   in ra (sourceReference, Shape, Value)
+3  python -c "import check_corpus; check_corpus.quet_bi_mat(...)" để lấy phía Python
+4  so hai danh sách theo (ref, shape, value)
+```
+
+⚠ **Điều phép đối chiếu này KHÔNG chứng minh:** rằng luật đủ. Nó chỉ chứng minh **bản port
+không yếu hơn bản gốc**. Recall của chính luật gốc là **cận TRÊN** (13/13 trên corpus mà nó
+được sửa theo — overfit theo định nghĩa), và corpus 12 tháng đã lộ hình dạng thứ NĂM (JWT)
+mà luật bắt được nhờ may. Sửa luật thì phải đo lại, ở CẢ HAI bản.
+
 ## `IM-22` · `RlsGuard` báo XANH trong khi dữ liệu đang rò — đã đo, đã sửa
 
 **Đây là lỗ nghiêm trọng nhất tìm được từ đầu dự án, và nó nằm bên trong chính cơ chế
