@@ -73,7 +73,14 @@ TẦNG 2  có tạo giá trị không        nhiều tháng lagging, cần basel
 (a) số bản nháp Path A được duyệt thành tri thức chính thức
 (b) MỨC SỬA của người duyệt:  diff(bản nháp AI, bản đã duyệt)
     → thô: % assertion bị sửa / xoá / thêm
+(c) BẰNG CHỨNG rằng lượt duyệt CÓ XẢY RA          ← thêm 2026-09-08
+    → mọi chỗ bản nháp tự khai là SUY ĐOÁN phải được trả lời tường minh;
+      thiếu một ô = CHƯA DUYỆT, không phải "đã duyệt và đồng ý"
+    → cộng ít nhất một câu mà câu trả lời ĐỐI CHIẾU ĐƯỢC với dữ liệu nguồn
 ```
+
+⚠ **(c) không phải một phép đo thêm cho đẹp — thiếu nó thì (b) không đọc được.** Lý do và
+ca thật ở mục `LỖ ĐỐI XỨNG` bên dưới.
 
 ### Vì sao Tầng 0 phải tồn tại
 
@@ -118,7 +125,7 @@ TÍN HIỆU TỐT RÕ RÀNG:  duyệt xong, và lần sau người đó quay l�
 
 → Bắt buộc ghi kèm: **tỉ lệ bỏ giữa đường**. Không có nó thì (b) dễ bị đọc sai theo cả hai hướng.
 
-### 🛑 LỖ ĐỐI XỨNG, phát hiện 2026-09-08 khi có lượt duyệt thật đầu tiên · `PROPOSED`
+### 🛑 LỖ ĐỐI XỨNG, phát hiện 2026-09-08 khi có lượt duyệt thật đầu tiên · `CONFIRMED 2026-09-08`
 
 Mục ngay trên cảnh báo kỹ về **mức sửa CAO**. Nó không nói gì về chiều ngược lại, và chiều
 ngược lại mới là chiều nguy hiểm, vì nó **trông như thành công**:
@@ -138,7 +145,7 @@ trả về **không sửa gì** — kể cả 7 nhánh mà chính bản nháp t�
   thông tin cần đo. Thước đo mà giá trị đẹp nhất của nó cũng là giá trị **không kiểm
   chứng được** thì sẽ bị đạt được mà không ai cố tình gian.
 
-**Đề xuất (`PROPOSED`, cần chủ dự án chốt):** `M2` phải ghi kèm một **tín hiệu "đã THỰC SỰ
+**✅ CHỐT 2026-09-08 bởi chủ dự án:** `M2` phải ghi kèm một **tín hiệu "đã THỰC SỰ
 duyệt"** độc lập với mức sửa — và nó phải là thứ **không thể đạt được bằng cách bỏ trống**:
 
 ```text
@@ -150,7 +157,17 @@ duyệt"** độc lập với mức sửa — và nó phải là thứ **không 
 ```
 
 → Tức `M2` cần **ba** con số đi cùng nhau, không phải hai: số nháp được duyệt · mức sửa ·
-  và **bằng chứng rằng lượt duyệt đó có xảy ra**. Chưa chốt — xem `11` §10.4 về cách làm.
+  và **bằng chứng rằng lượt duyệt đó có xảy ra**. Cách làm ở `11` §10.4.
+
+⚠ **Hệ quả phải nhớ khi hiện thực, không được bỏ:** luồng duyệt (`S7`) từ nay có **hai**
+trạng thái kết thúc khác nhau, không phải một. *"Duyệt xong"* và *"trả về vì chưa trả lời
+đủ"* là hai chuyện, và cái thứ hai KHÔNG được tính vào (a). Bản nháp gửi ra mà nhận về
+thiếu ô thì đếm vào **tỉ lệ bỏ giữa đường**, đúng chỗ mục trên đã đòi.
+
+⚠ **Và một cái giá đã biết:** (c) làm việc duyệt TỐN CÔNG HƠN cho người duyệt. Đó là lựa
+chọn có ý thức: một lượt duyệt rẻ mà không đọc được thì không đáng gì, còn `M2` là thước
+đo CHÍNH của tháng đầu. Nếu người duyệt bỏ giữa đường vì mệt, con số đó cũng là dữ liệu
+(`M2` đã bắt buộc ghi kèm tỉ lệ bỏ giữa đường từ trước).
 
 ## 2.2 TẦNG 1 — Có ai dùng không · `CONFIRMED` (M3)
 
@@ -296,6 +313,9 @@ M1   Success Metric ≠ Eval metric. Ứng viên "% chỉ đúng nguyên nhân"
 M2   TẦNG 0 = Success Metric CHÍNH của tháng đầu:
      số nháp Path A được duyệt + MỨC SỬA diff(A,B).
      Bắt buộc ghi kèm tỉ lệ bỏ giữa đường.
+     → SỬA 2026-09-08 (CONFIRMED): thêm (c) BẰNG CHỨNG lượt duyệt có xảy ra.
+       Lý do: lượt duyệt thật đầu tiên trả về diff = 0, không phân biệt được
+       với một gói chưa ai đọc. Xem §2.1 mục LỖ ĐỐI XỨNG và 11 §10.
 M3   TẦNG 1 = chuỗi ĐẦY ĐỦ, không rút gọn.
      → TINH CHỈNH cùng ngày bởi L2 (Step 3) thành 5 mốc, gộp với
        vocabulary của Case v0.2 §11.2 + §11.3:
@@ -318,6 +338,7 @@ G5             Timeline over Snapshot                    → điều kiện củ
 G12            tỉ trọng của khách là tham số             → lý do M4b xuống hạng
 D5 hệ quả 1    bộ eval là first-class                    → §3
 D6 flywheel    diff(nháp, bản duyệt) = nhãn eval         → M2 phần (b)
+               ⚠ nhãn chỉ dùng được khi M2 (c) xác nhận lượt duyệt CÓ xảy ra
 P8             REUSE_NOT_MEASURABLE                      → M3 giải trực tiếp
 ```
 

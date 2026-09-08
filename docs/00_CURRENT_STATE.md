@@ -369,8 +369,10 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >    Gói duyệt ghi "ô trống nghĩa là đúng", nên bản trả về trắng KHÔNG phân biệt
 >    được: đã đọc kỹ và đồng ý / xem nhanh rồi bảo ổn / chưa mở ra.
 >    → diff(A,B) = 0 CHƯA là baseline M2. Đã ghi ở docs/11 §10, và sinh một đề
->      xuất sửa cách đo M2 ở docs/02 §2.1 (PROPOSED, chờ chốt): M2 cần THÊM một
->      tín hiệu "đã thực sự duyệt", không đạt được bằng cách bỏ trống.
+>      xuất sửa cách đo M2 — ✅ CHỦ DỰ ÁN ĐÃ CHỐT 2026-09-08, xem docs/02 §2.1:
+>      M2 từ nay có BA phần, thêm (c) bằng chứng lượt duyệt CÓ xảy ra. Thiếu một
+>      ô = CHƯA DUYỆT. Hệ quả: luồng duyệt S7 có hai trạng thái kết thúc, và
+>      "trả về vì chưa trả lời đủ" KHÔNG tính vào (a).
 >    → Vòng 2 phải bỏ luật "để trống nghĩa là đúng" + hai câu đối chiếu được với
 >      ticket (thứ tự kiểm thật · mã lỗi hay gặp nhất). Xem docs/11 §10.4.
 >    ⚠ ĐỪNG nâng chungCu của 7 nhánh đó lên "evidence-noi-ro". Hai file cây đã ghi
@@ -469,6 +471,10 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
    Mốc §6.7 (~04/09) đạt sớm: cả hai model xong 23/08.
 ✅ Q-E ĐÃ CHỐT → 02_SUCCESS_METRICS_V1.md (M1-M4). QM-1 (NGƯỠNG) vẫn OPEN
    → có thước đo mà chưa có ngưỡng thì chưa có điều kiện dừng thật sự.
+   ⚠ M2 ĐÃ SỬA 2026-09-08 (CONFIRMED): thêm phần (c) BẰNG CHỨNG lượt duyệt có
+     xảy ra. Lần sửa duy nhất của bộ metric từ khi chốt, và nó đến từ lượt duyệt
+     thật đầu tiên — diff = 0 không phân biệt được với gói chưa ai đọc.
+     → 02 §2.1 mục LỖ ĐỐI XỨNG · docs/11 §10
 ✅ H-1..H-9 housekeeping ĐÃ ĐÓNG HẾT. Xem §9.
 ```
 

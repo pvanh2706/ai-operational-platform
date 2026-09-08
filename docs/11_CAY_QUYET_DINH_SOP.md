@@ -431,10 +431,14 @@ lượt duyệt trắng không phải bằng chứng. Hai file JSON đã ghi rõ
 ### 10.3 Hệ quả: chưa có baseline `M2` — và `M2` có một lỗ chưa ai thấy
 
 Cặp (bản nháp, bản đã duyệt) này **chưa dùng được làm baseline `M2`**, vì `diff = 0` ở
-đây đúng bằng kết quả của một gói chưa ai đọc. Đề xuất sửa cách đo đã ghi ở
-`02_SUCCESS_METRICS_V1.md` §2.1 (`PROPOSED`, chưa chốt): `M2` cần một **tín hiệu "đã
-thực sự duyệt"** độc lập với mức sửa, nếu không thì giá trị trông đẹp nhất của nó
-(`diff = 0`) lại là giá trị không kiểm chứng được.
+đây đúng bằng kết quả của một gói chưa ai đọc. ✅ **Và cách đo `M2` đã được CHỐT SỬA
+2026-09-08** (`02_SUCCESS_METRICS_V1.md` §2.1): `M2` từ nay có **ba** phần, không phải
+hai — số nháp được duyệt · mức sửa · **và bằng chứng rằng lượt duyệt có xảy ra**. Nếu
+không có phần thứ ba thì giá trị trông đẹp nhất của `M2` (`diff = 0`) lại là giá trị
+không kiểm chứng được.
+
+→ Hệ quả cho luồng duyệt `S7` khi hiện thực: có **hai** trạng thái kết thúc, và *"trả về
+vì chưa trả lời đủ"* KHÔNG được tính vào phần (a). Chi tiết ở `02` §2.1.
 
 ### 10.4 Lần sau gói phải khác ở đúng một chỗ
 
