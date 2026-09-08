@@ -488,6 +488,27 @@ chẩn đoán qua remote — thứ `docs/11` đo được là chỉ 4/10 case gh
 4  so hai danh sách theo (ref, shape, value)
 ```
 
+🛑 **VÀ MỘT LỖ ĐÃ SUÝT LỌT, ĐÁNG GHI HƠN CẢ CỔNG: che từng mẩu rồi ghép KHÔNG BẰNG che
+trên payload đã ghép.** Bản đầu của `SopPromptBuilder` che từng mẩu evidence rồi mới nối
+lại. Test bắt được ngay: hình dạng 3 nhìn TỚI TRƯỚC 6 dòng, nên một từ khoá ở cuối mẩu này
+và một dãy số trần ở đầu mẩu sau — **tách riêng thì cả hai vô hại** — ghép lại thành đúng
+một cặp đăng nhập. Che từng mẩu đếm **0 chỗ**; quét lại toàn payload đếm **2 chỗ**.
+
+```text
+che từng mẩu rồi ghép   ->  0 chỗ che, payload MANG cặp ID + mật khẩu ra ngoài
+che trên payload ghép   ->  2 chỗ che, sạch
+```
+
+→ **Mẫu sẽ tái diễn: một luật đúng trên từng phần KHÔNG tự động đúng trên phần ghép lại.**
+Và đó đúng là chữ `AR-o` đã dùng — che trên **PAYLOAD** trước mỗi lần gọi — nên lần này
+tài liệu đã đúng trước code. Đã dựng lại thiết kế cũ để xác nhận test biết đỏ: **3 test đỏ**.
+
+⚠ Kèm một ràng buộc mới cho ai sửa khung payload: khung do `SopPromptBuilder` sinh ra
+(`TICKET ES-…`, `--- …#comment-…`) an toàn trước cả bốn hình dạng vì nó không phải dòng
+chỉ-có-số, không mang nhãn mật khẩu, không mang tên công cụ remote, không có key JSON. Đổi
+khung thành một dòng chỉ có số là **tự che mất mã ticket của mình** — và mã ticket là thứ
+bộ eval dùng để kiểm model không bịa nguồn.
+
 ⚠ **Điều phép đối chiếu này KHÔNG chứng minh:** rằng luật đủ. Nó chỉ chứng minh **bản port
 không yếu hơn bản gốc**. Recall của chính luật gốc là **cận TRÊN** (13/13 trên corpus mà nó
 được sửa theo — overfit theo định nghĩa), và corpus 12 tháng đã lộ hình dạng thứ NĂM (JWT)
