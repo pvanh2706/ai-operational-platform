@@ -632,6 +632,25 @@ mức sửa diff(A,B)* — nháp bịa thì cả hai con số đều vô nghĩa)
 **Thứ tự đúng:** nạp evidence (`AR-f`) → xuất case OTA thật kèm comment (§8.2) →
 FTS tune trên corpus thật → `ISoạnNhápSOP`.
 
+🛑 **SỬA THỨ TỰ LẦN HAI — 2026-09-08, chủ dự án chốt: `ISoạnNhápSOP` LÀM TRƯỚC, FTS lùi.**
+Lập luận cũ ở trên **không bị xoá vì nó đúng ở thời điểm đó**: khi ấy `canonical_case`
+chỉ là một dòng tiêu đề, tìm được cũng không gom được gì. Ba điều đã đổi:
+
+  1  **Evidence đã nạp xong** (`AR-f`, 2026-08-30) và `taxonomy-19-nhom-hoa-don.json` map
+     sẵn 19 nhóm → danh sách mã case. Tức đầu vào của `ISoạnNhápSOP` **có sẵn mà
+     không cần retrieval** — đưa đúng 10 case của một nhóm, như đã làm TAY ở `11`.
+  2  **Phép thủ đã đo FTS 34% so với đoán mù 31%** trên nguồn này (`docs/09` §5).
+     Build FTS trước là build đúng phần yếu nhất trước.
+  3  **`M2` đóng được vòng ngay.** Hai cây ở `11` là bản A do NGƯỜI viết; `diff(A,B)`
+     vì thế đang đo **người viết tài liệu**, không đo sản phẩm. Chỉ khi máy sinh bản
+     A thì `M2` mới đo đúng thứ nó định đo.
+
+⚠ Retrieval **vẫn cần**, nhưng cho **case MỚI ĐẾN**, không cho slice đầu. Đừng đọc mục
+  này thành "bỏ FTS" — `AR4` vẫn đúng và vẫn là điều kiện chạy lại được.
+✅ Và bộ eval **đã có sẵn**: `nhom_sop.py --kiem-cay` (11 phép đột biến, 11/11 bắt được).
+  Máy sinh ra cây thì phải qua đúng phép kiểm đó, cộng MỘT phép mới cần thêm: **mã case
+  model viết ra phải TỒN TẠI trong nhóm** — `G6`/`AP3` nói model không được bịa nguồn.
+
 ✅ **Bước một đã xong cùng ngày** — `POST /signals/case-evidence` chạy được, 16 test,
 và đã gọi thật vào app đang chạy (newman: 23 request, 59 assertion, 0 đỏ). Bước kế
 tiếp giờ là **việc của người dùng**: xuất case OTA thật KÈM COMMENT.
@@ -999,6 +1018,29 @@ AR-l   Ranh giới KHÁCH SẠN A ↔ KHÁCH SẠN B có phải ranh giới bả
            thì để trống và CHẶN NẠP, không đoán (`G6`/`AP3`).
          · evidence không thuộc khách sạn nào (việc nội bộ ezCloud) biểu diễn thế nào?
          · cấp thứ ba (khách CỦA khách sạn) có cần chỗ riêng, hay chỉ là dữ liệu phải che?
+
+AR-o   Che bí mật ở khâu **GỬI RA**, không chỉ ở khâu NẠP.                  ← MỚI
+       ✅ **CHỐT 2026-09-08 bởi chủ dự án:** đồng ý cho nội dung ticket đi ra API của
+          Anthropic, **với điều kiện luật che chạy trên PAYLOAD trước MỖI lần gọi.**
+
+       Vì sao câu này KHÁC `AR-j`: `AR-j` nói về che lúc **nạp vào kho của mình** — dữ
+       liệu vẫn ở trong nhà. `AR-o` là lúc dữ liệu **rời khỏi máy**, sang hạ tầng của
+       một bên thứ ba. Hai ranh giới khác nhau, và `check_corpus.py` đang đứng ở ranh
+       giới THỨ NHẤT.
+         · đã đo: **5,2% mẩu evidence** chứa thông tin đăng nhập còn sống của khách
+         · cộng dữ liệu pháp nhân bên thứ ba và giá hợp đồng theo năm (`AR-n`)
+
+       Yêu cầu thiết kế sinh ra từ quyết định này:
+         · cổng che phải **FAIL CLOSED**: bắt được hình dạng bí mật thì **KHÔNG GỬI**,
+           không phải gửi kèm cảnh báo. Che ở tầng đọc là tạo ra sự an tâm giả.
+         · phải **giữ DẤU** chỗ đã che (`G6`/`AP3`): người duyệt cần phân biệt
+           "đã che" với "không có gì".
+         · luật che là một **cạn TRÊN** đã đo (92% recall trên chính corpus nó được sửa
+           theo), nên cổng phải đếm và ghi lại số chỗ đã che mỗi lần gọi — không để
+           nó chạy im lặng.
+       ⚠ Còn phải quyết khi hiện thực: bắt được bí mật thì **bỏ cả mẩu** hay **thay
+         giá trị giữ hình dạng**? Bỏ cả mẩu là mất bước kiểm (vì chính mẩu xin
+         Ultraviewer là **biên lai** của một lần chẩn đoán qua remote).
 
 AR-m   Nội dung ĐÃ BỊ NGƯỜI GỬI RÚT LẠI — chưa có chỗ nào đánh dấu.      ← MỚI
        Ghi 2026-09-05. CHƯA CHỌN HƯỚNG. ⚠ Phải quyết TRƯỚC khi chốt cách cắt transcript.

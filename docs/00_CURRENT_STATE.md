@@ -316,6 +316,29 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >        nguyên nhân + phép kiểm nói ra khi nó trống.  → docs/09 §7
 > ```
 >
+> ✅ **HAI QUYẾT ĐỊNH MỚI 2026-09-08:**
+> ```text
+> AR-o   MỚI. Che bí mật ở khâu GỬI RA, không chỉ khâu nạp. Chủ dự án ĐỒNG Ý cho
+>        nội dung ticket đi ra API của Anthropic, VỚI ĐIỀU KIỆN luật che chạy trên
+>        payload trước MỖI lần gọi. Cổng che phải FAIL CLOSED: bắt được hình dạng
+>        bí mật thì KHÔNG GỬI. → 07 §5 AR-o
+>        ⚠ check_corpus.py đang đứng ở ranh giới NẠP, không ở ranh giới GỬI RA.
+> thứ tự  ISoạnNhápSOP LÀM TRƯỚC, FTS lùi lại. Ba lý do: evidence đã nạp + taxonomy
+>        map sẵn 19 nhóm → mã case (không cần retrieval để có đầu vào); FTS đo được
+>        34% vs đoán mù 31%; và M2 chỉ đo đúng thứ nó định đo khi MÁY sinh bản nháp
+>        — hiện diff(A,B) đang đo người viết tài liệu. → 07 §4
+>        ⚠ KHÔNG phải "bỏ FTS": retrieval vẫn cần cho case MỚI ĐẾN.
+> ```
+>
+> **Chi phí đã đo trên corpus thật** (207 528 ký tự / 88 case có nhãn, claude-opus-5
+> $5/$25 một triệu token):
+> ```text
+> một nhóm 10 case      ~$0,16   → qua Batches API: ~$0,08
+> nhóm dày nhất         ~$0,27   → ~$0,14
+> cả 19 nhóm một lượt   ~$2,77   → ~$1,39
+> ```
+> → Tiền không phải rào cản. Rào cản là AR-o (dữ liệu rời khỏi máy) và bộ eval.
+>
 > **CÒN CHỜ QUYẾT — một câu chặn, hai câu chưa chọn hướng:**
 > ```text
 > AR-k   luật gán nhãn thay cho `machineReadability` hằng số. → 07 §5 AR-k
