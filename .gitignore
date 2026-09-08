@@ -41,4 +41,10 @@ scripts/jira-export/redact-list.json
 doc-nhom-*.txt
 *.corpus.txt
 nhom*.txt
+# Khoá API. `appsettings.Development.json` thì ĐƯỢC theo dõi và chỉ chứa mật khẩu của
+# database local (vô hại — database đó chỉ tồn tại trên máy dev). Khoá API thì tiêu tiền
+# thật và git history KHÔNG xoá được, nên nó đi vào file này. Mẫu: appsettings.Local.example.json
+appsettings.Local.json
+**/appsettings.Local.json
+
 __pycache__/

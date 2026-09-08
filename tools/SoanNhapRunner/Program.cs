@@ -124,13 +124,27 @@ catch (EgressBlockedException ex)
 Console.WriteLine($"Đã che    : {prompt.RedactedCount} chỗ nghi là bí mật trước khi gửi (AR-o)");
 Console.WriteLine();
 
-if (Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY") is null
-    && Environment.GetEnvironmentVariable("ANTHROPIC_AUTH_TOKEN") is null)
+var (khoa, tuDau) = LayKhoa(goc);
+if (khoa is null)
 {
-    Console.Error.WriteLine("Chưa có ANTHROPIC_API_KEY (hoặc profile của `ant auth login`).");
+    Console.Error.WriteLine("Chưa có khoá API. Hai cách, chọn một:");
+    Console.Error.WriteLine("  1. đặt biến môi trường ANTHROPIC_API_KEY");
+    Console.Error.WriteLine("  2. copy appsettings.Local.example.json appsettings.Local.json");
+    Console.Error.WriteLine("     rồi điền khoá vào trường Anthropic:ApiKey");
+    Console.Error.WriteLine();
+    Console.Error.WriteLine("⚠ ĐỪNG đặt khoá vào appsettings.Development.json — file đó ĐANG");
+    Console.Error.WriteLine("  ĐƯỢC GIT THEO DÕI, và git history không xoá được.");
+    Console.Error.WriteLine();
     Console.Error.WriteLine("Payload đã dựng và đã che xong, nhưng không gọi được.");
     return 4;
 }
+
+Console.WriteLine($"Khoá API  : lấy từ {tuDau}");
+
+// SDK đọc `ANTHROPIC_API_KEY` từ môi trường của tiến trình. Đặt vào đây thay vì truyền
+// khoá qua constructor CỐ Ý: constructor của SDK có thể đổi giữa các bản, còn biến môi
+// trường là hợp đồng đã được tài liệu hoá. Và nó chỉ sống trong tiến trình này.
+Environment.SetEnvironmentVariable("ANTHROPIC_API_KEY", khoa);
 
 // ── Gọi thật ──────────────────────────────────────────────────────────────────
 Console.WriteLine("Đang gọi claude-opus-5… (một lượt, không dùng Batches — xem AnthropicSopDrafter)");
@@ -179,6 +193,84 @@ Console.WriteLine();
 Console.WriteLine("Đã ghi    : " + duongRa);
 Console.WriteLine("Kiểm ngay : python scripts/jira-export/nhom_sop.py --kiem-cay \"" + duongRa + "\"");
 return 0;
+
+/// <summary>
+/// Lấy khoá API: biến môi trường trước, rồi `appsettings.Local.json` ở gốc repo.
+///
+/// 🛑 VÀ TỪ CHỐI nếu file chứa khoá KHÔNG được `.gitignore` chặn. Đây không phải phòng xa:
+/// `appsettings.Development.json` của dự án này đang được git theo dõi, nên "đặt khoá vào
+/// appsettings" là một thao tác tự nhiên dẫn thẳng tới việc khoá đi vào git — và git
+/// history không xoá được (repo này đã một lần phải chọn giữa viết lại history và để
+/// nguyên, xem `docs/10` §0).
+///
+/// Hỏi `git check-ignore` thay vì so tên file, vì so tên là đoán: ai đó đổi `.gitignore`
+/// thì phép so tên vẫn báo an toàn. Cùng cách làm với `nhom_sop.py --ra`.
+/// </summary>
+static (string? Khoa, string TuDau) LayKhoa(string goc)
+{
+    var tuMoiTruong = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+    if (!string.IsNullOrWhiteSpace(tuMoiTruong))
+    {
+        return (tuMoiTruong, "biến môi trường ANTHROPIC_API_KEY");
+    }
+
+    var p = Path.Combine(goc, "appsettings.Local.json");
+    if (!File.Exists(p))
+    {
+        return (null, "");
+    }
+
+    if (!GitDangChan(goc, p))
+    {
+        Console.Error.WriteLine($"🛑 TỪ CHỐI ĐỌC KHOÁ TỪ {Path.GetFileName(p)}: git KHÔNG chặn file này.");
+        Console.Error.WriteLine("   Khoá trong một file được theo dõi là khoá sẽ đi vào git history,");
+        Console.Error.WriteLine("   và history không xoá được. Thêm nó vào .gitignore trước.");
+        return (null, "");
+    }
+
+    using var doc = JsonDocument.Parse(File.ReadAllText(p));
+    if (doc.RootElement.TryGetProperty("Anthropic", out var a)
+        && a.TryGetProperty("ApiKey", out var k)
+        && k.GetString() is { } gt
+        && !string.IsNullOrWhiteSpace(gt)
+        && !gt.Contains("DAN-KHOA-CUA-BAN", StringComparison.Ordinal))
+    {
+        return (gt, Path.GetFileName(p) + " (git đã chặn)");
+    }
+
+    Console.Error.WriteLine($"⚠ {Path.GetFileName(p)} có nhưng trường Anthropic:ApiKey còn trống "
+                            + "hoặc vẫn là giá trị mẫu.");
+    return (null, "");
+}
+
+static bool GitDangChan(string goc, string duongDan)
+{
+    try
+    {
+        using var pr = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "git",
+            ArgumentList = { "check-ignore", "-q", duongDan },
+            WorkingDirectory = goc,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        });
+
+        if (pr is null)
+        {
+            return false;
+        }
+
+        pr.WaitForExit();
+        return pr.ExitCode == 0;
+    }
+    catch (Exception)
+    {
+        // Không gọi được git thì coi như KHÔNG được chặn. Fail closed: thà bắt người dùng
+        // dùng biến môi trường, hơn là đọc khoá từ một file mình không biết có an toàn không.
+        return false;
+    }
+}
 
 static string TimGocRepo()
 {
