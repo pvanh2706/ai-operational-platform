@@ -432,6 +432,53 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-26` · Đường soạn nháp đã nối xong tới sát API — và cổng che đo được trên dữ liệu thật
+
+Hiện thực `ISoạnNhápSOP` (2026-09-08), sau khi chủ dự án chốt đổi thứ tự ở `§4`.
+
+```text
+tools/SoanNhapRunner            lệnh chạy theo lô, KHÔNG phải endpoint trong Api
+src/…/Infrastructure/Sop/       AnthropicSopDrafter · SopDraftSchema
+src/…/Domain/Sop/               ISopDrafter · SopDraft · SopPromptBuilder
+package                         Anthropic 12.46.0 (chính thức, owner Anthropic)
+model                           claude-opus-5   (AR3)
+```
+
+⚠ **Vì sao là LỆNH chứ không phải endpoint** — ghi ra vì nó là một lựa chọn, không phải
+thói quen: việc này chạy theo lô, không cần tenant middleware, không cần database (đầu vào
+là file trên đĩa), và **mỗi lần chạy là tốn tiền**. Một endpoint thì ai gọi cũng được; một
+lệnh thì phải có người gõ. Đó là cái chốt rẻ nhất cho một việc mất tiền.
+
+✅ **CỔNG CHE `AR-o` ĐÃ ĐO ĐƯỢC TRÊN DỮ LIỆU THẬT, không phải trên test:**
+
+```text
+nhóm                                    ticket   mẩu   ký tự vào   ĐÃ CHE
+Phân quyền & ký hiệu hoá đơn              10      14     17 295       0
+NCC từ chối payload                       10      21     24 216       5
+Kênh kết nối tới NCC mất hiệu lực          7      26     17 618       5
+```
+
+→ Con số **0 ở nhóm 1** không phải cổng hỏng: nhóm phân quyền không có mẩu nào chứa thông
+tin đăng nhập. Tỉ lệ 5,2% là tỉ lệ TOÀN CORPUS, không phải tỉ lệ mỗi nhóm — và điều đó có
+nghĩa: **nhóm nào cũng phải qua cổng, vì không đoán trước được nhóm nào có.** Nhóm "kênh
+kết nối tới NCC mất hiệu lực" thì đúng như tên nó, dày credential nhất trên mỗi mẩu.
+
+🛑 **CHẶN Ở CHỖ KHÔNG PHẢI CODE: tài khoản API hết credit.** Key hợp lệ (xác thực qua
+được), request tới được API, và API trả về:
+```text
+invalid_request_error: "Your credit balance is too low to access the Anthropic API."
+```
+Nên **chưa có bản nháp nào do máy sinh ra**, và `M2` vẫn chưa có cặp (A, B) thật. Mọi thứ
+TRƯỚC ranh giới mạng đã chạy: đọc taxonomy → gom case + evidence → dựng payload → cổng che
+→ gọi SDK → bắt lỗi và nói ra đúng nguyên nhân.
+
+⚠ **Điều này KHÔNG chứng minh adapter đúng.** Nó chứng minh: package đúng, kiểu dữ liệu
+đúng (build sạch), xác thực đúng, và đường xử lý lỗi đúng. Ba thứ chưa biết, và biết là
+chưa biết: (1) model có trả về JSON khớp `SopDraftSchema` không; (2) `output_config.format`
+có nhận schema có `"type": ["string","null"]` không — nếu không thì phải bỏ nullable và
+dùng chuỗi rỗng; (3) bản nháp có qua được `--kiem-cay` không, đặc biệt phép cộng `phanBo`.
+Cả ba chỉ trả lời được bằng một lượt gọi thật.
+
 ## `IM-25` · Cổng che ở khâu GỬI RA — port từ luật Python, và đã ĐỐI CHIẾU trên corpus thật
 
 Hiện thực `AR-o` (2026-09-08). `SecretShapeScanner` + `EgressRedactor` ở

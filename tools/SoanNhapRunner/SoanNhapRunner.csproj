@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>KnowledgePlatform.Tools.SoanNhap</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/KnowledgePlatform.Infrastructure/KnowledgePlatform.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!--
+    CỐ Ý là một công cụ dòng lệnh, KHÔNG phải một endpoint trong Api:
+    · nó là việc chạy theo LÔ, không phải việc phản ứng theo request
+    · nó không cần tenant middleware, không cần database — đầu vào là file trên đĩa
+    · và quan trọng nhất: nó TỐN TIỀN mỗi lần chạy. Một endpoint thì ai gọi cũng được;
+      một lệnh thì phải có người gõ. Đó là cái chốt rẻ nhất cho một việc mất tiền.
+  -->
+</Project>
