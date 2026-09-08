@@ -299,7 +299,7 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
-> 🛑 **ĐỌC KHỐI NÀY, ĐỪNG ĐỌC PHẦN NGAY DƯỚI NÓ.** Cập nhật 2026-09-07.
+> 🛑 **ĐỌC KHỐI NÀY, ĐỪNG ĐỌC PHẦN NGAY DƯỚI NÓ.** Cập nhật 2026-09-08.
 > Phần `text` phía dưới là **bản của 2026-08-30** và đã chết: nó ghi việc (a)/(b) là
 > "việc kế tiếp" trong khi cả hai đã xong, và (c) FTS đã bị lùi lại sau phép đếm.
 > Giữ nguyên vì lập luận trong đó vẫn giải thích được **vì sao** thứ tự từng là như vậy —
@@ -364,8 +364,17 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >
 > **VIỆC KẾ TIẾP mà `docs/11` mở ra (§8), CHƯA làm:**
 > ```text
-> 1  Đưa cây cho MỘT người làm support thật duyệt. Đây là phép kiểm duy nhất chưa
->    ai chạy được, và nó là baseline đầu tiên cho M2 (diff giữa nháp và bản duyệt).
+> 1  ⚠ ĐÃ LÀM 2026-09-08 NHƯNG CHƯA RA SỐ DÙNG ĐƯỢC. Support duyệt và báo KHÔNG
+>    SỬA GÌ — kể cả 7 nhánh mà chính bản nháp tự đánh dấu là "chúng tôi tự đoán".
+>    Gói duyệt ghi "ô trống nghĩa là đúng", nên bản trả về trắng KHÔNG phân biệt
+>    được: đã đọc kỹ và đồng ý / xem nhanh rồi bảo ổn / chưa mở ra.
+>    → diff(A,B) = 0 CHƯA là baseline M2. Đã ghi ở docs/11 §10, và sinh một đề
+>      xuất sửa cách đo M2 ở docs/02 §2.1 (PROPOSED, chờ chốt): M2 cần THÊM một
+>      tín hiệu "đã thực sự duyệt", không đạt được bằng cách bỏ trống.
+>    → Vòng 2 phải bỏ luật "để trống nghĩa là đúng" + hai câu đối chiếu được với
+>      ticket (thứ tự kiểm thật · mã lỗi hay gặp nhất). Xem docs/11 §10.4.
+>    ⚠ ĐỪNG nâng chungCu của 7 nhánh đó lên "evidence-noi-ro". Hai file cây đã ghi
+>      rõ điều này ở khối `duyet`, và `nhom_sop.py --kiem-cay` in ra cảnh báo.
 > 2  ✅ XONG cùng ngày — cây thứ hai ở docs/11 §9. Việc MỚI nó sinh ra: sửa connector
 >    để KHÔNG BAO GIỜ lọc bỏ comment nội bộ (5/10 bước kiểm nằm ở đó), và thêm
 >    trường quyền-cần vào bước kiểm.

@@ -386,3 +386,70 @@ lúc, đúng chỗ, chỉ không được đưa tới người cần. Sản ph�
   *"hệ thống cho nhập tự do, dữ liệu vốn đã sai định dạng, đây là vấn đề dữ liệu đầu vào"*.
   Cả hai đúng trong phạm vi của mình. **Một SOP sinh tự động từ case này sẽ mặc định rằng
   bảo khách sửa là cách đúng** — và đó là một quyết định sản phẩm bị lẫn vào một bước SOP.
+
+---
+
+## 10. KẾT QUẢ DUYỆT VÒNG 1 (2026-09-08): support duyệt, **không sửa gì** — và vì sao con số đó chưa dùng được
+
+Gói duyệt (`docs/12_GOI_DUYET_SOP.md`) đã được đưa cho support ezCloud. Kết quả người
+dùng báo lại: **các case đều ổn, không cần sửa gì.** Chủ dự án cũng đọc qua và thấy ổn.
+
+Ghi lại nguyên trạng vì đó là dữ kiện. Nhưng phải ghi kèm ba điều, nếu không thì sáu
+tháng nữa dòng trên bị đọc thành *"cây quyết định đã được kiểm chứng"*, mà nó không phải.
+
+### 10.1 🛑 `diff(A,B) = 0` là giá trị ÍT THÔNG TIN NHẤT, không phải giá trị tốt nhất
+
+Lỗi ở gói do tôi thiết kế: nó ghi *"ô trống nghĩa là đúng, không phải chưa xem"*. Câu đó
+làm gói dễ trả lời hơn, nhưng nó **xoá mất khả năng phân biệt hai trạng thái khác nhau
+hoàn toàn**:
+
+```text
+đã đọc kỹ 64 ô, đồng ý tất       ->  bản trả về TRẮNG
+xem nhanh, thấy hợp lý, bảo ổn   ->  bản trả về TRẮNG
+chưa mở ra                       ->  bản trả về TRẮNG
+```
+
+Ba trạng thái, một kết quả. Nên bản trả về trắng **không** xác nhận được cây đúng; nó
+chỉ xác nhận rằng không ai phản đối.
+
+### 10.2 ⚠ Chỗ đáng nghi cụ thể: 7 nhánh TỰ ĐOÁN cũng "ổn"
+
+7 chỗ trong gói được đánh dấu ⚠ **CHÚNG TÔI TỰ ĐOÁN** — chúng là nhánh **tôi bịa ra từ
+kết luận của nhân viên**, không ticket nào ghi lại. Xác suất cả 7 đều đúng ngay lần đầu,
+do một người ngoài nghề viết ra sau một buổi đọc ticket, là thấp.
+
+Cộng thêm hai chỗ gần như chắc chắn có gì để điền mà lại trống:
+
+- **Mục "còn thiếu bước kiểm nào"** — `ES-343733` cho thấy bước kiểm đã xảy ra qua phiên
+  remote và không để lại chữ nào trong ticket. Bước đó tồn tại, chỉ không ai viết ra.
+- **Câu "bước nào không tự làm được vì thiếu quyền"** — chính khách đã nói câu đó trong
+  `ES-345623` (*"Đâu phải ai cũng có quyền vào mục cấu hình này đâu em"*).
+
+→ Nên **KHÔNG nâng `chungCu` của 7 nhánh đó từ `toi-suy-ra` lên `evidence-noi-ro`.** Một
+lượt duyệt trắng không phải bằng chứng. Hai file JSON đã ghi rõ điều này ở khối `duyet`.
+
+### 10.3 Hệ quả: chưa có baseline `M2` — và `M2` có một lỗ chưa ai thấy
+
+Cặp (bản nháp, bản đã duyệt) này **chưa dùng được làm baseline `M2`**, vì `diff = 0` ở
+đây đúng bằng kết quả của một gói chưa ai đọc. Đề xuất sửa cách đo đã ghi ở
+`02_SUCCESS_METRICS_V1.md` §2.1 (`PROPOSED`, chưa chốt): `M2` cần một **tín hiệu "đã
+thực sự duyệt"** độc lập với mức sửa, nếu không thì giá trị trông đẹp nhất của nó
+(`diff = 0`) lại là giá trị không kiểm chứng được.
+
+### 10.4 Lần sau gói phải khác ở đúng một chỗ
+
+**Bỏ luật "để trống nghĩa là đúng".** Mỗi chỗ TỰ ĐOÁN phải buộc chọn một trong ba
+(*đúng* / *sai, phải là…* / *không bao giờ xảy ra*), và gói trả về thiếu ô thì coi là
+**chưa duyệt**, không phải *đã duyệt và đồng ý*.
+
+Cộng hai câu **kiểm chứng được** — trả lời hời hợt sẽ lộ ra, vì đối chiếu được với ticket:
+
+```text
+1  "Khách báo không xuất được hoá đơn — anh/chị kiểm gì TRƯỚC TIÊN?"
+   Nếu thứ tự khác K1 -> K2 thì đó là một chỗ sửa thật.
+2  "Mã lỗi nào của nhà cung cấp anh/chị gặp nhiều nhất?"
+   Bảng hiện có 6 dòng; thiếu một mã hay gặp thì hiện ra ngay.
+```
+
+Hai câu này không hỏi *"cây có đúng không"* — chúng hỏi một việc người trả lời làm hằng
+ngày, rồi để mình tự so. Đó là khác biệt giữa một câu hỏi và một phép kiểm.

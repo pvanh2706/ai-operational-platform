@@ -9,6 +9,16 @@
   "soCaseDungSau": 10,
   "corpus": "150 case hoá đơn đã đóng, xuất 2026-09-05, trải 24 ngày",
 
+  "duyet": {
+    "ngay": "2026-09-08",
+    "nguoiDuyet": "support ezCloud (nội bộ)",
+    "goiDaGui": "docs/12_GOI_DUYET_SOP.md",
+    "ketQua": "KHÔNG SỬA GÌ — báo lại là các case đều ổn.",
+    "soChoDaSua": 0,
+    "🛑_KHONG_DUOC_DUNG_DE_NANG_MUC_CHUNG_CU": "Lượt duyệt này KHÔNG phải bằng chứng cho các nhánh chungCu = 'toi-suy-ra'. Gói duyệt ghi \"ô trống nghĩa là đúng\", nên bản trả về trắng không phân biệt được ba trạng thái: đã đọc kỹ và đồng ý / xem nhanh rồi bảo ổn / chưa mở ra. Giữ nguyên mọi giá trị chungCu cho tới khi có một lượt duyệt buộc trả lời từng chỗ. Xem docs/11 §10.",
+    "chuaLaBaselineM2": "diff(A,B) = 0 ở đây đúng bằng kết quả của một gói chưa ai đọc. Đề xuất sửa cách đo ở docs/02 §2.1 (PROPOSED)."
+  },
+
   "hinhDang": {
     "nhom1": "cây phân nhánh LỒNG NHAU — mỗi bước kiểm thu hẹp bước sau, bốn nguyên nhân là bốn tầng phân quyền",
     "nhom2": "BẢNG TRA + vòng lặp 4 bước — lấy mã lỗi → tra ra TRƯỜNG bị từ chối → sửa trường tại nguồn → phát hành lại và xác nhận CÓ SỐ",

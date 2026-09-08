@@ -118,6 +118,40 @@ TÍN HIỆU TỐT RÕ RÀNG:  duyệt xong, và lần sau người đó quay l�
 
 → Bắt buộc ghi kèm: **tỉ lệ bỏ giữa đường**. Không có nó thì (b) dễ bị đọc sai theo cả hai hướng.
 
+### 🛑 LỖ ĐỐI XỨNG, phát hiện 2026-09-08 khi có lượt duyệt thật đầu tiên · `PROPOSED`
+
+Mục ngay trên cảnh báo kỹ về **mức sửa CAO**. Nó không nói gì về chiều ngược lại, và chiều
+ngược lại mới là chiều nguy hiểm, vì nó **trông như thành công**:
+
+```text
+mức sửa = 0   ->  có thể bản nháp đúng
+             ->  cũng có thể người duyệt xem nhanh rồi bảo ổn
+             ->  cũng có thể chưa ai mở ra
+```
+
+Đã xảy ra thật: lượt duyệt đầu tiên của dự án (2026-09-08, hai bản nháp SOP ở `11` §10)
+trả về **không sửa gì** — kể cả 7 nhánh mà chính bản nháp tự đánh dấu là *"chúng tôi tự
+đoán"*. `diff = 0` vì thế **không phân biệt được với một gói chưa ai đọc**.
+
+⚠ Và nó không phải lỗi của người duyệt: bản nháp đầu tiên ghi *"ô trống nghĩa là đúng"*
+  để giảm công cho họ. Đó là một lựa chọn thiết kế của **bên đo**, và chính nó xoá mất
+  thông tin cần đo. Thước đo mà giá trị đẹp nhất của nó cũng là giá trị **không kiểm
+  chứng được** thì sẽ bị đạt được mà không ai cố tình gian.
+
+**Đề xuất (`PROPOSED`, cần chủ dự án chốt):** `M2` phải ghi kèm một **tín hiệu "đã THỰC SỰ
+duyệt"** độc lập với mức sửa — và nó phải là thứ **không thể đạt được bằng cách bỏ trống**:
+
+```text
+· mọi chỗ bản nháp tự khai là SUY ĐOÁN đều phải được trả lời tường minh
+  (đúng / sai, phải là … / không bao giờ xảy ra) — thiếu một ô = CHƯA DUYỆT
+· cộng ít nhất một câu mà câu trả lời ĐỐI CHIẾU ĐƯỢC với dữ liệu nguồn
+  (ví dụ: "anh/chị kiểm gì TRƯỚC TIÊN" — so với thứ tự trong bản nháp)
+· tỉ lệ bỏ giữa đường (đã có ở trên) vẫn giữ
+```
+
+→ Tức `M2` cần **ba** con số đi cùng nhau, không phải hai: số nháp được duyệt · mức sửa ·
+  và **bằng chứng rằng lượt duyệt đó có xảy ra**. Chưa chốt — xem `11` §10.4 về cách làm.
+
 ## 2.2 TẦNG 1 — Có ai dùng không · `CONFIRMED` (M3)
 
 Chuỗi **đầy đủ**, không rút gọn:

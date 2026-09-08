@@ -9,6 +9,16 @@
   "soCaseDungSau": 10,
   "corpus": "150 case hoá đơn đã đóng, xuất 2026-09-05, trải 24 ngày (không phải 12 tháng)",
 
+  "duyet": {
+    "ngay": "2026-09-08",
+    "nguoiDuyet": "support ezCloud (nội bộ)",
+    "goiDaGui": "docs/12_GOI_DUYET_SOP.md",
+    "ketQua": "KHÔNG SỬA GÌ — báo lại là các case đều ổn.",
+    "soChoDaSua": 0,
+    "🛑_KHONG_DUOC_DUNG_DE_NANG_MUC_CHUNG_CU": "Lượt duyệt này KHÔNG phải bằng chứng cho các nhánh chungCu = 'toi-suy-ra'. Gói duyệt ghi \"ô trống nghĩa là đúng\", nên bản trả về trắng không phân biệt được ba trạng thái: đã đọc kỹ và đồng ý / xem nhanh rồi bảo ổn / chưa mở ra. Giữ nguyên mọi giá trị chungCu cho tới khi có một lượt duyệt buộc trả lời từng chỗ. Xem docs/11 §10.",
+    "chuaLaBaselineM2": "diff(A,B) = 0 ở đây đúng bằng kết quả của một gói chưa ai đọc. Đề xuất sửa cách đo ở docs/02 §2.1 (PROPOSED)."
+  },
+
   "trieuChungVao": [
     { "moTa": "\"không xuất được hoá đơn\" kèm một ảnh chụp màn hình", "case": ["ES-343662", "ES-341317"] },
     { "moTa": "form phát hành báo đỏ / \"Validation form error\"", "case": ["ES-341290", "ES-346647"] },

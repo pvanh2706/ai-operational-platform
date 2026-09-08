@@ -280,6 +280,20 @@ def kiem_cay(tax, duong_dan: str) -> int:
         tong_nhanh += len(bang)
         print("  bảng tra        : %d dòng, khoá (nhà cung cấp, mã lỗi)" % len(bang))
     print("  nhánh có nguồn  : %d/%d (còn lại là suy ra từ kết luận)" % (nhanh_co_nguon, tong_nhanh))
+    # Trạng thái duyệt phải HIỆN RA, không nằm im trong file. Một cây đã qua một lượt
+    # duyệt "không sửa gì" trông giống hệt một cây chưa ai đọc — nói ra để không ai
+    # tưởng nó đã được kiểm chứng.
+    duyet = cay.get("duyet")
+    if duyet:
+        print("  đã duyệt        : %s bởi %s — sửa %s chỗ"
+              % (duyet.get("ngay"), duyet.get("nguoiDuyet"), duyet.get("soChoDaSua")))
+        if duyet.get("soChoDaSua") == 0 and nhanh_co_nguon < tong_nhanh:
+            print("  ⚠ lượt duyệt KHÔNG sửa gì, trong khi còn %d nhánh mức 'tôi suy ra'."
+                  % (tong_nhanh - nhanh_co_nguon))
+            print("    ĐỪNG nâng mức chứng cứ dựa trên nó — xem docs/11 §10.")
+    else:
+        print("  đã duyệt        : CHƯA (không có khối `duyet`)")
+
     if chan:
         print("\n%d PHÁT HIỆN CHẶN:" % len(chan))
         for c in chan:
