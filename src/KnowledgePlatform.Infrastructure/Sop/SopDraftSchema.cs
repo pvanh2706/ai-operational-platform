@@ -9,6 +9,11 @@ namespace KnowledgePlatform.Infrastructure.Sop;
 /// quy ước của bộ sinh, và lệch một chữ là bộ eval không đọc được. Viết tay thì nó lệch
 /// TO và lệch NGAY (test bắt), thay vì lệch nhỏ và lệch âm thầm.
 ///
+/// ⚠ KHÔNG dùng `$defs`/`$ref`, dù nó làm schema gọn hơn: chưa kiểm được structured
+/// outputs có nhận không, và cách duy nhất để kiểm là một lượt gọi TỐN TIỀN. Năm ô của
+/// phân bố vì thế được viết thẳng năm lần. Đổi lại là dài dòng, và đó là cái giá đúng cho
+/// việc bỏ một ẩn số mà mình không đo được miễn phí.
+///
 /// ⚠ `description` của từng trường KHÔNG phải chú thích cho người đọc — model đọc chúng.
 /// Mỗi câu ở đây đến từ một chỗ đã đo khi dựng tay hai bản nháp đầu (`docs/11`).
 /// </summary>
@@ -19,7 +24,7 @@ internal static class SopDraftSchema
           "type": "object",
           "additionalProperties": false,
           "required": ["nhom", "soCaseDungSau", "trieuChungVao", "buocKiem", "buocSua",
-                       "buocXacNhan", "khoangTrongPhaiBiet"],
+                       "buocXacNhan", "phanBoBuocKiemDuocGhiLai", "khoangTrongPhaiBiet"],
           "properties": {
             "nhom": {
               "type": "string",
@@ -149,6 +154,26 @@ internal static class SopDraftSchema
                 "viec": { "type": "string" },
                 "case": { "type": "array", "items": { "type": "string" } }
               }
+            },
+            "phanBoBuocKiemDuocGhiLai": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["ghi-ro-buoc-kiem", "suy-ra-duoc-nhung-khong-ghi",
+                           "chi-ghi-ket-luan", "buoc-kiem-ngoai-ticket",
+                           "khong-phai-chan-doan"],
+              "description": "PHEP CONG PHAI KHOP: tong `so` cua nam o phai bang dung soCaseDungSau, khong ticket nao duoc dem hai lan, khong ticket nao bi bo quen. Day la cho de sai nhat cua ca ban nhap.",
+              "properties": {
+                "ghi-ro-buoc-kiem": { "type": "object", "additionalProperties": false, "required": ["so", "case"], "properties": { "so": { "type": "integer" }, "case": { "type": "array", "items": { "type": "string" } } } },
+                "suy-ra-duoc-nhung-khong-ghi": { "type": "object", "additionalProperties": false, "required": ["so", "case"], "properties": { "so": { "type": "integer" }, "case": { "type": "array", "items": { "type": "string" } } } },
+                "chi-ghi-ket-luan": { "type": "object", "additionalProperties": false, "required": ["so", "case"], "properties": { "so": { "type": "integer" }, "case": { "type": "array", "items": { "type": "string" } } } },
+                "buoc-kiem-ngoai-ticket": { "type": "object", "additionalProperties": false, "required": ["so", "case"], "properties": { "so": { "type": "integer" }, "case": { "type": "array", "items": { "type": "string" } } } },
+                "khong-phai-chan-doan": { "type": "object", "additionalProperties": false, "required": ["so", "case"], "properties": { "so": { "type": "integer" }, "case": { "type": "array", "items": { "type": "string" } } } }
+              }
+            },
+            "_haiCaseLech": {
+              "type": ["object", "null"],
+              "description": "Ticket xuat hien trong ban nhap ma KHONG thuoc nhom, kem ly do. Khoa la ma ticket. null neu khong dung ticket ngoai nhom.",
+              "additionalProperties": { "type": "string" }
             },
             "khoangTrongPhaiBiet": {
               "type": "array",

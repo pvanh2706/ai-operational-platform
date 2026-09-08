@@ -432,6 +432,54 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-27` · Xoá hai trong ba ẩn số MÀ KHÔNG GỌI API — và lỗ tìm được là lỗi kiểu dữ liệu
+
+`IM-26` liệt ba thứ chưa biết. Hai trong ba **kiểm được miễn phí**, và hoá ra phải kiểm:
+
+```text
+(1) serialize có ra đúng hình dạng bộ eval đọc được?   ✅ kiểm được không cần model
+(2) API có nhận schema có "type": [...,"null"] không?  ❌ chỉ một lượt gọi thật trả lời
+(3) bản nháp có qua được --kiem-cay không?             ✅ kiểm được không cần model
+```
+
+**Cách kiểm, và nó rẻ đến mức đáng ngượng vì không làm sớm hơn:** cho chính cây dựng TAY
+đi qua kiểu C# `SopDraft` (deserialize → serialize) rồi ném bản ghi lại vào `--kiem-cay`.
+
+🛑 **Kết quả lần đầu: 3 PHÁT HIỆN CHẶN, mã thoát 1.** `SopDraft` **thiếu hai khối** mà bộ
+eval bắt buộc:
+
+```text
+phanBoBuocKiemDuocGhiLai   phân bố mà S8 đòi  -> eval: "phân bố cộng lại = 0, nhóm có 10 case"
+_haiCaseLech               giải thích ticket ngoài nhóm -> eval: "ES-343036 … bịa nguồn"
+```
+
+Kiểu C# vẫn **build sạch** và **serialize sạch** — nó chỉ im lặng bỏ mất hai khối. Đúng
+loại lỗi mà trình biên dịch không thấy và test đơn vị cũng không thấy, vì cả hai chỉ kiểm
+những gì người viết nghĩ ra. Sau khi vá: **mã thoát 0.**
+
+→ **Nếu chờ lượt gọi API mới biết thì đã trả tiền cho một lỗi kiểu dữ liệu.** Ghi lại như
+một luật: *trước khi gọi một API tốn tiền, hãy hỏi phần nào của đường đi kiểm được mà
+không cần gọi nó.* Ở đây là 2/3.
+
+⚠ **Một quyết định thiết kế phát sinh:** phân bố dùng **BỘ 5 Ô CỐ ĐỊNH**, không để mỗi nhóm
+tự đặt tên ô. Hai cây dựng tay đặt tên khác nhau (nhóm 1 có 5 ô, nhóm 2 có 3 ô và là bản
+chia nhỏ của nhóm 1) — một phân bố mà mỗi nhóm tự đặt tên là phân bố **không so được giữa
+các nhóm**, mà so được chính là lý do `S8` đòi nó. Hai file dựng tay GIỮ tên ô riêng của
+chúng: `--kiem-cay` nhận cả hai dạng, và hai file đó là **bản A của phép đo `M2`** — sửa
+chúng cho "khớp" là làm hỏng mốc so.
+
+⚠ **Và một rủi ro đã bỏ đi thay vì đo:** schema bản đầu dùng `$defs`/`$ref` cho ô phân bố.
+Chưa biết structured outputs có nhận không, và cách duy nhất để biết là một lượt gọi tốn
+tiền. Đã **viết thẳng 5 lần** thay vì `$ref`. Dài dòng hơn, và đó là cái giá đúng cho việc
+bỏ một ẩn số không đo được miễn phí.
+
+⚠ Một lỗi của chính phép đo, ghi vì nó dễ lặp: lần chạy đầu tôi đọc `$?` **sau một pipe**
+(`… | tail -8`), nên lấy mã thoát của `tail` chứ không của `--kiem-cay` — báo 0 trong khi
+phép kiểm đang trả 1. Đo mã thoát thì đừng đo sau ống dẫn.
+
+5 test mới canh hình dạng (`SopDraftShapeTests`), trong đó một test canh ĐÚNG hai khối đã
+từng bị mất. Test: **147** (90 domain + 15 hạ tầng + 42 API).
+
 ## `IM-26` · Đường soạn nháp đã nối xong tới sát API — và cổng che đo được trên dữ liệu thật
 
 Hiện thực `ISoạnNhápSOP` (2026-09-08), sau khi chủ dự án chốt đổi thứ tự ở `§4`.

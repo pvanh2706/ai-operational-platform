@@ -43,12 +43,71 @@ public sealed record SopDraft
     public SopConfirmStep? BuocXacNhan { get; init; }
 
     /// <summary>
+    /// Phân bố mà `S8` đòi: trong số ticket của nhóm, bao nhiêu ticket GHI LẠI bước kiểm.
+    ///
+    /// 🛑 BẮT BUỘC, và đây là chỗ khó nhất của cả hình dạng này — không phải vì nội dung mà
+    /// vì PHÉP CỘNG: tổng các ô phải bằng đúng số ticket của nhóm, không ticket nào bị đếm
+    /// hai lần, không ticket nào bị bỏ quên. `--kiem-cay` kiểm cả ba điều đó.
+    ///
+    /// ⚠ Thiếu khối này là lỗ đã tìm ra 2026-09-08 bằng một phép thử KHÔNG TỐN TIỀN: cho
+    /// chính hai cây dựng tay đi qua kiểu C# rồi ghi lại, `--kiem-cay` trả 3 phát hiện CHẶN.
+    /// Nếu chờ lượt gọi API mới biết thì mất tiền để phát hiện một lỗi kiểu dữ liệu.
+    /// </summary>
+    [JsonPropertyName("phanBoBuocKiemDuocGhiLai")]
+    public required SopDistribution PhanBoBuocKiemDuocGhiLai { get; init; }
+
+    /// <summary>
+    /// Ticket xuất hiện trong bản nháp mà KHÔNG thuộc nhóm — kèm lý do vì sao nó ở đó.
+    /// Khoá là mã ticket, giá trị là lời giải thích.
+    ///
+    /// Có mặt vì một ca thật: bước LOẠI TRỪ của nhóm 1 trỏ tới `ES-343036`, một ca thuần
+    /// của nhóm "xung đột phiên". Không có chỗ giải thích thì `--kiem-cay` coi đó là bịa
+    /// nguồn — mà nó là cố ý. `null` khi bản nháp không dùng ticket ngoài nhóm.
+    /// </summary>
+    [JsonPropertyName("_haiCaseLech")]
+    public IReadOnlyDictionary<string, string>? HaiCaseLech { get; init; }
+
+    /// <summary>
     /// Những chỗ bản nháp TỰ NHẬN là không đủ bằng chứng. `G6`/`AP3`: nói ra chỗ mình
     /// không biết là một phần của đầu ra, không phải một lời xin lỗi.
     /// </summary>
     [JsonPropertyName("khoangTrongPhaiBiet")]
     public IReadOnlyList<string>? KhoangTrongPhaiBiet { get; init; }
 }
+
+/// <summary>
+/// Phân bố "bước kiểm có được ghi lại hay không", với BỘ Ô CỐ ĐỊNH.
+///
+/// ⚠ VÌ SAO CỐ ĐỊNH mà không để mỗi nhóm tự đặt tên ô: hai cây dựng tay đặt tên ô khác
+/// nhau (nhóm 1 có 5 ô, nhóm 2 có 3 ô, và ô của nhóm 2 là bản chia nhỏ của nhóm 1). Một
+/// phân bố mà mỗi nhóm tự đặt tên là một phân bố **không so được giữa các nhóm** — mà so
+/// được chính là lý do `S8` đòi phân bố. Nên bộ ô này là bộ hợp của cả hai, đủ để chứa
+/// những gì đã đo trên 20 ticket.
+///
+/// ⚠ Hai cây dựng tay GIỮ NGUYÊN tên ô riêng của chúng — `nhom_sop.py --kiem-cay` nhận cả
+/// hai dạng (nó chỉ đòi phép cộng khớp). Đừng sửa hai file đó để "cho khớp": chúng là bản
+/// A của phép đo `M2`, sửa là làm hỏng mốc so.
+/// </summary>
+public sealed record SopDistribution(
+    /// <summary>Ticket ghi RÕ bước kiểm: có câu hỏi, có chỗ xem, có giá trị quan sát được.</summary>
+    [property: JsonPropertyName("ghi-ro-buoc-kiem")] SopDistributionBucket GhiRoBuocKiem,
+    /// <summary>Suy ra được từ mẩu (ví dụ nhìn ảnh khách gửi), nhưng bước kiểm không được viết ra.</summary>
+    [property: JsonPropertyName("suy-ra-duoc-nhung-khong-ghi")] SopDistributionBucket SuyRaDuocNhungKhongGhi,
+    /// <summary>Chỉ ghi KẾT LUẬN, không ghi cách biết. Ví dụ thật: một ticket đóng bằng tám chữ "Sai CCCD".</summary>
+    [property: JsonPropertyName("chi-ghi-ket-luan")] SopDistributionBucket ChiGhiKetLuan,
+    /// <summary>Bước kiểm xảy ra NGOÀI ticket — qua remote desktop hoặc điện thoại.</summary>
+    [property: JsonPropertyName("buoc-kiem-ngoai-ticket")] SopDistributionBucket BuocKiemNgoaiTicket,
+    /// <summary>Không phải một ca chẩn đoán (hỏi-đáp, yêu cầu nội bộ, v.v.).</summary>
+    [property: JsonPropertyName("khong-phai-chan-doan")] SopDistributionBucket KhongPhaiChanDoan);
+
+/// <summary>
+/// Một ô của phân bố. <paramref name="So"/> phải bằng đúng số phần tử của
+/// <paramref name="Case"/> — dư thừa CỐ Ý: hai con số phải khớp nhau là một phép kiểm rẻ
+/// bắt được sự cẩu thả, và `--kiem-cay` kiểm đúng điều đó.
+/// </summary>
+public sealed record SopDistributionBucket(
+    [property: JsonPropertyName("so")] int So,
+    [property: JsonPropertyName("case")] IReadOnlyList<string> Case);
 
 /// <param name="MoTa">Câu khách nói hoặc màn hình báo, viết bằng lời của người dùng.</param>
 /// <param name="Case">Mã ticket chống lưng. ⚠ Phải TỒN TẠI trong nhóm — eval kiểm điều này.</param>
