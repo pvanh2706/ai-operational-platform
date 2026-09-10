@@ -44,6 +44,16 @@ import os
 import sys
 from collections import Counter
 
+# Python tren Windows: khi output bi pipe, stdout ve cp1252 va moi chu tieng Viet nem
+# UnicodeEncodeError. Quy uoc cua repo la SCRIPT TU EP UTF-8, khong bat nguoi goi dat
+# PYTHONIOENCODING — xem docs/10 §5.2. Khoi nay chep tu check_corpus.py.
+for _luong in (sys.stdout, sys.stderr):
+    if (getattr(_luong, "encoding", "") or "").lower().replace("-", "") != "utf8":
+        try:
+            _luong.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
 KHONG_BIET = "KHONG-BIET"
 
 

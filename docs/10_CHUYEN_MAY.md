@@ -1,7 +1,14 @@
 # 10 — CHUYỂN SANG MÁY KHÁC
 
-> **Viết 2026-09-05** khi người dùng chuyển máy làm việc.
+> **Viết 2026-09-05**, **cập nhật 2026-09-10** khi người dùng chuyển máy lần thứ hai.
 > Mục đích: dựng lại **toàn bộ ngữ cảnh** trên một máy trắng, không mất thông tin.
+>
+> Sửa gì ở lần cập nhật 2026-09-10, ghi ra để biết chỗ nào từng sai:
+> §1 thiếu hẳn `appsettings.Local.json` (nó sinh ra 2026-09-08, sau bản trước) và
+> `redact-list.json` · §2 ghi "phải 105/105 xanh", giờ là **147** · §4 thiếu bốn file
+> kết quả, gồm **bản A và bản B của `M2`** · §5.2 chỉ ghi cp1252 ở chiều GHI, thiếu
+> chiều ĐỌC (`open()`), và chiều đọc đã cắn 3 lần trong một phiên · §6 liệt ba câu chờ
+> quyết mà cả ba đã chuyển trạng thái, nên **§6 đã viết lại hoàn toàn**.
 >
 > Đọc file này **sau** `00_CURRENT_STATE.md`. `00` nói *đang ở đâu*; file này nói
 > *làm sao có lại được những gì máy cũ có mà git không giữ*.
@@ -49,6 +56,18 @@ spread-*.json, fixture-*.json)                  (.gitignore — dữ liệu khá
 jira-config.bat (có PAT)      MẤT               chép từ jira-config.example.bat
                                                 rồi điền lại PAT
 
+appsettings.Local.json        MẤT               chép từ appsettings.Local.example.json
+(khoá API Anthropic)                            rồi dán khoá. ⚠ ĐỪNG đặt khoá vào
+                                                appsettings.Development.json — file đó
+                                                ĐANG ĐƯỢC GIT THEO DÕI, và history
+                                                không xoá được (§0). SoanNhapRunner
+                                                TỪ CHỐI CHẠY nếu file nó đọc khoá từ
+                                                đó lại không được .gitignore chặn.
+
+redact-list.json              MẤT               KHÔNG cần làm gì: make_fixture.py TỰ
+(cột giá trị bí mật thật)                       SINH lại nếu thiếu. Nằm ngoài repo vì
+                                                nó chứa giá trị bí mật thật.
+
 Database kp_dev + dữ liệu      MẤT               dev-db-setup.sql rồi nạp lại fixture
 
 Bộ nhớ của agent               MẤT               ⚠ ĐÃ CHÉP VÀO §5 CỦA FILE NÀY
@@ -92,7 +111,7 @@ dotnet ef database update --project src/KnowledgePlatform.Infrastructure \
 # 3. Tenant cho máy dev
 psql -U kp_app -h localhost -d kp_dev -f scripts/dev-seed-tenant.sql
 
-# 4. Kiểm — phải 105/105 xanh
+# 4. Kiểm — phải 147/147 xanh (90 domain + 15 hạ tầng + 42 API)
 dotnet test src/KnowledgePlatform.slnx
 
 # 5. Kiểm THẬT SỰ: app khởi động được và thấy kp_dev
@@ -105,7 +124,7 @@ curl localhost:5119/internal/tenant-boundary   # đếm bằng SQL thô, KHÔNG 
 🛑 **BƯỚC 5 KHÔNG THỪA — bước 4 có thể XANH GIẢ.** `dotnet test` không đọc `kp_dev` lấy
 một dòng: bộ Infrastructure trỏ vào `kp_test`, bộ API trỏ vào `kp_api_test`, cả hai **tự
 chạy migration** và bộ API còn **tự tạo tenant riêng**. Nên bỏ qua hoặc làm hỏng bước 2
-và bước 3 thì bước 4 **vẫn 105/105**. Chỉ bước 5 mới chạm vào thứ ba bước đầu vừa dựng.
+và bước 3 thì bước 4 **vẫn 147/147**. Chỉ bước 5 mới chạm vào thứ ba bước đầu vừa dựng.
 Nếu bước 3 bị bỏ, app sẽ **từ chối khởi động** — đó là hành vi cố ý, không phải lỗi.
 
 ⚠ **Ba chỗ vấp đã đo trên máy cũ, sẽ lặp lại trên máy mới:**
@@ -167,6 +186,13 @@ vì chuyện này.
 |---|---|---|
 | `taxonomy-19-nhom-hoa-don.json` | 19 nhóm nguyên nhân + case nào thuộc nhóm nào | workflow 16 agent, ~40 phút |
 | `nguyen-nhan-150-case.json` | nguyên nhân + mức chắc chắn + bước xử lý của từng case | (cùng workflow) |
+| `cay-quyet-dinh-*.json` (2 file) | hai bản nháp SOP dựng TAY — **bản A của `M2`** | nhiều giờ người |
+| `may-sinh-phan-quyen-ky-hieu.json` | bản nháp SOP đầu tiên do MÁY sinh — **bản B của `M2`** | 1 ngữ cảnh sạch, ~6 phút |
+| `dinh-tuyen-150-case.json` | kết quả phép đo định tuyến (`docs/13`) | 5 ngữ cảnh sạch, ~6 phút |
+
+🛑 **ĐỪNG SỬA hai file `cay-quyet-dinh-*.json` cho "khớp" với bản máy sinh.** Chúng là
+**bản A của phép đo `M2`**; sửa chúng là làm hỏng mốc so, và mốc đó không dựng lại được
+(xem `07` §3 `IM-27` và `AR-q`). Bản máy sinh thì chạy lại được, bản người viết thì không.
 
 `nguyen-nhan-150-case.json` **đã bỏ trường `trichDan`** (nguyên văn evidence của khách)
 có chủ đích — đó là dữ liệu vận hành thật, và `.gitignore` của repo đặt nguyên tắc rằng
@@ -251,8 +277,18 @@ máy mới sẽ khác.
   → Phần chữ hiển thị viết KHÔNG DẤU, phần dữ liệu trong set thì để dấu thoải mái.
 
 · Python trên Windows: khi output bị pipe, stdout về cp1252 và mọi chữ tiếng Việt
-  ném UnicodeEncodeError. Bốn script trong scripts/jira-export/ đã tự ép UTF-8;
+  ném UnicodeEncodeError. Năm script trong scripts/jira-export/ đã tự ép UTF-8;
   script mới phải làm theo (chép khối `for _luong in (sys.stdout, sys.stderr)`).
+
+· ⚠ VÀ CHIỀU ĐỌC CŨNG VẬY, chỗ này chưa được ghi cho tới 2026-09-10 và đã cắn 3 lần
+  trong một phiên: `open()` không truyền encoding cũng mặc định cp1252, nên đọc một
+  file UTF-8 có tiếng Việt (appsettings.Local.json, mọi file docs/) chết bằng
+  `UnicodeDecodeError: byte 0x81`. Thông điệp lỗi trỏ về FILE, trong khi lỗi nằm ở
+  CÁCH MỞ file — nên rất dễ đi sửa sai chỗ.
+  → Luôn `io.open(p, encoding="utf-8")` (và `utf-8-sig` nếu nghi có BOM).
+  → Và một hệ quả xấu hơn: khi lỗi xảy ra ở `print()` SAU khi file đã ghi xong thì
+    mã thoát 1 KHÔNG có nghĩa là việc chưa làm. Kiểm bằng grep trước khi chạy lại,
+    kẻo chèn hai lần vào tài liệu.
 
 · Heredoc Python-trong-Bash làm BUNG escape \n thành newline thật → SyntaxError.
   Vấp 3 lần trong một phiên. Sửa code có escape thì dùng tool Write/Edit.
@@ -273,19 +309,104 @@ máy mới sẽ khác.
 
 ## 6. Đang dở việc gì — đọc `00_CURRENT_STATE.md` để đủ, đây là bản nén
 
-**Ba câu đang chờ người dùng quyết:**
+> ⚠ **Viết lại 2026-09-10.** Bản cũ (2026-09-05) liệt ba câu chờ quyết mà **cả ba đã
+> chuyển trạng thái**, và ghi "việc làm được ngay" là dựng cây quyết định — việc đó
+> **đã xong** (`docs/11`). Giữ lập luận cũ thì tốt, nhưng đừng làm theo danh sách cũ.
 
-1. **`AR-l` sub-tenant** — bị chặn thật. Jira không có trường nào dùng được (`Mã khách
-   sạn` = `-1.0` ở 32/32 case). Hai nhánh đều ngoài code: ezCloud điền trường đó cho
-   thật, hoặc lùi quyết định và ghi rõ ranh giới khách sạn chưa được thực thi.
-2. **`R-K4` Q2** — có mở phép đếm sang case CÒN MỞ và bắt ghi nguyên nhân lúc remote
-   không? Đây là việc duy nhất làm con số 41% tiến lên.
-3. **`AR-k`** — luật gán nhãn thay cho `machineReadability` hằng số.
+### 6.1 · Việc chặn DUY NHẤT, và nó không phải việc của code
 
-**Việc làm được ngay, không chờ ai:** dựng cây quyết định có bước kiểm cho nhóm SOP lớn
-nhất (*Phân quyền & ký hiệu hoá đơn*, 10 case). `ES-346396` chứa trọn một SOP có B1/B2
-kèm nhánh điều kiện do nhân viên tự gõ — bằng chứng trực tiếp rằng dạng đầu ra này viết
-được, và nó là thứ Path A phải sinh ra.
+```text
+🛑 Tài khoản API Anthropic hết credit, và việc nạp CẦN TỔ CHỨC DUYỆT.
+   Đã kiểm 2026-09-10, và kiểm được với giá $0:
+     GET  /v1/models    -> 200  (khoá hợp lệ, 108 ký tự, xác thực qua)
+     POST /v1/messages  -> 400  "Your credit balance is too low"
+     POST /v1/messages/count_tokens -> 400  (cùng cổng credit)
+   Một lượt 400 vì hết credit KHÔNG bị tính tiền -> câu "còn credit không" hỏi được
+   miễn phí, và nó tách ba nguyên nhân: khoá sai (401) · hết credit (400 credit) ·
+   schema bị từ chối (400 schema).
+```
+
+**Nạp được credit rồi thì chạy đúng hai lệnh** (mọi thứ khác đã sẵn sàng):
+```bash
+dotnet run --project tools/SoanNhapRunner -- "Phân quyền" --ra nhap-nhom1.json
+python scripts/jira-export/nhom_sop.py --kiem-cay nhap-nhom1.json
+```
+
+⚠ Còn **một** ẩn số API duy nhất: `output_config.format` có nhận schema có
+`"type": ["string","null"]` không. **Cố ý KHÔNG phòng thủ trước** — nếu bị từ chối thì
+API trả 400 lúc validate, **tốn $0**. Cái giá của việc SAI mới quyết định có nên đề
+phòng, không phải cái giá của việc biết. Xem `07` §3 `IM-28`.
+
+### 6.2 · Làm được ngay, KHÔNG cần credit
+
+Đường `--xuat-payload` (2026-09-10) mở ra việc này: xuất payload **đã qua cổng che**
+rồi để một ngữ cảnh sạch sinh bản nháp. Đã dùng nó để có bản B đầu tiên.
+
+```text
+AR-q   Viết ĐỊNH NGHĨA + ca biên cho 5 ô phân bố vào `description` của schema, rồi
+       đo lại bằng cách cho HAI ngữ cảnh sạch xếp cùng một nhóm và so.
+       Vì sao gấp: đây là DỤNG CỤ ĐO của M2. Hiện hai người đọc xếp khác nhau 3/10
+       ticket, và ô "bước kiểm NGOÀI ticket" — ô mang phát hiện nền của cả dự án —
+       về 0 ở bản B.  -> 07 §5 AR-q
+AR-k   Luật gán nhãn thay `machineReadability` hằng số. Là BUG THẬT trong đường nạp
+       đã build, không phải câu hỏi thiết kế.
+18 nhóm còn lại: sinh bản B cho chúng qua cùng đường, để biết prompt có tổng quát hoá
+       ngoài nhóm 1 hay không.
+Đo lại định tuyến kiểu TỪNG TICKET MỘT (hiện chạy theo lô 30 -> xem docs/13 §1 giới hạn a).
+```
+
+### 6.3 · Ba câu chờ NGƯỜI DÙNG quyết
+
+```text
+AR-p   MỚI, và giờ có BA phép đo chống lưng. Máy có được trích case NGOÀI nhóm để dựng
+       bước loại trừ không? Đây đã thành câu về TAXONOMY, không còn là câu về prompt:
+         docs/11 §9  bước kiểm đầu của nhóm 2 bị chặn bởi nguyên nhân của nhóm 1
+         AR-p        bản A phải MƯỢN ES-343036 của nhóm khác để dựng K5
+         docs/13     4/5 lỗi định tuyến nằm ở SEAM giữa hai nhóm kề nhau
+       Vẽ lại các nhóm quanh nhà cung cấp thì giải cả ba cùng lúc.  -> 07 §5 AR-p
+AR-m   Nội dung người gửi ĐÃ RÚT LẠI — chưa có chỗ nào đánh dấu.
+       ⚠ Phải quyết TRƯỚC khi chốt cách cắt transcript; cắt rồi không ghép lại được.
+AR-n   Dữ liệu BÊN THỨ BA (khách của khách sạn) và dữ liệu THƯƠNG MẠI trong evidence.
+```
+
+### 6.4 · Cổng CỨNG phải qua trước khi bật tính năng tư vấn
+
+```text
+🛑 AR-l — ranh giới KHÁCH SẠN chưa được thực thi ở BẤT KỲ TẦNG NÀO (đã chốt nhánh lùi
+   2026-09-07, vì không nguồn nào cho ≥2 giá trị phân biệt).
+   Và tài liệu đã ghi rõ: phải mở lại TRƯỚC khi có luồng duyệt thật, vì rò xảy ra ở
+   khâu XUẤT BẢN SOP — mà "hệ thống hướng dẫn cách giải quyết" CHÍNH LÀ xuất bản SOP.
+   RLS KHÔNG cứu được kiểu rò này: nó rò ở khâu xuất bản, không ở khâu truy vấn hàng.
+```
+
+### 6.5 · Khoảng cách tới "issue mới → hướng dẫn tự động"
+
+**Ẩn số nghiên cứu khó nhất đã trả lời XONG, và trả lời là CÓ** (`docs/13`: định tuyến
+84,1% so với đoán mù 11,4%). Trước đó retrieval đo được gần bằng chance (34% vs 31%) và
+điều đó *có thể* đã phủ định cả ý tưởng. Giờ biết là không — nhưng bằng cách **đổi cơ
+chế**: phân loại, không phải tìm case giống bằng văn bản.
+
+Còn lại **không phải ẩn số nghiên cứu, mà là việc build + việc quản trị**:
+
+```text
+1  Endpoint để HỎI. Hiện chỉ có 2 endpoint NẠP (/signals/case-observed, case-evidence)
+   cùng /health và /internal/tenant-boundary. Không có đường vào cho một câu hỏi.
+2  Kho tri thức RỖNG. `KnowledgeRecord.Approve()` có ở Domain nhưng KHÔNG endpoint nào
+   gọi. 0/19 nhóm được duyệt. M2 chưa có phần (a) và (c).
+   -> Định tuyến đúng nhóm chỉ có nghĩa NẾU nhóm đó có một SOP ĐÃ DUYỆT để trả về.
+3  Cổng "KHÔNG BIẾT" phải là PHẦN CỦA SẢN PHẨM, không phải tuỳ chọn. 40,3% dám gán
+   trên case rỗng nghĩa là: bật tính năng mà thiếu cổng này thì ~4/10 ticket không xác
+   định được nguyên nhân sẽ nhận một hướng dẫn KHÔNG KIỂM ĐƯỢC. Ngưỡng phải ĐO.
+4  AR-l (§6.4) — cổng cứng.
+5  41% case không có nguyên nhân trong hồ sơ (62/150). KHÔNG phải bài toán của mô hình:
+   nguyên nhân xảy ra trên remote/điện thoại. Trùng đúng việc R-K4 Q2 đã chốt.
+```
+
+⚠ Và **quét thêm dữ liệu KHÔNG tạo ra thêm SOP** — đã đo: corpus 12 tháng có 100% case
+đã đóng nhưng chỉ **1,6 mẩu dùng được mỗi case**, *mỏng hơn* corpus 4 ngày (2,5), và 25%
+case có 0 mẩu. Nút cổ chai không phải khối lượng dữ liệu. Việc quét lại 3 tháng vẫn đáng
+làm nhưng vì lý do KHÁC: `R-K4` Q2 đã chốt JQL mới **không lọc case đã đóng**, và mọi JQL
+trong `jira-config.example.bat` đều lọc — chính chỗ làm mẫu lệch.
 
 ---
 
