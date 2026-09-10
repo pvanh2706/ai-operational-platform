@@ -305,6 +305,87 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > Giữ nguyên vì lập luận trong đó vẫn giải thích được **vì sao** thứ tự từng là như vậy —
 > nhưng đừng làm theo nó.
 >
+> 🎯 **ĐỊNH TUYẾN ĐÃ ĐO — 2026-09-10. `docs/13_DINH_TUYEN_ISSUE_MOI.md`. ĐÂY LÀ PHÉP ĐO
+> CHẶN CÂU "bao giờ tích hợp được để issue mới có hướng dẫn tự động".**
+> Đầu vào = ĐÚNG thứ có lúc ticket đến: tiêu đề + mô tả. Không comment, không transcript.
+> ```text
+>   88 case CÓ NHÃN     gán đúng 74/88  84,1%  ·  precision khi dám gán 74/79  93,7%
+>   62 case RỖNG        đúng đắn nói KHONG-BIET 37/62  59,7%  ·  dám gán 25/62  40,3%
+>   ĐƯỜNG CƠ SỞ         luôn đoán nhóm lớn nhất: 11,4%   (đã chạy thật, không tính tay)
+> ```
+> ✅ **84,1% so với đoán mù 11,4% — hơn 7 lần. Tín hiệu THẬT.** Và nó khác hẳn retrieval:
+>   FTS hơn đoán mù đúng 3 điểm (34% vs 31%). Trên CÙNG nguồn dữ liệu, hai cơ chế cách
+>   nhau rất xa.
+>   → **Xương sống của tính năng nên là PHÂN LOẠI vào nhóm nguyên nhân, KHÔNG phải tìm
+>     case giống bằng văn bản.** Chạm vào `AR4`/`Q-C`. ⚠ Không đọc thành "bỏ retrieval":
+>     vào nhóm rồi vẫn cần lấy case của nhóm đó, nhưng nó không còn là bước ĐẦU và không
+>     còn là bước rủi ro nhất.
+>
+> ⚠ **BA CHỖ PHẢI ĐỌC TRƯỚC KHI TIN 84%** (đủ lập luận ở `docs/13` §3):
+> ```text
+> · 63/79 ca dám gán là ca mà MÔ TẢ ĐÃ NÓI RA nguyên nhân -> phần lớn đang ĐỌC, không
+>   phải CHẨN ĐOÁN. Nhóm phải suy: 87,5% nhưng n=16, đừng chốt.
+> · 40,3% "dám gán" KHÔNG phải 40,3% "gán sai": đáp án là "hồ sơ chưa bao giờ ghi ra
+>   nguyên nhân". Đó là tự tin KHÔNG KIỂM ĐƯỢC — với sản phẩm thì nguy hiểm ngang nhau.
+> · 4/5 lỗi là SEAM giữa hai nhóm KỀ NHAU, không có lỗi nào hoang đường. Đây là quan
+>   sát ĐỘC LẬP THỨ BA về cùng một điều, sau docs/11 §9 và AR-p -> ranh giới nhóm của
+>   taxonomy không phải ranh giới hợp lệ. AR-p vì thế NẶNG THÊM: nó là câu về TAXONOMY.
+> ```
+> ⚠ Và nó KHÔNG nói tính năng đã dùng được: kho tri thức vẫn RỖNG (0/19 nhóm được duyệt,
+>   `Approve()` chưa endpoint nào gọi), `AR-l` vẫn chưa thực thi ở tầng nào. Định tuyến
+>   đúng nhóm chỉ có nghĩa NẾU nhóm đó có một SOP đã duyệt để trả về.
+>
+> 🎯 **BẢN B ĐẦU TIÊN ĐÃ CÓ — 2026-09-10, SINH KHÔNG CẦN CREDIT. Xem `07` §3 `IM-29`.**
+> Tài khoản chờ tổ chức duyệt (`count_tokens` cũng bị chặn; chỉ `GET /v1/models` đi qua),
+> nên đã đi đường khác: `SoanNhapRunner --xuat-payload` xuất payload ĐÃ QUA CỔNG CHE, rồi
+> một ngữ cảnh SẠCH (bị cấm `docs/11`, `docs/00`, `docs/07`, hai file cây, `git log`, và
+> cấm cả bộ eval) sinh bản nháp từ đúng payload đó.
+> ```text
+>                 buocKiem  buocSua  nhanh  co-nguon  trieuChung  khoangTrong
+>   bản A (người)     5        6       13     7 (54%)      5            4
+>   bản B (máy)       4        8       16     8 (50%)      8           13
+>   nhom_sop.py --kiem-cay  ->  mã thoát 0, phép cộng case khớp
+>   -> docs/ket-qua-phan-tich/may-sinh-phan-quyen-ky-hieu.json
+> ```
+> ✅ `diff(A,B)` KHÁC 0 — tín hiệu `M2` có nghĩa đầu tiên (vòng duyệt 1 cho 0 vô nghĩa).
+>   ⚠ ĐỪNG đọc thành "điểm M2": *cách tính* diff vẫn chưa quyết (`docs/11` §8 mục 3).
+> ✅ 4/5 bước kiểm hội tụ độc lập → prompt của `SopPromptBuilder` ĐỦ.
+>
+> 🛑 **VÀ HAI CÂU MỚI PHẢI QUYẾT, cả hai ĐO ĐƯỢC chứ không suy đoán:**
+> ```text
+> AR-p   Luật chống-bịa-nguồn CHÍNH LÀ thứ chặn máy dựng được K5 của bản A. K5 mượn
+>        ES-343036 từ nhóm KHÁC làm mốc loại trừ; luật "mã case phải trong nhóm" rào
+>        máy trong một nhóm. Và bộ eval KHÔNG phân biệt "không bịa" với "không vươn
+>        tới được". → Đo lần thứ HAI, từ chiều ngược lại, của docs/11 §9: ranh giới
+>        nhóm của taxonomy KHÔNG phải ranh giới hợp lệ của một SOP.  → 07 §5 AR-p
+> AR-q   Bộ 5 ô phân bố chốt được TÊN, chưa chốt được ĐỊNH NGHĨA: hai người đọc xếp
+>        khác nhau 3/10 ticket, và ô "bước kiểm NGOÀI ticket" — ô mang phát hiện nền
+>        của cả dự án — về 0 ở bản B. Làm được KHÔNG CẦN CREDIT.  → 07 §5 AR-q
+> ```
+> ⚠ Ba thứ phép thử này KHÔNG chứng minh: schema `["string","null"]` có được nhận ·
+>   đường HTTP + token + giá thật · và structured outputs có RÀNG BUỘC được đầu ra hay
+>   không. Ngữ cảnh đọc payload tuân thủ schema TỰ NGUYỆN; qua API thì bị RÀNG BUỘC.
+>   `--kiem-cay` xanh ở đây KHÔNG chứng minh lượt gọi thật sẽ xanh.
+>
+> 🛑 **CHẶN, KIỂM LẠI 2026-09-10 — VẪN LÀ CREDIT, VÀ KIỂM XONG VỚI GIÁ $0.**
+> ```text
+> POST /v1/messages  ·  payload thăm dò 577 byte, KHÔNG có dữ liệu khách
+> -> http=400  "Your credit balance is too low to access the Anthropic API."
+> ```
+> Khoá KHÔNG phải vấn đề (108 ký tự, xác thực qua — khoá sai thì là 401). Một lượt 400
+> vì hết credit KHÔNG bị tính tiền, nên câu "còn credit không" hỏi được miễn phí, và nó
+> tách bạch ba nguyên nhân mà `IM-26` từng gộp: khoá sai (401) · hết credit (400 credit)
+> · schema bị từ chối (400 schema).
+> → **VIỆC CHẶN LÀ VIỆC CỦA NGƯỜI DÙNG:** nạp credit ở console → Plans & Billing.
+>   Nạp xong thì chạy đúng một lệnh, mọi thứ khác đã sẵn sàng trên máy này:
+> ```text
+> dotnet run --project tools/SoanNhapRunner -- "Phân quyền" --ra nhap-nhom1.json
+> python scripts/jira-export/nhom_sop.py --kiem-cay nhap-nhom1.json
+> ```
+> ✅ Và một ẩn số đã xoá miễn phí cùng ngày: `$defs`/`$ref` ĐƯỢC structured outputs hỗ trợ
+>   (tài liệu nói rõ). `IM-27` ghi nhầm đó là "ẩn số không đo được miễn phí" — đo được,
+>   bằng cách tra tài liệu. KHÔNG đổi schema vì việc này; xem `07` §3 `IM-28`.
+>
 > ✅ **HAI TRONG BA CÂU ĐÃ CHỐT 2026-09-07** (lập luận đầy đủ ở `07` §5 và `docs/09` §7):
 > ```text
 > AR-l   ✅ CHỐT: nhánh (b) — LÙI. Nạp evidence KHÔNG có sub-tenant, KHÔNG thêm cột,
@@ -425,6 +506,7 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > `docs/09_RK4_DEM_NGUYEN_NHAN.md` (phép đếm nguyên nhân) ·
 > `docs/10_CHUYEN_MAY.md` (dựng lại trên máy khác) ·
 > `docs/11_CAY_QUYET_DINH_SOP.md` (hai bản nháp SOP đầu tiên, 2026-09-07) ·
+`docs/13_DINH_TUYEN_ISSUE_MOI.md` (phép đo định tuyến, 2026-09-10) ·
 > `docs/ket-qua-phan-tich/` (taxonomy + nguyên nhân 150 case + cây quyết định) ·
 > `scripts/workflows/` (định nghĩa 3 workflow đã chạy).
 

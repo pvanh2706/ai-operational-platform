@@ -432,6 +432,195 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-29` · Bản B ĐẦU TIÊN — sinh không cần credit, và nó phơi ra một trần cấu trúc của cách gom theo nhóm
+
+Ngày 2026-09-10. Tài khoản API chờ tổ chức duyệt, `count_tokens` cũng bị cổng credit chặn
+(chỉ `GET /v1/models` đi qua). Chủ dự án hỏi có cách test tạm nào không. Có, và nó trả lời
+được **câu đắt hơn** câu mà lượt gọi thật trả lời.
+
+```text
+tools/SoanNhapRunner --xuat-payload <file>     xuất payload SẼ gửi, rồi dừng
+  · đặt SAU cổng che AR-o        -> không nhánh nào xuất được payload chưa che
+  · từ chối ghi vào chỗ git theo dõi (exit 7)  -> đã thử, KHÔNG tạo file
+  · bắt truyền đường dẫn tường minh, không có mặc định tiện tay
+payload nhóm 1: system 2 201 ký tự · user 19 891 ký tự · che 0 chỗ · 41 KB
+```
+
+⚠ `SopDraftSchema` đổi `internal` → `public` để xuất được schema cùng payload. Lý do ghi
+trong chính file đó: `description` của từng trường **là một phần của prompt thật**, nên bản
+xuất thiếu schema là bản xuất không trung thực.
+
+**Cái bẫy đã xử lý TRƯỚC khi đo, và nó quan trọng hơn phép đo:** phiên đang chạy đã đọc
+`docs/00`, nơi trích khá chi tiết bản A. Một bản B viết bởi ngữ cảnh đó đo **việc nhớ bản
+A**, không đo sản phẩm — và nó sẽ ra con số nhỏ trông như tin tốt, đúng hố mà vòng duyệt 1
+đã rơi vào. Nên bản B do một ngữ cảnh SẠCH sinh: chỉ đọc file payload, bị cấm `docs/11`,
+`docs/00`, `docs/07`, hai file cây, `git log`, và **cấm cả bộ eval** — vì model qua API cũng
+chỉ có một lượt và không thấy eval. Cấm eval là chỗ dễ bỏ sót nhất: cho nó tự kiểm rồi sửa
+là biến phép đo một-lượt thành phép đo có-vòng-lặp.
+
+✅ **`--kiem-cay` mã thoát 0.** Phép cộng case khớp, không case nào bị bỏ hay đếm hai lần.
+
+```text
+                buocKiem  buocSua  nhanh  co-nguon  trieuChung  khoangTrong
+bản A (người)       5        6       13     7 (54%)      5            4
+bản B (máy)         4        8       16     8 (50%)      8           13
+```
+
+🎯 **`diff(A,B)` KHÁC 0 — tín hiệu `M2` có nghĩa đầu tiên, và tốn $0 tiền API.** Vòng duyệt
+1 cho ra 0 vô nghĩa (support trả về trắng). Đây là số đầu tiên đến từ hai bản thật sự độc
+lập. ⚠ Nhưng ĐỪNG đọc nó thành "điểm M2": *cách tính* `diff(A,B)` vẫn là câu chưa quyết
+(`docs/11` §8 mục 3 — mức chứng cứ đặt ở tầng nhánh hay tầng SOP, và diff có đọc theo
+nhánh-không-nguồn hay không). Ở đây chỉ là so sánh mô tả.
+
+**Bốn trong năm bước kiểm hội tụ độc lập.** B dựng lại K1→K4 của A gần như cùng nội dung:
+form/mã đặt phòng → tài khoản + phân quyền trên trang quản trị → role PMS có quyền "Thêm
+hoá đơn" → site/MST mới đã khai ký hiệu chưa. Prompt của `SopPromptBuilder` **đủ** để tới
+đó, và đó là điều lượt gọi thật không cần chứng minh lại.
+
+### 🛑 Phát hiện nặng nhất: luật chống-bịa-nguồn chính là thứ chặn B dựng được K5
+
+B **thiếu hẳn K5 của A** — *"trình duyệt đang đăng nhập nhiều tài khoản cùng lúc không?"*.
+Và K5 không phải nhánh yếu: nó là `evidence-noi-ro`, chống lưng bởi `ES-341290` **và
+`ES-343036`**. Truy `ES-343036` thì ra lý do:
+
+```text
+ES-343036 KHÔNG thuộc nhóm này. Bản A cố ý mượn nó từ nhóm "xung đột phiên"
+làm mốc cho một BƯỚC LOẠI TRỪ, và ghi rõ việc mượn ở khối _haiCaseLech.
+```
+
+Trong khi luật mà `G6`/`AP3` đòi và bộ eval thi hành là: **mã case model viết ra phải TỒN
+TẠI trong nhóm.** Luật đó tồn tại để chặn model bịa nguồn, và nó làm đúng việc đó. Nhưng
+cùng lúc nó **rào máy ở trong một nhóm**, nên máy không thể dựng bước loại trừ trỏ sang
+nhóm khác — thứ người viết làm rất tự nhiên.
+
+⚠ Và bộ eval **không phân biệt được** "không bịa" với "không vươn tới được": B đặt
+`_haiCaseLech: null`, trích 9 mã đều trong nhóm, nên phép kiểm chống bịa nguồn **qua một
+cách tầm thường**.
+
+→ Đây là lần đo **thứ hai, từ chiều ngược lại**, của cùng một điều `docs/11` §9 đã ghi:
+*bước kiểm đầu tiên của nhóm 2 bị chặn bởi đúng nguyên nhân của nhóm 1.* Lần đó là hai
+nhóm phụ thuộc nhau khi THAO TÁC; lần này là một bước loại trừ phải MƯỢN case của nhóm
+khác. Hai quan sát độc lập, cùng một kết luận: **ranh giới nhóm của taxonomy không phải
+ranh giới hợp lệ của một SOP.** Đưa `ISoạnNhápSOP` mỗi lần một nhóm là có **trần cấu
+trúc**, không phải hạn chế tạm thời của prompt.
+
+Câu phải quyết, và nó chạm vào cả `G6` lẫn hình dạng đầu vào:
+
+```text
+cho phép trích case NGOÀI nhóm để dựng bước loại trừ, với điều kiện gì?
+  · nếu KHÔNG: máy vĩnh viễn không dựng được bước loại trừ liên nhóm
+  · nếu CÓ:    phải cấp corpus rộng hơn một nhóm, và phép kiểm chống
+               bịa nguồn phải đổi từ "trong nhóm" sang "trong corpus"
+               + bắt khai chỗ mượn (đúng như _haiCaseLech của bản A)
+```
+
+### Phát hiện thứ hai: bộ 5 ô cố định chốt được TÊN ô, chưa chốt được ĐỊNH NGHĨA ô
+
+`IM-27` đặt bộ 5 ô cố định vì *"phân bố mà mỗi nhóm tự đặt tên là phân bố không so được
+giữa các nhóm"*. Đúng, nhưng chưa đủ. Cùng bộ ô, hai người đọc xếp khác nhau ba ticket:
+
+```text
+                              bản A                        bản B
+ES-341317   suy-ra-được                        ->  ghi-rõ-bước-kiểm
+ES-343733   bước-kiểm-NGOÀI-ticket (remote)    ->  ghi-rõ-bước-kiểm
+ES-346559   ghi-rõ-bước-kiểm                   ->  suy-ra-được
+ô "ngoài ticket"        A: 1 case                  B: 0 case
+```
+
+🛑 Ô về 0 ở B là chỗ đáng lo nhất, vì đó là ô mang **phát hiện nền của cả dự án** — chẩn
+đoán xảy ra trên remote/điện thoại và không để lại chữ nào. B **có thấy** hiện tượng (nó
+viết ra: *"mọi kết luận đều nằm trong ticket, dù việc kiểm thật xảy ra qua zalo/cuộc
+gọi/ultraview"*) nhưng đọc tên ô thành *"kết luận ngoài ticket"* rồi xếp sang ô khác.
+
+→ Một ô mà hai người đọc hiểu khác nhau thì phân bố **vẫn không so được** — đúng thứ `S8`
+sinh nó ra để tránh. Việc còn lại: viết **định nghĩa + ca biên** cho từng ô vào chính
+`description` của schema, rồi đo lại bằng cách cho hai ngữ cảnh sạch xếp cùng một nhóm.
+B tự nêu đúng chỗ này trong `khoangTrongPhaiBiet` (13 mục, so với 4 của A).
+
+### Ba thứ phép thử này KHÔNG chứng minh — ghi kẻo đọc lại tưởng đã xong
+
+```text
+1  output_config.format có nhận "type": ["string","null"] hay không   VẪN LÀ ẨN SỐ
+2  đường HTTP của AnthropicSopDrafter, số token, giá thật             CHƯA ĐO
+3  structured outputs có RÀNG BUỘC được đầu ra hay không              CHƯA BIẾT
+```
+
+Điểm 3 tinh vi nhất và dễ nhầm nhất: một ngữ cảnh đọc file payload tuân thủ schema **tự
+nguyện**; qua API thì bị **ràng buộc**. `--kiem-cay` xanh ở đây **không** chứng minh lượt
+gọi thật sẽ xanh. Nó chứng minh prompt đủ và hình dạng đầu ra khả thi — hai thứ khác.
+
+⚠ Sửa một lỗi phân tích tham số sẵn có trong lúc thêm cờ: `args.FirstOrDefault(a => !a
+.StartsWith("--"))` lấy tên nhóm bằng "token đầu không phải cờ", nhưng đường dẫn đi sau
+`--ra` cũng không bắt đầu bằng `--`. Gõ cờ trước tên nhóm là lấy đường dẫn làm tên nhóm
+rồi báo "khớp 0 nhóm" — một thông điệp chỉ về sai hướng hoàn toàn. Chưa vấp vì mọi ví dụ
+đều đặt tên nhóm trước.
+
+---
+
+## `IM-28` · Ẩn số thứ ba hoá ra tra được, và phép kiểm "còn credit không" là MIỄN PHÍ
+
+Ngày 2026-09-10, trước khi định tiêu tiền cho lượt gọi thật, áp lại đúng luật của `IM-27`
+(*trước khi gọi một API tốn tiền, hỏi phần nào kiểm được mà không cần gọi nó*) — lần này
+lên chính cái danh sách ẩn số mà `IM-26`/`IM-27` để lại. Ra hai thứ.
+
+**1 · `$defs`/`$ref` ĐƯỢC HỖ TRỢ — tài liệu nói, không cần đo.**
+
+`IM-27` ghi việc bỏ `$ref` là *"cái giá đúng cho việc bỏ một ẩn số không đo được miễn phí"*.
+Câu đó **sai ở vế cuối**: ẩn số đó đo được miễn phí, chỉ là bằng cách tra tài liệu chứ
+không bằng cách gọi API. Tập schema mà structured outputs nhận có ghi rõ:
+
+```text
+Supported:  enum · const · anyOf · allOf · $ref/$def · additionalProperties: false
+Not:        schema đệ quy · minimum/maximum · minLength/maxLength · ràng buộc mảng phức
+```
+
+⚠ **KHÔNG đổi `SopDraftSchema` về `$ref` vì phát hiện này.** Bản viết thẳng 5 lần đang
+chạy, đã có test canh, và khớp với thứ `--kiem-cay` đọc được. Đổi để cho gọn là chấp nhận
+rủi ro thật lấy cái đẹp. Điều cần sửa là **niềm tin**, không phải mã: *"chỉ một lượt gọi
+tốn tiền mới trả lời được"* đã đúng với một câu và sai với hai câu khác trong cùng danh
+sách. Trước khi ghi một thứ là "không đo được miễn phí", hãy tra tài liệu trước.
+
+**2 · Ẩn số nullable KHÔNG cần đề phòng trước, vì lượt hỏi nó là lượt MIỄN PHÍ.**
+
+`"type": ["string","null"]` (ở `quyenCan`) vẫn chưa xác nhận: tài liệu liệt kê `null` như
+kiểu cơ bản và `anyOf` như dạng được đỡ, nhưng **không** khẳng định dạng union-array. Cám
+dỗ là đổi sẵn sang `anyOf: [{"type":"string"},{"type":"null"}]` cho chắc. Đã KHÔNG làm, và
+lý do là một phép đo:
+
+```text
+schema bị từ chối  ->  HTTP 400 lúc validate request  ->  KHÔNG TÍNH TIỀN
+```
+
+Một ẩn số mà câu trả lời sai của nó tốn **$0** thì không đáng đổi mã để đề phòng. Đổi mã
+thì tốn một vòng review + một lần chạy lại bộ test; để nguyên thì lượt gọi đầu tiên tự nói
+ra. **Cái giá của việc SAI mới là thứ quyết định có nên phòng thủ trước hay không** — không
+phải cái giá của việc biết.
+
+**3 · Và phép kiểm đáng mang đi nhất: "còn credit không" hỏi được miễn phí.**
+
+```text
+POST /v1/messages  ·  payload 577 byte  ·  KHÔNG có một byte dữ liệu khách nào
+-> http=400  "Your credit balance is too low to access the Anthropic API."
+   request_id: req_011CeuKWEQeqxmEkQVMh1iZd
+```
+
+Lượt này tách được ba nguyên nhân mà trước đây `IM-26` chỉ gộp làm một cục "chặn ở credit":
+**khoá sai** (401) · **hết credit** (400, thông điệp credit) · **schema bị từ chối** (400,
+thông điệp schema). Cả ba đều trả lời trước khi có token nào được sinh, nên cả ba **miễn
+phí**. Khoá đọc được dài 108 ký tự và xác thực qua — vấn đề chưa bao giờ nằm ở khoá.
+
+⚠ `AR-o` **không áp dụng** cho lượt gọi này, và đó là một lựa chọn chứ không phải sơ suất:
+payload thăm dò do tôi viết, không có mẩu ticket nào. Cổng che tồn tại để canh dữ liệu
+khách; chạy nó lên một chuỗi hằng số là làm loãng ý nghĩa con số nó in ra.
+
+⚠ Một bẫy môi trường đã vấp trong lúc làm, ghi vì nó sẽ lặp: `open()` của Python trên
+Windows mặc định **cp1252**, nên đọc `appsettings.Local.json` (có chú thích tiếng Việt)
+chết bằng `UnicodeDecodeError` ở byte 0x81 — và thông điệp lỗi trỏ về *file*, trong khi lỗi
+nằm ở *cách mở file*. Mọi chỗ đọc file của repo này phải `encoding='utf-8'`.
+`SoanNhapRunner` không dính: C# mặc định UTF-8.
+
+---
+
 ## `IM-27` · Xoá hai trong ba ẩn số MÀ KHÔNG GỌI API — và lỗ tìm được là lỗi kiểu dữ liệu
 
 `IM-26` liệt ba thứ chưa biết. Hai trong ba **kiểm được miễn phí**, và hoá ra phải kiểm:
@@ -1531,6 +1720,69 @@ R-K4   ✅ ĐÃ ĐẾM 2026-09-04. Kết quả đầy đủ: `docs/09_RK4_DEM_NG
        gộp thành 3-4 nguyên nhân mỗi nhóm, suy ra "thấp hơn cận dưới 5-10". Cả hai đều
        lập luận được. Đó KHÔNG phải bằng chứng cho hướng nào — đó là bằng chứng rằng
        n=32 quá nhỏ. Ghi "chưa đếm được", đừng ghi một con số nghe hay.
+
+AR-p   Máy có được trích case NGOÀI nhóm để dựng BƯỚC LOẠI TRỪ không?     ← MỚI
+       Sinh 2026-09-10 từ bản B đầu tiên (`IM-29`). ĐO ĐƯỢC, không phải suy đoán.
+
+       Bản B thiếu hẳn `K5` của bản A — "trình duyệt đang đăng nhập nhiều tài khoản
+       cùng lúc không?". K5 KHÔNG phải nhánh yếu: nó là `evidence-noi-ro`, chống lưng
+       bởi `ES-341290` VÀ `ES-343036`. Và `ES-343036` KHÔNG thuộc nhóm — bản A cố ý
+       MƯỢN nó từ nhóm "xung đột phiên" làm mốc cho một bước loại trừ, khai rõ việc
+       mượn ở khối `_haiCaseLech`.
+
+       Luật mà `G6`/`AP3` đòi và bộ eval thi hành là: mã case model viết ra phải TỒN
+       TẠI trong nhóm. Luật đó chặn model bịa nguồn và nó làm đúng việc đó. Nhưng cùng
+       lúc nó RÀO MÁY TRONG MỘT NHÓM, nên máy không dựng được bước loại trừ trỏ sang
+       nhóm khác — việc người viết làm rất tự nhiên.
+
+       ⚠ Và bộ eval KHÔNG phân biệt được "không bịa" với "không vươn tới được": bản B
+         đặt `_haiCaseLech: null`, trích 9 mã đều trong nhóm, nên phép kiểm chống bịa
+         nguồn QUA MỘT CÁCH TẦM THƯỜNG. Một phép kiểm qua vì đối tượng không thể chạm
+         tới vùng bị cấm thì nó chưa kiểm gì cả.
+
+       → Đây là lần đo THỨ HAI, TỪ CHIỀU NGƯỢC LẠI, của điều `docs/11` §9 đã ghi: bước
+         kiểm đầu tiên của nhóm 2 bị chặn bởi đúng nguyên nhân của nhóm 1. Lần đó là
+         hai nhóm phụ thuộc nhau khi THAO TÁC; lần này là một bước loại trừ phải MƯỢN
+         case của nhóm khác. Hai quan sát độc lập, cùng kết luận: RANH GIỚI NHÓM CỦA
+         TAXONOMY KHÔNG PHẢI RANH GIỚI HỢP LỆ CỦA MỘT SOP.
+
+       Hai nhánh, và nó chạm vào cả `G6` lẫn hình dạng ĐẦU VÀO của `ISoạnNhápSOP`:
+         (a) KHÔNG cho mượn — máy vĩnh viễn không dựng được bước loại trừ liên nhóm.
+             Trần này là trần CẤU TRÚC, không phải hạn chế tạm của prompt, nên phải
+             ghi vào tài liệu sản phẩm chứ không chờ prompt tốt hơn.
+         (b) CHO mượn, kèm ba điều kiện: cấp corpus rộng hơn một nhóm · phép kiểm chống
+             bịa nguồn đổi từ "trong nhóm" sang "trong corpus" · BẮT KHAI chỗ mượn,
+             đúng như `_haiCaseLech` của bản A đã làm bằng tay.
+       ⚠ Chọn (b) là làm ĐẮT hơn mỗi lượt gọi (corpus vào nhiều hơn) — đo lại giá
+         trước khi chốt. Nhóm 10 case hiện ~$0,16.
+
+AR-q   Bộ 5 ô phân bố cần ĐỊNH NGHĨA, không chỉ cần TÊN CỐ ĐỊNH.          ← MỚI
+       Sinh 2026-09-10 từ `IM-29`. Đây là phần chưa xong của `IM-27`.
+
+       `IM-27` đặt bộ 5 ô cố định vì "phân bố mà mỗi nhóm tự đặt tên là phân bố không
+       so được giữa các nhóm". Đúng, nhưng CHƯA ĐỦ: cùng bộ ô, hai người đọc độc lập
+       xếp khác nhau BA ticket trên MỘT nhóm 10 case.
+
+                                     bản A                      bản B
+         ES-341317   suy-ra-được                     ->  ghi-rõ-bước-kiểm
+         ES-343733   bước-kiểm-NGOÀI-ticket (remote) ->  ghi-rõ-bước-kiểm
+         ES-346559   ghi-rõ-bước-kiểm                ->  suy-ra-được
+         ô "ngoài ticket"      A: 1 case                 B: 0 case
+
+       🛑 Ô về 0 là chỗ đáng lo nhất, vì đó là ô mang PHÁT HIỆN NỀN của cả dự án —
+         chẩn đoán xảy ra trên remote/điện thoại và không để lại chữ nào trong ticket.
+         Bản B CÓ THẤY hiện tượng (nó viết: "mọi kết luận đều nằm trong ticket, dù
+         việc kiểm thật xảy ra qua zalo/cuộc gọi/ultraview") nhưng đọc tên ô thành
+         "kết luận ngoài ticket" rồi xếp sang ô khác. Tên ô nói về BƯỚC KIỂM; nó đọc
+         thành KẾT LUẬN. Một chữ, và mất đúng ô quan trọng nhất.
+
+       → Một ô mà hai người đọc hiểu khác nhau thì phân bố VẪN KHÔNG SO ĐƯỢC — đúng
+         thứ `S8` sinh nó ra để tránh. Việc phải làm: viết ĐỊNH NGHĨA + CA BIÊN cho
+         từng ô vào chính `description` của schema (model đọc chúng), rồi đo lại bằng
+         cách cho HAI ngữ cảnh sạch xếp cùng một nhóm và so.
+       ✅ Việc này làm được KHÔNG CẦN CREDIT, bằng đúng đường `--xuat-payload`.
+       ⚠ Nhưng ĐỪNG sửa hai file cây dựng tay cho "khớp": chúng là bản A của `M2`
+         (`IM-27`), sửa là hỏng mốc so.
 ```
 
 ---

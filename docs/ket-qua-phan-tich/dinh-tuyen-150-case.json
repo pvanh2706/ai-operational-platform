@@ -1,0 +1,756 @@
+{
+ "_ghiChu": "Ket qua phep do DINH TUYEN 2026-09-10. Dau vao: tieu de + mo ta LUC DEN. Sinh boi 5 ngu canh SACH, moi lo 30 ticket. Xem docs/13. Cham lai: python scripts/jira-export/cham_routing.py <file nay>",
+ "_soTicket": 150,
+ "ketQua": {
+  "ES-345990": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Trộn hai việc: mất mục cấu hình kết nối VNPT và đòi tự phát hành."
+  },
+  "ES-343712": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Mô tả nói rõ MISA trả lỗi số hóa đơn không liên tục nên chỉ lưu nháp."
+  },
+  "ES-346065": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; tiêu đề chỉ ghi hỏi đáp xuất hóa đơn, không có triệu chứng nào."
+  },
+  "ES-346652": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; tiêu đề gộp ba chủ đề rời nhau, không chỉ ra vướng ở đâu."
+  },
+  "ES-342433": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Mô tả là ba việc rời nhau; phần hóa đơn chỉ nói không load được sang ezInvoice."
+  },
+  "ES-345257": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ nói lưu nháp báo lỗi như ảnh; nội dung lỗi nằm trong ảnh, không có trong text."
+  },
+  "ES-341581": {
+   "nhom": "Xoá hoá đơn nháp trên ba hệ thống",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Khách hỏi xóa hóa đơn nháp trùng; mô tả nêu rõ MISA không cho xóa qua ezInvoice."
+  },
+  "ES-346303": {
+   "nhom": "Ngày làm việc/kiểm toán quyết định ngày trên hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Mô tả nói thẳng: hóa đơn nhảy sang ngày sau vì chạy kiểm toán sớm."
+  },
+  "ES-342418": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Cùng mô tả gộp ba việc như ticket Hana1; không đủ dữ kiện chốt nguyên nhân."
+  },
+  "ES-345857": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Log trong mô tả ghi InvalidInvoiceDate với ngày 0001-01-01 do NCC trả về."
+  },
+  "ES-346452": {
+   "nhom": "Trạng thái đặt phòng/phòng chưa thoả điều kiện của chức năng hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Tiêu đề nêu thẳng nguyên nhân: nhiều phòng của đoàn chưa check-out nên chưa lấy được dữ liệu."
+  },
+  "ES-346484": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; hóa đơn không lên NCC là triệu chứng chung của nhiều nguyên nhân khác nhau."
+  },
+  "ES-343605": {
+   "nhom": "Thông tin người mua lấy từ trường nào, áp cho ai",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Muốn kéo thông tin khách đã check-in; mô tả chỉ rõ phải nhập ở tab Thông tin khác."
+  },
+  "ES-346490": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; xóa hóa đơn có thể là nháp hoặc hủy/thay thế hóa đơn đã phát hành."
+  },
+  "ES-346039": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Không hiện mục Ký hiệu hóa đơn vì tài khoản chưa được phân quyền ký hiệu."
+  },
+  "ES-344182": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; tiêu đề chỉ là hỗ trợ xuất hóa đơn, không có triệu chứng."
+  },
+  "ES-317720": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; sửa mẫu hóa đơn đoàn có thể là bản in hoặc cấu hình nội dung."
+  },
+  "ES-344307": {
+   "nhom": "Lệch cấu hình tiền/thuế/định dạng số giữa PMS – ezInvoice.Admin – NCC",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Đơn giá lệch giữa PDF PMS và admin ezInvoice; suy ra lệch cấu hình chiết khấu."
+  },
+  "ES-346134": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; hỗ trợ xuất hóa đơn có điều chỉnh không nói vướng ở khâu nào."
+  },
+  "ES-346396": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Mô tả kết luận: user chưa được phân quyền ký hiệu và chưa có trên ezInvoice."
+  },
+  "ES-343837": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Mô tả ghi thẳng mã lỗi phát hành 5000 do NCC trả về."
+  },
+  "ES-343348": {
+   "nhom": "Phát hành không hoàn tất — nháp treo hoặc sinh hoá đơn/số trùng",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Nháp chưa có số, hệ thống chặn phát hành lại; không có mã lỗi dữ liệu."
+  },
+  "ES-343982": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Nội dung thông báo khi ký nằm trong ảnh; text không cho biết lỗi gì."
+  },
+  "ES-346025": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; phát hành hóa đơn đoàn báo lỗi có thể do trạng thái, payload hay timeout."
+  },
+  "ES-345284": {
+   "nhom": "Kênh kết nối tới NCC mất hiệu lực (mật khẩu/token/chứng thư/NCC gián đoạn)",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Mô tả nói Viettel đổi ký số, key mới, và chưa kích hoạt chứng thư số."
+  },
+  "ES-344717": {
+   "nhom": "Trạng thái đặt phòng/phòng chưa thoả điều kiện của chức năng hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Hóa đơn khu kinh doanh đã thanh toán vào phòng nên phải hủy trả chỗ mới sửa được."
+  },
+  "ES-345359": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Tiêu đề nêu rõ nhu cầu thêm người dùng trên admin.invoice, đúng một bước của checklist phân quyền."
+  },
+  "ES-344110": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; lỗi đăng nhập ezInvoice có thể do phân quyền, xung đột phiên hay chưa cấp."
+  },
+  "ES-345487": {
+   "nhom": "Phòng no-show không đi qua luồng hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Hỏi xuất hóa đơn cho phòng no-show; quy định là ghi dịch vụ bổ sung, không phát hành."
+  },
+  "ES-343138": {
+   "nhom": "Bản in & mẫu hoá đơn hiển thị không như mong đợi",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Khách chỉ chưa biết nút in hóa đơn bán hàng nằm ở đâu, không có lỗi dữ liệu."
+  },
+  "ES-343084": {
+   "nhom": "Kênh kết nối tới NCC mất hiệu lực (mật khẩu/token/chứng thư/NCC gián đoạn)",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Đang chạy rồi bỗng lỗi phát hành; hỏi ngay tài khoản/mật khẩu VNPT và nhờ VNPT kiểm tra."
+  },
+  "ES-342165": {
+   "nhom": "Xoá hoá đơn nháp trên ba hệ thống",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ hỏi cách xoá hoá đơn; tài liệu xoá hoá đơn nháp là nơi duy nhất trả lời."
+  },
+  "ES-344068": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Tiêu đề chỉ nói kiểm tra xuất hoá đơn, không có triệu chứng nào để suy nguyên nhân."
+  },
+  "ES-342309": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Mô tả nói rõ nhà cung cấp phản hồi dữ liệu bên mình truyền sai trường."
+  },
+  "ES-343033": {
+   "nhom": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Thanh toán công nợ chỉ hiện một công ty vì chưa thêm công ty vào danh mục."
+  },
+  "ES-346559": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có chữ 'cấu hình hoá đơn', trùng với nhiều nhóm cấu hình khác nhau."
+  },
+  "ES-345424": {
+   "nhom": "Xoá hoá đơn nháp trên ba hệ thống",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Khách chưa biết bấm nút xoá ngay trên hoá đơn nháp."
+  },
+  "ES-343247": {
+   "nhom": "Chưa được cấp/kích hoạt — đấu nối mới, module, thuê bao, đào tạo",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Yêu cầu cấp key gia hạn thuê bao ezInvoice, thuộc khâu cấp phép."
+  },
+  "ES-344754": {
+   "nhom": "Sửa hoá đơn đã phát hành — thay thế/điều chỉnh và hệ quả khi thao tác sai",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Hoá đơn đã phát hành không sửa trực tiếp được, phải dùng chức năng thay thế."
+  },
+  "ES-345508": {
+   "nhom": "Chưa được cấp/kích hoạt — đấu nối mới, module, thuê bao, đào tạo",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Khách sạn chưa mua module ezInvoice, chuyển sale tư vấn."
+  },
+  "ES-344424": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Ký hiệu hoá đơn cần được phân quyền cho tài khoản trên admin.ezinvoice.vn."
+  },
+  "ES-344465": {
+   "nhom": "Giới hạn tính năng/lỗi sản phẩm — xác nhận rồi chuyển dev hoặc nâng bản",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Hệ thống không cho đổi username, đây là giới hạn sản phẩm."
+  },
+  "ES-344512": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Gửi email hoá đơn cho khách không rơi vào nhóm nào, lại không có mô tả."
+  },
+  "ES-346354": {
+   "nhom": "Thông tin người mua lấy từ trường nào, áp cho ai",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Xoay quanh thông tin người mua cho khách lẻ không lấy hoá đơn."
+  },
+  "ES-343737": {
+   "nhom": "Thông tin người mua lấy từ trường nào, áp cho ai",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Bản mới chỉ lấy CCCD/hộ chiếu từ tab Thông tin khác."
+  },
+  "ES-346136": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Treo 'đang xử lý' vì CCCD nhập 13 số nên NCC từ chối."
+  },
+  "ES-328513": {
+   "nhom": "Kênh kết nối tới NCC mất hiệu lực (mật khẩu/token/chứng thư/NCC gián đoạn)",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Thông báo NCC tạm dừng nâng cấp, tức kênh tới NCC gián đoạn theo kế hoạch."
+  },
+  "ES-340759": {
+   "nhom": "Chưa được cấp/kích hoạt — đấu nối mới, module, thuê bao, đào tạo",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Đấu nối NCC mới, xin token/endpoint FPT lần đầu."
+  },
+  "ES-345844": {
+   "nhom": "Thông tin người mua lấy từ trường nào, áp cho ai",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Hỏi cấu hình tên mặc định người mua cho khách lẻ."
+  },
+  "ES-346024": {
+   "nhom": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Tên phương thức thanh toán trên hoá đơn đến từ khai báo danh mục/cấu hình."
+  },
+  "ES-344862": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Hệ thống ghi mã lỗi ERR.1518 do CCCD sai định dạng, sửa rồi xuất lại."
+  },
+  "ES-346587": {
+   "nhom": "Chưa được cấp/kích hoạt — đấu nối mới, module, thuê bao, đào tạo",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Hoá đơn gia hạn thuê bao, thuộc khâu cấp phép chứ không phải lỗi chức năng."
+  },
+  "ES-332789": {
+   "nhom": "Phát hành không hoàn tất — nháp treo hoặc sinh hoá đơn/số trùng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Sửa hoá đơn nháp trên ezInvoice sinh thêm hoá đơn mới trên site NCC."
+  },
+  "ES-345258": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Khách xin hướng dẫn phân quyền cho lễ tân tạo hoá đơn."
+  },
+  "ES-343124": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; xoá cache là cách chữa chung, không chỉ ra nguyên nhân nào."
+  },
+  "ES-345234": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Sale chỉ nhờ liên hệ khách sạn, không nêu triệu chứng hay lỗi nào."
+  },
+  "ES-346584": {
+   "nhom": "Xung đột phiên do nhiều tài khoản trên cùng một trình duyệt",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không truy cập được admin invoice, chữa bằng đăng xuất rồi đăng nhập lại."
+  },
+  "ES-344024": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Hướng dẫn xuất hoá đơn tuỳ chỉnh và sao chép đặt phòng, không có triệu chứng."
+  },
+  "ES-346230": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ 'giải đáp về check out hoá đơn'; nhiều nhóm đều dính tới check-out."
+  },
+  "ES-342420": {
+   "nhom": "Giới hạn tính năng/lỗi sản phẩm — xác nhận rồi chuyển dev hoặc nâng bản",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Một PMS không xuất được cho nhiều chi nhánh khác MST, là giới hạn phiên bản."
+  },
+  "ES-342044": {
+   "nhom": "Trạng thái đặt phòng/phòng chưa thoả điều kiện của chức năng hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Đoàn trả phòng hai thời điểm; muốn hoá đơn tổng thì check-out phòng lẻ, không tích xuất hoá đơn."
+  },
+  "ES-345357": {
+   "nhom": "Phát hành không hoàn tất — nháp treo hoặc sinh hoá đơn/số trùng",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Một booking có hai hoá đơn, chưa rõ do phiên phát hành lặp hay thao tác lặp."
+  },
+  "ES-342232": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có tiêu đề “phát hành báo lỗi”, không mã lỗi, không triệu chứng nào để xác định."
+  },
+  "ES-342284": {
+   "nhom": "Ngày làm việc/kiểm toán quyết định ngày trên hoá đơn",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Doanh thu 12/8 bị ghi vào 11/8 — ngày hoá đơn theo ngày làm việc/kiểm toán khu kinh doanh."
+  },
+  "ES-346273": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Tiêu đề chỉ ghi “hỗ trợ xuất hoá đơn”, ticket không có mô tả."
+  },
+  "ES-342306": {
+   "nhom": "Khoản giảm trừ/giao dịch âm trong folio",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Tiền phòng đã về 0 nhưng folio không cân nên chặn check-out phòng 404."
+  },
+  "ES-344990": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có ảnh Zalo; “sửa hoá đơn phòng đoàn” có thể là thay thế, gộp hay trạng thái."
+  },
+  "ES-342304": {
+   "nhom": "Kênh kết nối tới NCC mất hiệu lực (mật khẩu/token/chứng thư/NCC gián đoạn)",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Ghi rõ khách tự đổi mật khẩu truy cập nhà cung cấp nên ezFolio giữ thông tin cũ."
+  },
+  "ES-343036": {
+   "nhom": "Xung đột phiên do nhiều tài khoản trên cùng một trình duyệt",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Nhân viên nói rõ: nhiều tài khoản trên một trình duyệt gây xung đột, log-out là vào được."
+  },
+  "ES-341290": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Nói rõ: chưa chọn ký hiệu hoá đơn, tài khoản chưa được phân quyền user và ký hiệu."
+  },
+  "ES-344318": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có tiêu đề “hỗ trợ xuất hoá đơn”, không đủ thông tin để xác định nguyên nhân."
+  },
+  "ES-344891": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ biết “không xuất được hoá đơn”; kỹ thuật can thiệp rồi F5, nguyên nhân không được nói ra."
+  },
+  "ES-345237": {
+   "nhom": "Phát hành không hoàn tất — nháp treo hoặc sinh hoá đơn/số trùng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Nói rõ: phiên phát hành bị gián đoạn nên hệ thống lưu nháp, phát hành lại từ bản nháp."
+  },
+  "ES-346342": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Tiêu đề nói rõ nội dung là hướng dẫn phân quyền users phát hành hoá đơn điện tử."
+  },
+  "ES-345579": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; tiêu đề gộp hai chủ đề và không nói hoá đơn VAT vướng gì."
+  },
+  "ES-344149": {
+   "nhom": "Giới hạn tính năng/lỗi sản phẩm — xác nhận rồi chuyển dev hoặc nâng bản",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Yêu cầu cấu hình tự động phát hành hoá đơn khu kinh doanh — chức năng này chưa có."
+  },
+  "ES-342377": {
+   "nhom": "Trạng thái đặt phòng/phòng chưa thoả điều kiện của chức năng hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Mô tả ghi rõ phòng 110 trả trước một ngày nên hoá đơn chung chỉ lấy phòng 100."
+  },
+  "ES-344992": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ là nhu cầu tra cứu hoá đơn; không có triệu chứng lỗi để quy về nhóm nào."
+  },
+  "ES-343423": {
+   "nhom": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Đổi đơn vị tính giá giờ, muốn cấu hình mới áp cho booking cũ — khai báo danh mục."
+  },
+  "ES-341279": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Hoá đơn ezInvoice không thấy ở MISA quý 1; không rõ do đồng bộ, kết nối hay dữ liệu."
+  },
+  "ES-344106": {
+   "nhom": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Đơn vị tính dịch vụ phòng sai ở một site, đúng ở site khác — danh mục chưa khai."
+  },
+  "ES-342326": {
+   "nhom": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Nói rõ thao tác trong Cấu hình: bỏ giá cả ngày, tắt tiền phòng no-show, sửa mẫu hoá đơn."
+  },
+  "ES-345407": {
+   "nhom": "Bản in & mẫu hoá đơn hiển thị không như mong đợi",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Nói rõ tuỳ chọn trên màn in đang được tích nên bản in ẩn tiền phòng."
+  },
+  "ES-341296": {
+   "nhom": "Lệch cấu hình tiền/thuế/định dạng số giữa PMS – ezInvoice.Admin – NCC",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Nói rõ: NCC VNPT là hoá đơn bán hàng còn PMS cấu hình hoá đơn VAT nên tiền lệch."
+  },
+  "ES-343811": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Nói rõ: mã số thuế có dấu cách nên nhà cung cấp từ chối, sửa rồi cập nhật lại."
+  },
+  "ES-343947": {
+   "nhom": "Bản in & mẫu hoá đơn hiển thị không như mong đợi",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "PDF bản in bị cắt lề phải — lỗi chiều rộng khai trong mẫu hoá đơn."
+  },
+  "ES-344023": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Mô tả chỉ là một đường link chat; “gộp hoá đơn phòng đoàn” chưa rõ vướng ở đâu."
+  },
+  "ES-344977": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không có mô tả; “kiểm tra hiển thị hoá đơn trên admin.invoice” không chỉ ra nguyên nhân."
+  },
+  "ES-345813": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Nói rõ lỗi 5000 do mã số thuế hoặc tên người mua nên NCC từ chối, không ký được."
+  },
+  "ES-338878": {
+   "nhom": "Sửa hoá đơn đã phát hành — thay thế/điều chỉnh và hệ quả khi thao tác sai",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Hoá đơn xuất sai, khách cần làm hoá đơn thay thế về 0đ và chưa nắm nghiệp vụ."
+  },
+  "ES-343686": {
+   "nhom": "Kênh kết nối tới NCC mất hiệu lực (mật khẩu/token/chứng thư/NCC gián đoạn)",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Tiêu đề nói rõ không xuất được vì đổi thông tin đăng nhập: xác thực hai bên lệch."
+  },
+  "ES-342493": {
+   "nhom": "Lệch cấu hình tiền/thuế/định dạng số giữa PMS – ezInvoice.Admin – NCC",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Hoá đơn ra thuế 0% do đổi cấu hình thuế phí mà chưa bật lại tuỳ chọn."
+  },
+  "ES-345244": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có tiêu đề chung về sửa giao dịch và phát hành, không có triệu chứng nào."
+  },
+  "ES-345043": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Nội dung báo lỗi chỉ nằm trong ảnh; không biết mã lỗi hay khâu nào chặn."
+  },
+  "ES-341377": {
+   "nhom": "Trạng thái đặt phòng/phòng chưa thoả điều kiện của chức năng hoá đơn",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Xuất hoá đơn khi khách chưa đến, tức booking chưa đạt trạng thái check-in/check-out mà chức năng cần."
+  },
+  "ES-345531": {
+   "nhom": "Bản in & mẫu hoá đơn hiển thị không như mong đợi",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Bản in không hiện số dư vì đang tích tuỳ chọn \"Không in giá\"; dữ liệu không sai."
+  },
+  "ES-342695": {
+   "nhom": "Giới hạn tính năng/lỗi sản phẩm — xác nhận rồi chuyển dev hoặc nâng bản",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Hệ thống chưa có tự động phát hành; xuất có điều chỉnh còn chờ kỹ thuật thi công."
+  },
+  "ES-346026": {
+   "nhom": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Muốn hoá đơn hiện chi tiết sản phẩm nhưng tạo/gán món trong danh mục chưa được."
+  },
+  "ES-345268": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có tiêu đề \"Hỗ trợ xuất hóa đơn\", không có mô tả nào để suy nguyên nhân."
+  },
+  "ES-341560": {
+   "nhom": "Thông tin người mua lấy từ trường nào, áp cho ai",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Hỏi cách thêm tên công ty lúc xuất, tức phạm vi trường thông tin người mua."
+  },
+  "ES-342533": {
+   "nhom": "Xoá hoá đơn nháp trên ba hệ thống",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Tiêu đề nói đúng nhu cầu: hướng dẫn xoá hoá đơn nháp."
+  },
+  "ES-341528": {
+   "nhom": "Sửa hoá đơn đã phát hành — thay thế/điều chỉnh và hệ quả khi thao tác sai",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Thao tác thay thế sai nên hoá đơn hiện hai lần, bản gốc treo trạng thái \"bị thay thế\"."
+  },
+  "ES-341613": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không bấm xuất hoá đơn được, xử lý nhanh ở màn quản trị; nghi thiếu phân quyền/ký hiệu."
+  },
+  "ES-342998": {
+   "nhom": "Sửa hoá đơn đã phát hành — thay thế/điều chỉnh và hệ quả khi thao tác sai",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Xin hướng dẫn xuất hoá đơn có điều chỉnh, tức nghiệp vụ điều chỉnh/thay thế."
+  },
+  "ES-344189": {
+   "nhom": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Dòng \"phí phục vụ\" ra \"undefined\": tên dòng hàng không lấy được từ danh mục đã khai."
+  },
+  "ES-345373": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có tiêu đề hỏi đáp đối chiếu hoá đơn, không rõ đối chiếu lệch ở đâu."
+  },
+  "ES-346481": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "\"Không đồng bộ sang VNPT\" có thể do token, payload bị từ chối hay phiên gián đoạn."
+  },
+  "ES-346647": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Mô tả nói rõ xuất hoá đơn báo đỏ do tài khoản khác chưa được phân quyền."
+  },
+  "ES-341316": {
+   "nhom": "Phát hành không hoàn tất — nháp treo hoặc sinh hoá đơn/số trùng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Một booking có hai số hoá đơn trên NCC vì gián đoạn kết nối rồi phát hành lại."
+  },
+  "ES-345723": {
+   "nhom": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Hoá đơn gộp thành \"dịch vụ bổ sung\", không ra chi tiết món: danh mục/nhóm dịch vụ chưa khai."
+  },
+  "ES-344786": {
+   "nhom": "Khai báo danh mục/cấu hình quyết định nội dung hoá đơn",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Giao dịch ăn sáng hiển thị trên hoá đơn do cấu hình mẫu gộp ăn sáng quyết định."
+  },
+  "ES-344018": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Mô tả chỉ là một đường link chat; \"cấu hình máy in\" không khớp rõ nhóm nào."
+  },
+  "ES-344680": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Tiêu đề chỉ nói giải đáp thông tin phát hành hoá đơn, không có mô tả."
+  },
+  "ES-342137": {
+   "nhom": "Kênh kết nối tới NCC mất hiệu lực (mật khẩu/token/chứng thư/NCC gián đoạn)",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Yêu cầu đổi SĐT/email/địa chỉ site ngay trong màn Cấu hình kết nối hoá đơn điện tử."
+  },
+  "ES-345623": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "NCC trả mã lỗi ERR:1518 về trường giấy tờ khách, phải sửa dữ liệu rồi phát hành lại."
+  },
+  "ES-344096": {
+   "nhom": "Trạng thái đặt phòng/phòng chưa thoả điều kiện của chức năng hoá đơn",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Hướng dẫn xuất hoá đơn đoàn, thuộc nhánh \"nếu là đoàn\" của tài liệu điều kiện trạng thái."
+  },
+  "ES-344141": {
+   "nhom": "Lệch cấu hình tiền/thuế/định dạng số giữa PMS – ezInvoice.Admin – NCC",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Làm tròn sai cột tổng tiền, tiền không khớp giữa các cột: lệch định dạng số giữa các phía."
+  },
+  "ES-342142": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có tiêu đề \"Không in được hóa đơn\", không rõ chặn ở tuỳ chọn, mẫu hay quyền."
+  },
+  "ES-343415": {
+   "nhom": "Hoá đơn tự phát hành ngoài ý muốn",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Đã hủy yêu cầu xuất và hệ thống ghi không xuất, hoá đơn vẫn tự phát hành."
+  },
+  "ES-345163": {
+   "nhom": "Xoá hoá đơn nháp trên ba hệ thống",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Tiêu đề nói đúng nhu cầu: hướng dẫn xoá hoá đơn nháp."
+  },
+  "ES-343132": {
+   "nhom": "Kênh kết nối tới NCC mất hiệu lực (mật khẩu/token/chứng thư/NCC gián đoạn)",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Khách gửi tài khoản/mật khẩu service, supporter vào cấu hình kết nối cập nhật token."
+  },
+  "ES-342305": {
+   "nhom": "Ngày làm việc/kiểm toán quyết định ngày trên hoá đơn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Khu kinh doanh quên kiểm toán ngày 12 nên hoá đơn ghi ngày 11."
+  },
+  "ES-344185": {
+   "nhom": "Thông tin người mua lấy từ trường nào, áp cho ai",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "CCCD/hộ chiếu chỉ lấy từ tab Thông tin khác, và chỉ chọn được một nguồn."
+  },
+  "ES-338386": {
+   "nhom": "Chưa được cấp/kích hoạt — đấu nối mới, module, thuê bao, đào tạo",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Yêu cầu cấp token/endpoint cho đấu nối NCC FPT bản test, chưa từng chạy."
+  },
+  "ES-342190": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Máy in bill báo thành công nhưng không ra giấy — sự cố máy in cục bộ."
+  },
+  "ES-344810": {
+   "nhom": "Lệch cấu hình tiền/thuế/định dạng số giữa PMS – ezInvoice.Admin – NCC",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có tiêu đề, nhưng lỗi khu trú ở mục thuế 10% trên hoá đơn."
+  },
+  "ES-344027": {
+   "nhom": "Lệch cấu hình tiền/thuế/định dạng số giữa PMS – ezInvoice.Admin – NCC",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Yêu cầu khai lại số chữ số thập phân cho cột số lượng, đơn giá, thành tiền."
+  },
+  "ES-343662": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Supporter chỉ ra khách chưa chọn ký hiệu hoá đơn nên bị chặn phát hành."
+  },
+  "ES-345232": {
+   "nhom": "Sửa hoá đơn đã phát hành — thay thế/điều chỉnh và hệ quả khi thao tác sai",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Chưa có quyền riêng để chặn lễ tân lập hoá đơn thay thế/điều chỉnh."
+  },
+  "ES-345855": {
+   "nhom": "Kênh kết nối tới NCC mất hiệu lực (mật khẩu/token/chứng thư/NCC gián đoạn)",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "MISA trả UnAuthorize/MisaIdError, cổng MISA đang gián đoạn nên không lấy được PDF."
+  },
+  "ES-345033": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Ticket call_answer chỉ có tiêu đề chung chung, không nêu triệu chứng nào."
+  },
+  "ES-345502": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ trao ultraview rồi phát hành thành công, không có mã lỗi hay nguyên nhân."
+  },
+  "ES-341243": {
+   "nhom": "Khoản giảm trừ/giao dịch âm trong folio",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Dịch vụ Rebate giá trị âm bị NCC từ chối BAD_REQUEST_ITEM_VALUES_NEGATIVE."
+  },
+  "ES-342529": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Không nói lỗi gì, khách tự thử lại là xuất được; không đủ căn cứ kết luận."
+  },
+  "ES-341317": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Supporter kết luận chưa chọn ký hiệu hoá đơn nên không xuất được."
+  },
+  "ES-342328": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Khách ghi ID trùng số hộ chiếu nên payload bị từ chối; sửa xong xuất được."
+  },
+  "ES-341308": {
+   "nhom": "Sửa hoá đơn đã phát hành — thay thế/điều chỉnh và hệ quả khi thao tác sai",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Thao tác thay thế sai làm trạng thái thành Bị thay thế, phải nhờ kỹ thuật trả về gốc."
+  },
+  "ES-343926": {
+   "nhom": "Lệch cấu hình tiền/thuế/định dạng số giữa PMS – ezInvoice.Admin – NCC",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "PMS đúng tiền nhưng hoá đơn sai, đơn giá vẫn gồm thuế — lệch cấu hình tiền/thuế."
+  },
+  "ES-345684": {
+   "nhom": "Chưa được cấp/kích hoạt — đấu nối mới, module, thuê bao, đào tạo",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Đã mua gói nhưng chưa ai đấu nối MISA; xin phân người triển khai cho khách mới."
+  },
+  "ES-343522": {
+   "nhom": "Hoá đơn tự phát hành ngoài ý muốn",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Tuỳ chọn mặc định tự tích xuất hoá đơn khi trả phòng nên hệ thống tự xuất."
+  },
+  "ES-345386": {
+   "nhom": "Khoản giảm trừ/giao dịch âm trong folio",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Post giao dịch âm để sửa giá nên hoá đơn hiện hai dòng, có dòng âm."
+  },
+  "ES-346108": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Mô tả chỉ nói không out được phòng 305, không rõ lý do; hoá đơn chỉ ở tiêu đề."
+  },
+  "ES-346593": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có tiêu đề nhưng nêu rõ chủ đề phân quyền gắn với hoá đơn điện tử."
+  },
+  "ES-343367": {
+   "nhom": "Sửa hoá đơn đã phát hành — thay thế/điều chỉnh và hệ quả khi thao tác sai",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Mô tả chỉ là ảnh; tiêu đề nêu nhu cầu điều chỉnh hoá đơn đã phát hành."
+  },
+  "ES-344242": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ có tiêu đề check xuất hoá đơn, không triệu chứng, không mã lỗi."
+  },
+  "ES-343733": {
+   "nhom": "Phân quyền & ký hiệu hoá đơn chưa sẵn sàng",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Lễ tân chưa được phân quyền Thêm hoá đơn nên không vào màn xuất hoá đơn."
+  },
+  "ES-345569": {
+   "nhom": "Bản in & mẫu hoá đơn hiển thị không như mong đợi",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Chỉ là hướng dẫn lưu/in hoá đơn ra PDF, thuộc cụm màn in và mẫu."
+  },
+  "ES-346185": {
+   "nhom": "KHONG-BIET",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Tiêu đề gộp ba việc hướng dẫn, không nêu sự cố nào để quy nguyên nhân."
+  },
+  "ES-337454": {
+   "nhom": "Giới hạn tính năng/lỗi sản phẩm — xác nhận rồi chuyển dev hoặc nâng bản",
+   "nguon": "suy-tu-trieu-chung",
+   "vietTat": "Hỏi xác nhận khả năng tích hợp Sun Invoice — phải đối chiếu tài liệu tính năng."
+  },
+  "ES-346027": {
+   "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+   "nguon": "noi-ro-trong-mo-ta",
+   "vietTat": "Mã số thuế thừa dấu cách nên NCC từ chối, hoá đơn rơi về nháp."
+  }
+ }
+}
