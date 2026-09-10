@@ -17,7 +17,24 @@ using KnowledgePlatform.Infrastructure.Sop;
 //          scripts/jira-export/fixture-*.json                    (case + evidence)
 // Corpus KHÔNG theo git; dựng lại theo docs/10 §3.
 
-var mauTen = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
+// ⚠ Phải loại GIÁ TRỊ của cờ ra trước khi tìm tên nhóm. Đường dẫn đi sau `--ra` không
+// bắt đầu bằng "--", nên phép tìm "token đầu tiên không phải cờ" sẽ lấy chính đường dẫn
+// đó làm tên nhóm nếu người dùng gõ cờ trước tên nhóm — rồi báo "khớp 0 nhóm", một
+// thông điệp chỉ về sai hướng hoàn toàn. Chưa vấp vì mọi ví dụ đều đặt tên nhóm trước.
+var coCanGiaTri = new[] { "--ra", "--xuat-payload" };
+var chiSoLaGiaTriCuaCo = new HashSet<int>();
+for (var i = 0; i < args.Length; i++)
+{
+    if (coCanGiaTri.Contains(args[i]) && i + 1 < args.Length)
+    {
+        chiSoLaGiaTriCuaCo.Add(i + 1);
+    }
+}
+
+var mauTen = args
+    .Where((a, i) => !a.StartsWith("--", StringComparison.Ordinal) && !chiSoLaGiaTriCuaCo.Contains(i))
+    .FirstOrDefault();
+
 if (string.IsNullOrWhiteSpace(mauTen))
 {
     Console.Error.WriteLine("Thiếu tên nhóm. Ví dụ:");
@@ -26,8 +43,14 @@ if (string.IsNullOrWhiteSpace(mauTen))
     return 2;
 }
 
-var iRa = Array.IndexOf(args, "--ra");
-var duongRa = iRa >= 0 && iRa + 1 < args.Length ? args[iRa + 1] : null;
+string? GiaTriCo(string co)
+{
+    var i = Array.IndexOf(args, co);
+    return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+}
+
+var duongRa = GiaTriCo("--ra");
+var duongXuatPayload = GiaTriCo("--xuat-payload");
 
 var goc = TimGocRepo();
 var pTaxonomy = Path.Combine(goc, "docs", "ket-qua-phan-tich", "taxonomy-19-nhom-hoa-don.json");
@@ -123,6 +146,76 @@ catch (EgressBlockedException ex)
 
 Console.WriteLine($"Đã che    : {prompt.RedactedCount} chỗ nghi là bí mật trước khi gửi (AR-o)");
 Console.WriteLine();
+
+// ── `--xuat-payload`: ghi ra đúng payload SẼ được gửi, rồi dừng ────────────────
+//
+// Vì sao có cờ này: tài khoản API có thể bị chặn (hết credit, chờ tổ chức duyệt) trong
+// khi câu hỏi ĐÁNG nhất vẫn trả lời được — *prompt này có đủ để sinh ra một cây dùng
+// được hay không*. Xuất payload ra thì một ngữ cảnh khác đọc được và sinh thử bản nháp.
+//
+// 🛑 VÌ SAO ĐẶT ĐÚNG CHỖ NÀY, không sớm hơn một dòng: nó nằm SAU cổng che. Không có
+// nhánh nào của lệnh này xuất được payload chưa qua `AR-o`. Repo đã rò một lần theo
+// đúng hình dạng đó — một file dump mà `.gitignore` không chặn (commit 888c8e7) — nên
+// đường xuất mới phải sinh ra đã-che, chứ không dựa vào người gõ lệnh nhớ che.
+//
+// ⚠ File này VẪN LÀ dữ liệu khách (đã che bí mật, nhưng nội dung ticket là thật). Ghi
+// ra ngoài repo. Lệnh KHÔNG tự chọn chỗ ghi: bắt truyền đường dẫn tường minh, vì một
+// mặc định tiện tay là cách nhanh nhất để lần sau nó nằm trong thư mục được git theo dõi.
+//
+// ⚠ Và nó KHÔNG chứng minh được thứ chỉ lượt gọi thật chứng minh được: `output_config
+// .format` có nhận schema hay không, và structured outputs có RÀNG BUỘC được đầu ra hay
+// không. Một ngữ cảnh đọc file này tuân thủ schema TỰ NGUYỆN; qua API thì bị ràng buộc.
+if (duongXuatPayload is not null)
+{
+    var thuMuc = Path.GetDirectoryName(Path.GetFullPath(duongXuatPayload));
+    if (!string.IsNullOrEmpty(thuMuc) && !Directory.Exists(thuMuc))
+    {
+        Console.Error.WriteLine($"Thư mục không tồn tại: {thuMuc}");
+        return 6;
+    }
+
+    // Hỏi git chứ không so tên thư mục — cùng lý do như chỗ đọc khoá: so tên là đoán.
+    // Ngoài repo thì git không có ý kiến gì, và đó là chỗ an toàn nhất; trong repo thì
+    // BẮT BUỘC phải được .gitignore chặn.
+    var duongTuyetDoi = Path.GetFullPath(duongXuatPayload);
+    var trongRepo = duongTuyetDoi.StartsWith(
+        Path.GetFullPath(goc) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+
+    if (trongRepo && !GitDangChan(goc, duongTuyetDoi))
+    {
+        Console.Error.WriteLine("🛑 TỪ CHỐI GHI — chỗ ghi này nằm trong repo và git KHÔNG chặn:");
+        Console.Error.WriteLine("   " + duongTuyetDoi);
+        Console.Error.WriteLine();
+        Console.Error.WriteLine("File này chứa nội dung ticket thật (đã che bí mật, nhưng vẫn là");
+        Console.Error.WriteLine("dữ liệu khách). Ghi ra ngoài repo, hoặc vào chỗ .gitignore chặn.");
+        return 7;
+    }
+
+    var payload = new
+    {
+        _canhBao = "Dữ liệu khách hàng. ĐÃ qua cổng che AR-o. Không commit, không dán ra ngoài.",
+        nhom = tenNhom,
+        soTicket = cases.Count,
+        soMauEvidence = cases.Sum(c => c.Evidence.Count),
+        daChe = prompt.RedactedCount,
+        model = "claude-opus-5",
+        system = prompt.SystemText,
+        user = prompt.UserText,
+        schemaDauRa = JsonSerializer.Deserialize<JsonElement>(SopDraftSchema.Json),
+    };
+
+    File.WriteAllText(duongXuatPayload, JsonSerializer.Serialize(payload, new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    }));
+
+    Console.WriteLine("Đã xuất   : " + Path.GetFullPath(duongXuatPayload));
+    Console.WriteLine($"            system {prompt.SystemText.Length:N0} ký tự · "
+                      + $"user {prompt.UserText.Length:N0} ký tự");
+    Console.WriteLine("KHÔNG gọi API (đây là chế độ xuất payload).");
+    return 0;
+}
 
 var (khoa, tuDau) = LayKhoa(goc);
 if (khoa is null)

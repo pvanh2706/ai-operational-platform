@@ -17,9 +17,16 @@ namespace KnowledgePlatform.Infrastructure.Sop;
 /// ⚠ `description` của từng trường KHÔNG phải chú thích cho người đọc — model đọc chúng.
 /// Mỗi câu ở đây đến từ một chỗ đã đo khi dựng tay hai bản nháp đầu (`docs/11`).
 /// </summary>
-internal static class SopDraftSchema
+/// <remarks>
+/// ⚠ Đổi từ `internal` sang `public` ngày 2026-09-10, có lý do và ghi ra kẻo sau này ai đó
+/// đóng lại: `SoanNhapRunner --xuat-payload` phải xuất được schema CÙNG payload, vì một
+/// ngữ cảnh đọc file đó cần biết hình dạng đầu ra — và `description` của từng trường là
+/// một phần của prompt thật, không phải chú thích. Đây là một hằng số chuỗi công khai
+/// (chính nó được gửi ra API mỗi lượt gọi), nên mở ra không mất gì.
+/// </remarks>
+public static class SopDraftSchema
 {
-    internal const string Json = """
+    public const string Json = """
         {
           "type": "object",
           "additionalProperties": false,
