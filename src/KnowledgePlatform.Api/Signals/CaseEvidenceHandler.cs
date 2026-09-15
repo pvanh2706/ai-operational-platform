@@ -71,10 +71,60 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
             results.Add(await FindOrCreateAsync(signal, caseId, ct));
         }
 
+        // ─── AR-l: ĐẾM GIÁ TRỊ PHÂN BIỆT, KHÔNG ĐẾM ĐỘ PHỦ ───
+        //
+        // Phép đếm này là bài học của `Mã khách sạn = -1.0` (32/32 case) và
+        // `machineReadability = High` (128/128 mẩu) viết thành code. Cả hai trường đó phủ
+        // 100% và vẫn vô dụng, vì chúng chỉ có MỘT giá trị — và mọi phép kiểm dạng "trường
+        // này có được điền không?" đều trả lời CÓ. Chỉ câu "trường này có mấy giá trị KHÁC
+        // NHAU?" mới thấy, nên đó là câu được hỏi ở đây.
+        //
+        // ⚠ So KHÔNG phân biệt hoa thường: "MIRAH-01" và "mirah-01" là một khách sạn, đếm
+        //   thành hai là tự thổi con số mà chính cái cổng này dựa vào.
+        var maPhanBiet = signals
+            .Select(x => SubTenantCodes.TryChuanHoa(x.SubTenantCode, out var ma) ? ma : null)
+            .Where(ma => ma is not null && !SubTenantCodes.LaGiaTriDanhRieng(ma))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+
+        var boQua = results.Count(r => r.SubTenantNotApplied);
+
         return new CaseEvidenceBatchResult(
             Received: signals.Count,
             Created: results.Count(r => r.Created),
+            DistinctSubTenantCodes: maPhanBiet,
+            SubTenantWarning: CanhBaoMaKhachSan(signals.Count, maPhanBiet, boQua),
             Results: results);
+    }
+
+    /// <summary>
+    /// Nói thẳng khi lô này KHÔNG đẩy `AR-l` tiến thêm. Cố ý KHÔNG chặn lô: điều kiện mở lại
+    /// là một phép đo trên CẢ KHO, không phải trên một lô — và chặn ở đây sẽ chặn luôn lượt
+    /// export lại mà `AR-k` đang cần. Cổng thật vẫn là cái đã có: chế độ shared TỪ CHỐI
+    /// DUYỆT (409), và nó không được gỡ bởi commit này.
+    /// </summary>
+    private static string? CanhBaoMaKhachSan(int tong, int phanBiet, int boQua)
+    {
+        var phan = new List<string>();
+
+        if (phanBiet < 2)
+        {
+            phan.Add(
+                $"Cả lô {tong} mẩu chỉ có {phanBiet} mã khách sạn phân biệt (không tính " +
+                $"{SubTenantCodes.GiaTriDanhRieng}). Luật của AR-k/AR-l: ĐẾM SỐ GIÁ TRỊ PHÂN " +
+                "BIỆT, không đếm độ phủ — một giá trị thì coi như rỗng. Ranh giới khách sạn " +
+                "CHƯA mở lại được, và chế độ shared vẫn từ chối duyệt.");
+        }
+
+        if (boQua > 0)
+        {
+            phan.Add(
+                $"{boQua} mẩu đã có từ trước nên mã khách sạn vừa khai KHÔNG được ghi đè " +
+                "(K-B3: không sửa lại quá khứ). Muốn mã vào những mẩu đó thì phải nạp lại " +
+                "vào kho sạch — gửi chồng lên sẽ trả 200 mà không đổi gì.");
+        }
+
+        return phan.Count == 0 ? null : string.Join(" ", phan);
     }
 
     private async Task<CaseEvidenceResult> FindOrCreateAsync(
@@ -82,7 +132,7 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
     {
         var existing = await db.EvidenceItems
             .Where(e => e.SourceReference == signal.SourceReference)
-            .Select(e => new { e.Id, e.ObservedInCaseId })
+            .Select(e => new { e.Id, e.ObservedInCaseId, e.SubTenantCode })
             .FirstOrDefaultAsync(ct);
 
         if (existing is not null)
@@ -92,11 +142,17 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
             // và MỘT nguồn. Ghi đè lặng lẽ là sửa lại quá khứ — và nó sẽ kéo theo
             // mọi assertion đang dẫn chứng bằng mẩu này, mà không cảnh báo ai.
             // Muốn nói "nguồn đã đổi" thì đó là một mẩu evidence MỚI với khoá mới.
+            //
+            // ⚠ Và mã khách sạn cũng KHÔNG được ghi đè, vì cùng lý do đó. Nhưng im lặng ở
+            // chỗ này thì một lượt export lại "thành công" 200/created:0 sẽ trông y hệt một
+            // lượt đã nạp mã thành công — nên nói ra.
             return new CaseEvidenceResult(
-                signal.SourceReference, existing.Id, existing.ObservedInCaseId, Created: false);
+                signal.SourceReference, existing.Id, existing.ObservedInCaseId, Created: false,
+                SubTenantNotApplied: MaKhacVoiBanDaLuu(signal.SubTenantCode, existing.SubTenantCode));
         }
 
         EvidenceReadability.TryParse(signal.MachineReadability, out var readability);
+        SubTenantCodes.TryChuanHoa(signal.SubTenantCode, out var maKhachSan);
 
         var item = new EvidenceItem
         {
@@ -106,6 +162,7 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
             ObservedInCaseId = caseId,
             MachineReadability = readability,
             ObservedAt = signal.ObservedAt,
+            SubTenantCode = maKhachSan,
         };
 
         db.EvidenceItems.Add(item);
@@ -113,7 +170,8 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
         try
         {
             await db.SaveChangesAsync(ct);
-            return new CaseEvidenceResult(signal.SourceReference, item.Id, caseId, Created: true);
+            return new CaseEvidenceResult(
+                signal.SourceReference, item.Id, caseId, Created: true, SubTenantNotApplied: false);
         }
         catch (DbUpdateException ex) when (IsDuplicateSourceReference(ex))
         {
@@ -124,12 +182,24 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
 
             var row = await db.EvidenceItems
                 .Where(e => e.SourceReference == signal.SourceReference)
-                .Select(e => new { e.Id, e.ObservedInCaseId })
+                .Select(e => new { e.Id, e.ObservedInCaseId, e.SubTenantCode })
                 .FirstAsync(ct);
 
             return new CaseEvidenceResult(
-                signal.SourceReference, row.Id, row.ObservedInCaseId, Created: false);
+                signal.SourceReference, row.Id, row.ObservedInCaseId, Created: false,
+                SubTenantNotApplied: MaKhacVoiBanDaLuu(signal.SubTenantCode, row.SubTenantCode));
         }
+    }
+
+    /// <summary>
+    /// Bên gửi vừa khai một mã, mà bản đã lưu mang mã KHÁC (hoặc chưa có mã nào) — tức lần
+    /// gửi này không đổi được gì và bên gửi cần biết. Khai TRÙNG với bản đã lưu thì không
+    /// phải chuyện gì, nên không báo.
+    /// </summary>
+    private static bool MaKhacVoiBanDaLuu(string? vuaKhai, string? daLuu)
+    {
+        if (!SubTenantCodes.TryChuanHoa(vuaKhai, out var ma)) return false;
+        return !string.Equals(ma, daLuu, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsDuplicateSourceReference(DbUpdateException ex) =>

@@ -17,10 +17,12 @@ trong sơ đồ dưới.
 ## ⚠ Đọc mục này trước khi đọc bất cứ thứ gì khác
 
 ```
-Tài liệu thiết kế  ~11.000 dòng     27 quyết định domain + 24 quyết định khi code
-Code                 ~2.600 dòng     nền móng + host + đường nhận tín hiệu + evidence
-Test                 ~1.500 dòng     105 test, chạy trên PostgreSQL THẬT
-Script vận hành        ~900 dòng     xuất Jira · kiểm corpus · dựng fixture
+Tài liệu thiết kế  ~17.000 dòng     27 quyết định domain + 35 quyết định khi code
+Code                 ~6.300 dòng     nền móng · host · nạp tín hiệu + evidence ·
+                                     vòng tri thức (nạp → duyệt → hỏi) · đường đọc
+Test                 ~6.000 dòng     282 test, chạy trên PostgreSQL THẬT
+Script vận hành      ~3.500 dòng     xuất Jira · kiểm corpus · dựng fixture ·
+                                     gói duyệt · diff(A,B) · quét credential
 ```
 
 **Tài liệu mô tả toàn bộ tầm nhìn. Code hiện có là phần nền móng của slice đầu tiên.**
@@ -40,7 +42,7 @@ giới khách sạn không có nguồn nào để thực thi**, và **credential
 evidence**. Chi tiết ở [Rủi ro đang mở](#rủi-ro-đang-mở).
 
 ⚠ Điểm chung của cả bốn: chúng **không crash** và **không đỏ test nào**. Chúng chỉ sai
-im lặng — đúng loại lỗi mà cả dự án được dựng để chặn. Bộ test hiện có **105 test**, và
+im lặng — đúng loại lỗi mà cả dự án được dựng để chặn. Bộ test hiện có **282 test**, và
 bài học đắt nhất hôm nay là *một bộ test tự cấp vật liệu cho mình chỉ kiểm được những
 hình dạng mà người viết nghĩ ra.*
 
@@ -147,10 +149,63 @@ gom về sẽ đếm một việc thành mười, và không có gì báo.
 `G1`: Case không phụ thuộc Jira, Jira Issue chỉ là biểu diễn ở nguồn ngoài. Không
 field nào của hợp đồng này biết Jira là gì.
 
+### Nạp evidence — và mã khách sạn là BẮT BUỘC
+
+```bash
+curl -X POST localhost:5119/signals/case-evidence -H "Content-Type: application/json" -d '[
+ {"caseSourceReference":"jira:ES-2001","sourceReference":"jira:ES-2001#comment-7",
+  "content":"Da kiem room mapping, khong thay lech",
+  "machineReadability":"Medium","subTenantCode":"17468"}
+]'
+```
+
+`subTenantCode` **bỏ trống là 400**, không âm thầm hiểu thành "chưa biết" (`AR-l`). Ba giá trị
+có nghĩa khác nhau và **không gộp được**:
+
+```text
+"17468"                  mã khách sạn thật
+"khong-xac-dinh"         bên gửi ĐÃ được hỏi và trả lời: chưa biết
+"khong-thuoc-khach-san"  khẳng định không thuộc khách sạn nào — việc nội bộ, ezGolf,
+                         hoặc một chuỗi nhiều cơ sở chưa tách được
+(cột NULL trong DB)      mẩu nạp TRƯỚC luật này. Chưa ai từng được hỏi.
+```
+
+Response trả kèm `distinctSubTenantCodes` và `subTenantWarning`: **đếm số giá trị PHÂN BIỆT,
+không đếm độ phủ.** Một lô phủ 100% mà chỉ có một giá trị thì vô dụng cho ranh giới khách
+sạn — đó đúng hình dạng của `Mã khách sạn = -1.0` (32/32 case) và `machineReadability = High`
+(128/128 mẩu), hai lần vấp trong cùng một ngày.
+
+```bash
+# Điều kiện MỞ LẠI của AR-l, hỏi được bằng một lượt gọi — kèm ô `canTro`
+curl localhost:5119/internal/sub-tenant-coverage
+```
+
+⚠ `datDieuKienMoLai: true` **KHÔNG** có nghĩa gỡ được cổng. Đọc `canTro` trước: trên `kp_dev`
+hôm nay nó nói **137/145 mẩu chưa khai**, trong khi hai mã phân biệt duy nhất đến từ đúng hai
+dòng tạo ra lúc thử.
+
+### Đánh dấu một mẩu đã bị NGƯỜI GỬI rút lại
+
+```bash
+curl -X POST localhost:5119/evidence/rut-lai -H "Content-Type: application/json" -d '{
+ "khoaNguon":"jira:ES-346661#description",
+ "nguoiDanhDau":"tên bạn",
+ "lyDo":"Người gửi nói gửi nhầm nội dung, đoạn này là của case khác"}'
+```
+
+Ca thật: một mẩu giải thích nguyên nhân overbooking kèm hai mã booking OTA, và **16 phút sau**
+chính người gửi viết *"bỏ qua giúp em, em gửi nhầm nội dung"* — trong một case về *lỗi không
+sinh mã đặt phòng*. Từ lúc đánh dấu, mẩu đó **rời khỏi danh sách dùng được** của đường đọc và
+**nội dung không đi ra nữa**, nhưng dấu vết (ai, lúc nào, vì sao) thì còn.
+
+🛑 **Chỉ NGƯỜI đánh dấu được.** Hợp đồng tín hiệu không mang ba trường này, nên connector không
+có cách nào tự suy từ câu chữ — suy từ câu chữ là đoán, trái `G6`/`AP3`. Đánh dấu lần hai trả
+**409**: ghi đè sẽ xoá mất tác giả và lý do của lần đầu.
+
 ### Chạy test
 
 ```bash
-dotnet test src/KnowledgePlatform.slnx     # 105 test, tự apply migration
+dotnet test src/KnowledgePlatform.slnx     # 282 test, tự apply migration
 ```
 
 Test chạy trên **PostgreSQL thật**, cố ý. Row-level security là tính năng của database;
@@ -241,7 +296,7 @@ sau đã tồn tại và chỉ đang không có gì trả về.
 ✅ app.current_tenant được đặt tự động trên MỌI connection mở ra
 ✅ tenant đọc được từ một request HTTP thật, ở CẢ HAI chế độ deploy
 ✅ cấu hình tenant sai = KHÔNG START ĐƯỢC, không phải chạy im lặng
-   → 105 test giữ, ở ba tầng. Chi tiết bên dưới.
+   → 282 test giữ, ở ba tầng. Chi tiết bên dưới.
 ```
 
 ⚠ Còn một mảnh chưa xong, nhưng nó là câu hỏi **sản phẩm**, không phải code: ở chế
@@ -381,7 +436,7 @@ flowchart LR
     A["✅ ITenantContext<br/>tenant của request này"]
     B["✅ TenantConnectionInterceptor<br/>đặt app.current_tenant<br/>lên MỌI connection"]
     C["✅ Policy của Postgres<br/>tenant_isolation<br/>ENABLE + FORCE"]
-    D["✅ 105 test<br/>trên PostgreSQL thật<br/>role KHÔNG superuser"]
+    D["✅ 282 test<br/>trên PostgreSQL thật<br/>role KHÔNG superuser"]
     R --> M --> A --> B --> C
     D -.->|giữ cả chuỗi| A
 ```
@@ -490,7 +545,8 @@ trong đó có **đường nhận tín hiệu** tạo Case.
 |---|---|
 | 🛑 **Dữ liệu vận hành thật mang theo bí mật SỐNG, và đó là MẪU HÀNH VI chứ không phải ca lẻ** | Đo trên corpus Jira thật 2026-09-04: **40 chỗ nghi credential trên 18/345 mẩu = 5,2%**, tức cứ ~19 mẩu evidence có một mẩu chứa thông tin đăng nhập. Phần lớn là cặp ID + mật khẩu Ultraviewer mà khách gõ thành hai tin nhắn liên tiếp; cộng hai JWT token và một mật khẩu tài khoản hoá đơn điện tử VNPT **còn sống** (nhà cung cấp trả `OK` hai lần trong chính mẩu đó). <br><br>⚠ Đây không phải sự cố của một ticket — đó là **cách support team làm việc**: xin Ultraviewer để remote vào máy khách. Nên không xử lý được bằng cách sửa vài mẩu; phải là luật chạy mỗi lần nạp. Đã có `scripts/jira-export/check_corpus.py` (trả mã thoát ≠ 0, cắm được CI). <br><br>⚠ **Lọc theo từ khoá cùng dòng KHÔNG dùng được** — đo được là bắt **11%**. Khách gõ ID rồi mật khẩu ở hai tin nhắn trần, còn chữ "Ultraview" nằm ở lượt nói TRƯỚC ĐÓ của nhân viên: bộ lọc mù, mà model đọc thì thừa ngữ cảnh để hiểu đúng. Luật theo BỐN HÌNH DẠNG thật đạt recall **100%** (13/13) với 0 lần ăn nhầm — nhưng đó là **cận trên**, vì luật được sửa theo chính corpus dùng để đo nó. (`AR-j`) |
 | 🛑 **Một trường phủ 100% với MỘT giá trị duy nhất — đã vấp HAI LẦN trong một ngày** | `machineReadability` = `High` ở **128/128** mẩu evidence, và `Mã khách sạn` của Jira = `-1.0` ở **32/32** case. Cùng một hình dạng lỗi, và nó **tệ hơn trường rỗng**: trường rỗng thì ai cũng thấy là thiếu, còn trường phủ-100%-một-giá-trị thì *trông như đã có dữ liệu* — mọi phép kiểm "trường này có được điền không?" đều trả lời CÓ. Ai viết `WHERE machineReadability = 'High'` rồi báo "đã lọc rồi" thì vừa lọc xong 100% dữ liệu. <br><br>→ **Luật đã rút ra:** với mọi trường dùng làm ranh giới hay bộ lọc, **đếm số giá trị PHÂN BIỆT, không đếm độ phủ.** Một giá trị = coi như rỗng. (`AR-k`, `AR-l`) |
-| 🛑 **Ranh giới khách sạn A ↔ khách sạn B chưa được thực thi, và hiện KHÔNG CÓ nguồn nào để thực thi** | **✅ Đây là QUYẾT ĐỊNH có ý thức từ 2026-09-07, không phải chỗ bị bỏ quên:** đã chốt nhánh *lùi* — nạp evidence không có sub-tenant, không thêm cột, và ghi rõ ở đây rằng ranh giới này **chưa được thực thi ở bất kỳ tầng nào**. Mở lại khi có một nguồn cho **≥2 giá trị phân biệt**, và phải mở lại **trước** lúc có luồng duyệt thật. <br><br>✅ **CHỐT 2026-09-15 nguồn để mở lại:** thêm một **trường BẮT BUỘC ở đường nạp** — bên gửi khai mã khách sạn. ⚠ **Chưa code.** Trong lúc chờ, cổng chạy được là: chế độ shared **TỪ CHỐI DUYỆT** (409) — xem `IM-31`. Đó là TRÁNH, không phải GIẢI. <br><br>Hôm nay `tenant` = ezCloud, nên mọi khách sạn nằm chung một kho. Đã chốt rằng đây LÀ ranh giới bảo mật, nhưng đo trên Jira thật thì không trường nào dùng được: `Mã khách sạn` là hằng số `-1.0`, `Tên khách sạn / Resort` thì 25/32 rỗng và phần còn lại ghi tên **team**. <br><br>⚠ **RLS không cứu được kiểu rò này** — rò xảy ra ở khâu **xuất bản SOP**, không ở khâu truy vấn hàng: Path A gom evidence của nhiều khách sạn (đúng quyền, RLS xanh) rồi sinh một bản nháp được duyệt và hiện cho mọi người. Dữ liệu đi qua ranh giới bằng cửa chính. <br><br>⚠ Và ĐỪNG suy sub-tenant từ tiêu đề: chỉ 8/32 case có mã trong tiêu đề, và tên trong tiêu đề lệch với thân bài (`ES-346622` ghi "Mariha" nhưng email là `mirahhotel.sales@`). (`AR-l`) |
+| 🛑 **Ranh giới khách sạn A ↔ khách sạn B chưa được thực thi, và hiện KHÔNG CÓ nguồn nào để thực thi** | **✅ Đây là QUYẾT ĐỊNH có ý thức từ 2026-09-07, không phải chỗ bị bỏ quên:** đã chốt nhánh *lùi* — nạp evidence không có sub-tenant, không thêm cột, và ghi rõ ở đây rằng ranh giới này **chưa được thực thi ở bất kỳ tầng nào**. Mở lại khi có một nguồn cho **≥2 giá trị phân biệt**, và phải mở lại **trước** lúc có luồng duyệt thật. <br><br>✅ **CHỐT 2026-09-15 nguồn để mở lại:** thêm một **trường BẮT BUỘC ở đường nạp** — bên gửi khai mã khách sạn. ✅ **ĐÃ CODE 2026-09-16** (`IM-35`): `subTenantCode` bắt buộc, bỏ trống là **400**, và ba trạng thái không gộp được — `NULL` (nạp trước luật) · `khong-xac-dinh` (đã hỏi, chưa biết) · `khong-thuoc-khach-san` (khẳng định không thuộc ai). <br><br>🛑 **CÓ TRƯỜNG KHÔNG PHẢI CÓ DỮ LIỆU — đo ngay hôm code xong trên `kp_dev`: 137/145 mẩu CHƯA KHAI.** Và mâu thuẫn đáng biết: nguồn mà quyết định chọn (*bên gửi khai*) **không tồn tại** cho connector Jira — `customfield_12710` là hằng số `-1.0` — nên lô export từ nguồn này có **0 giá trị phân biệt**. Đường nạp vì thế tự ĐẾM số giá trị phân biệt và **nói thẳng ra**, còn `GET /internal/sub-tenant-coverage` trả lời điều kiện mở lại kèm ô `canTro`. <br><br>⚠ **Cổng 409 KHÔNG được gỡ:** chế độ shared vẫn **TỪ CHỐI DUYỆT** — xem `IM-31`. Đó là TRÁNH, không phải GIẢI. <br><br>Hôm nay `tenant` = ezCloud, nên mọi khách sạn nằm chung một kho. Đã chốt rằng đây LÀ ranh giới bảo mật, nhưng đo trên Jira thật thì không trường nào dùng được: `Mã khách sạn` là hằng số `-1.0`, `Tên khách sạn / Resort` thì 25/32 rỗng và phần còn lại ghi tên **team**. <br><br>⚠ **RLS không cứu được kiểu rò này** — rò xảy ra ở khâu **xuất bản SOP**, không ở khâu truy vấn hàng: Path A gom evidence của nhiều khách sạn (đúng quyền, RLS xanh) rồi sinh một bản nháp được duyệt và hiện cho mọi người. Dữ liệu đi qua ranh giới bằng cửa chính. <br><br>⚠ Và ĐỪNG suy sub-tenant từ tiêu đề: chỉ 8/32 case có mã trong tiêu đề, và tên trong tiêu đề lệch với thân bài (`ES-346622` ghi "Mariha" nhưng email là `mirahhotel.sales@`). (`AR-l`) |
+| ⚠ **Dấu "người gửi đã rút lại" có chỗ chứa rồi, nhưng CHƯA AI ĐÁNH DẤU CÁI NÀO** | ✅ **ĐÃ CODE 2026-09-16** (`AR-m`, `IM-35`): ba cột + `POST /evidence/rut-lai`, và **chỉ người** đặt được — hợp đồng tín hiệu không mang ba trường đó nên connector không có đường nào tự suy từ câu chữ. <br><br>🛑 **Rủi ro còn lại nằm đúng ở chỗ đó:** tín hiệu này chỉ tồn tại khi có người bỏ công đánh dấu, và hôm nay **số mẩu được đánh dấu là 0**. Ca `ES-346661` vẫn nằm trong corpus không mang dấu hiệu gì. <br><br>⚠ Hôm nay chưa hỏng vì đoạn sai và câu đính chính nằm CHUNG một mẩu 1 916 ký tự, nên model đọc mẩu đó thấy luôn câu đính chính. Đó là **may**, không phải thiết kế — và cái may đó hết hiệu lực đúng vào ngày pipeline cắt transcript thành nhiều mẩu, thứ mà `AR-h` đang tạo áp lực phải làm (mẩu dài đè bẹp xếp hạng **29:1**). <br><br>✅ Điều ĐÃ đổi: giờ **mới được phép** chốt cách cắt transcript. Trước 2026-09-16 thì không, vì cắt rồi không ghép lại được. (`AR-m`) |
 | ⚠ **"Đã xong" đi NGƯỢC với hàm lượng tri thức — bộ lọc tự nhiên nhất sẽ vứt đúng phần có giá trị** | Corpus 12 tháng có **100% case đã đóng** mà chỉ **1,6 mẩu dùng được mỗi case** — mỏng hơn corpus 4 ngày (2,5) vốn chỉ 22% đã đóng, và 25% case có **0** mẩu dùng được. Trên corpus nhỏ đã đọc kỹ: cả 7/7 case đã đóng chỉ ghi *hết triệu chứng* ("Done nhé" — 23 ký tự; một case đóng bằng đúng một tấm ảnh), còn nguyên nhân thật nằm ở case **CÒN MỞ**. <br><br>Lý do chạm vào **tiền đề sản phẩm**, không phải chất lượng corpus: bước kết luận không biến mất, nó **xảy ra ở nơi khác** — 6 case chuyển sang phiên remote desktop, 2 case "gọi khách không được", 1 case ghi thẳng *"như đã trao đổi qua điện thoại"*. Chính các mẩu credential ở trên là **biên lai** của những lần chẩn đoán không để lại chữ nào trong ticket. Trong 128 mẩu, Kibana — bước 1 của quy trình 5 bước — được nhắc **0 lần**. |
 | ⚠ **Đường nhận tín hiệu chỉ có một cái chốt tạm** | Nó là endpoint **ghi**: không xác thực thì bất kỳ ai cũng bơm được Case giả vào dữ liệu khách hàng — không crash, không báo, chỉ làm sai kho tri thức và sai thước đo tháng đầu. Hiện có một khoá dùng chung (`Ingest:SignalApiKey`), và **thiếu nó là không start được**. Nhưng khoá dùng chung không phân biệt được khách A với khách B, không thu hồi theo từng khách, không chống replay. Nó là cái chốt trong lúc chờ `AR-e`, không phải câu trả lời. |
 | ⚠ **Chế độ nhiều khách hàng dùng chung chưa có xác thực** | Tenant đến từ header `X-Tenant-Key`, và chưa có gì kiểm người gọi có quyền dùng khoá đó — biết khoá là đọc được dữ liệu. Nên chế độ này **từ chối khởi động** trừ khi được thừa nhận tường minh bằng một cờ cấu hình. Cờ đó không bảo vệ gì; nó chỉ làm việc deploy một API chưa xác thực thành **quyết định** thay vì **sơ suất**. ✅ **CHỐT 2026-09-15: API key theo từng khách hàng**, thu hồi được riêng. ⚠ **Chưa code** — tới lúc đó chế độ shared vẫn từ chối khởi động trừ khi có cờ thừa nhận. (`AR-e`) <br><br>⚠ **Không chặn khách hàng đầu tiên** — bản deploy riêng lấy tenant từ cấu hình, không từ người gọi. |

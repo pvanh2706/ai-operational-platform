@@ -5,7 +5,7 @@
 >
 > Sửa gì ở lần cập nhật 2026-09-10, ghi ra để biết chỗ nào từng sai:
 > §1 thiếu hẳn `appsettings.Local.json` (nó sinh ra 2026-09-08, sau bản trước) và
-> `redact-list.json` · §2 ghi "phải 105/105 xanh", giờ là **157** · §4 thiếu bốn file
+> `redact-list.json` · §2 ghi "phải 105/105 xanh", giờ là **282** · §4 thiếu bốn file
 > kết quả, gồm **bản A và bản B của `M2`** · §5.2 chỉ ghi cp1252 ở chiều GHI, thiếu
 > chiều ĐỌC (`open()`), và chiều đọc đã cắn 3 lần trong một phiên · §6 liệt ba câu chờ
 > quyết mà cả ba đã chuyển trạng thái, nên **§6 đã viết lại hoàn toàn**.
@@ -144,7 +144,7 @@ dotnet ef database update --project src/KnowledgePlatform.Infrastructure \
 # 3. Tenant cho máy dev
 psql -U kp_app -h localhost -d kp_dev -f scripts/dev-seed-tenant.sql
 
-# 4. Kiểm — phải 157/157 xanh (96 domain + 19 hạ tầng + 42 API)
+# 4. Kiểm — phải 282/282 xanh (170 domain + 19 hạ tầng + 93 API)
 dotnet test src/KnowledgePlatform.slnx
 
 # 4b. Kiểm rò credential vào file git theo dõi. Chạy ĐƯỢC ngay cả khi chưa có corpus —
@@ -161,7 +161,7 @@ curl localhost:5119/internal/tenant-boundary   # đếm bằng SQL thô, KHÔNG 
 🛑 **BƯỚC 5 KHÔNG THỪA — bước 4 có thể XANH GIẢ.** `dotnet test` không đọc `kp_dev` lấy
 một dòng: bộ Infrastructure trỏ vào `kp_test`, bộ API trỏ vào `kp_api_test`, cả hai **tự
 chạy migration** và bộ API còn **tự tạo tenant riêng**. Nên bỏ qua hoặc làm hỏng bước 2
-và bước 3 thì bước 4 **vẫn 157/157**. Chỉ bước 5 mới chạm vào thứ ba bước đầu vừa dựng.
+và bước 3 thì bước 4 **vẫn 282/282**. Chỉ bước 5 mới chạm vào thứ ba bước đầu vừa dựng.
 Nếu bước 3 bị bỏ, app sẽ **từ chối khởi động** — đó là hành vi cố ý, không phải lỗi.
 
 ⚠ **Ba chỗ vấp đã đo trên máy cũ, sẽ lặp lại trên máy mới:**
@@ -339,7 +339,11 @@ máy mới sẽ khác.
 · Cổng 8765 trên máy cũ bị IIS chiếm (một site TodoApi cũ) → bind fail và request
   rơi vào IIS trả 500.19, rất dễ tưởng là lỗi của mình. Máy mới: kiểm cổng trước
   khi dựng server test.
-· newman 6.2.2 có sẵn qua npx trên máy cũ (`npx --no-install newman run <file>`).
+· newman 6.2.2 có sẵn qua npx trên máy CŨ (`npx --no-install newman run <file>`).
+  🛑 MÁY NÀY (2026-09-16) KHÔNG CÓ — `npx --no-install` trả "missing packages" chứ không
+  tự cài. Đây là chỗ lỗi thời thứ SÁU mà việc chuyển máy tìm ra, và nó nguy hiểm vừa đủ:
+  một dòng tài liệu nói công cụ CÓ sẵn làm người đọc tưởng lượt kiểm đã chạy. Lượt chạy
+  thật của `IM-35` vì thế đi bằng script gọi HTTP trực tiếp, không bằng newman.
 ```
 
 ---

@@ -168,6 +168,28 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             // đếm một quan sát thành mười — hỏng đúng chỗ `S8` cần chính xác nhất
             // ("14/20 case đã làm bước này").
             e.HasIndex(x => new { x.TenantId, x.SourceReference }).IsUnique();
+
+            // --- AR-l: mã khách sạn do BÊN GỬI khai ---
+            //
+            // ⚠ Cột NULL được, dù hợp đồng nạp BẮT BUỘC khai. Không phải nới lỏng: NULL ở
+            // đây là một GIÁ TRỊ CÓ NGHĨA — "mẩu này nạp trước khi có luật", khác hẳn
+            // `khong-xac-dinh` ("đã được hỏi, chưa biết"). Backfill một sentinel cho 128 mẩu
+            // cũ sẽ xoá đúng khác biệt đó, và tạo lại đúng hình dạng lỗi mà `Mã khách sạn =
+            // -1.0` (32/32) đã dạy. Lý do đầy đủ ở `EvidenceItem.SubTenantCode`.
+            e.Property(x => x.SubTenantCode).HasMaxLength(SubTenantCodes.MaxLength);
+
+            // Index để trả lời ĐIỀU KIỆN MỞ LẠI của `AR-l` ("≥2 giá trị PHÂN BIỆT") mà không
+            // quét cả bảng. Câu hỏi đó phải chạy được, không phải là một dòng trong lịch.
+            e.HasIndex(x => new { x.TenantId, x.SubTenantCode });
+
+            // --- AR-m: dấu ĐÃ BỊ NGƯỜI GỬI RÚT LẠI ---
+            //
+            // Ba cột cùng NULL hoặc cùng có giá trị — `EvidenceItem.RutLai` là đường DUY NHẤT
+            // đặt chúng, và nó đặt cả ba một lượt. Không đặt ràng buộc CHECK ở DB cho quan hệ
+            // đó: luật đã nằm ở domain, và một luật ở hai chỗ là hai chỗ phải sửa (đúng dư
+            // chấn mà `IM-22` ghi lại về biểu thức policy).
+            e.Property(x => x.RetractedReason).HasMaxLength(1024);
+            e.Property(x => x.RetractedBy).HasMaxLength(256);
         });
 
         // --- KnowledgeRecord + cụm assertion (§3C.5) ---

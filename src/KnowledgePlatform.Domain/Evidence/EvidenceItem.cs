@@ -57,6 +57,86 @@ public sealed class EvidenceItem : ITenantScoped
     public DateTimeOffset? ObservedAt { get; set; }
 
     public DateTimeOffset IngestedAt { get; init; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Mã khách sạn mà mẩu này thuộc về — `AR-l`, chốt 2026-09-15: **bên gửi KHAI**.
+    /// Ba trạng thái và ĐỪNG GỘP CHÚNG — xem <see cref="SubTenantCodes"/>.
+    ///
+    /// ⚠ **Kiểu là <c>string?</c> dù hợp đồng nạp BẮT BUỘC khai, và đó là chủ đích.** Ở dự án
+    /// này chặn-lúc-biên-dịch được ưu tiên hơn chặn-lúc-chạy, nên <c>required</c> mới là phản
+    /// xạ đúng. Nhưng <c>required</c> ở đây sẽ nói dối về 128 mẩu ĐÃ nằm trong <c>kp_dev</c>
+    /// từ trước luật này: chúng không có giá trị nào, và cách duy nhất để chúng thoả
+    /// <c>required</c> là bịa ra một giá trị. Cột NULL được là để <c>NULL</c> giữ đúng nghĩa
+    /// "chưa ai từng được hỏi" — hàng thật, hàng cũ, và nhìn ra được ngay.
+    /// → Tính BẮT BUỘC vì thế được thực thi ở CỬA VÀO (`ValidateEvidence` trả 400), không ở
+    ///   kiểu dữ liệu. Ghi ra đây vì đó là một ngoại lệ có lý do, không phải một chỗ bỏ sót.
+    /// </summary>
+    public string? SubTenantCode { get; set; }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    //  AR-m — nội dung NGƯỜI GỬI ĐÃ RÚT LẠI. Chốt 2026-09-15 (phiếu `docs/14` §B1 = B1-1).
+    //
+    //  Ca thật: `ES-346661#description` chứa một đoạn giải thích nguyên nhân overbooking
+    //  đầy đủ kèm hai mã booking OTA. MƯỜI SÁU PHÚT SAU, cùng người gửi viết "dạ anh/chị
+    //  bỏ qua giúp em tin nhắn trên ạ, em gửi nhầm nội dung" — và tiêu đề case là "lỗi
+    //  không sinh mã đặt phòng", không dính gì tới overbook.
+    //
+    //  ⚠ VÌ SAO HÔM NAY CHƯA HỎNG VÀ NGÀY MAI SẼ HỎNG: hôm nay đoạn sai và câu đính chính
+    //    nằm CHUNG một mẩu 1 916 ký tự, nên model đọc mẩu đó thấy luôn câu đính chính. Đó
+    //    là MAY, không phải thiết kế. Ngày nào pipeline cắt transcript thành nhiều mẩu —
+    //    việc rất có thể làm, vì `AR-h` đo được mẩu dài đè bẹp xếp hạng 29:1 — thì đoạn đã
+    //    bị rút vào kho KHÔNG MANG DẤU HIỆU GÌ.
+    //  🛑 Nên thứ tự là bắt buộc: có chỗ đánh dấu RỒI mới được chốt cách cắt. Cắt trước là
+    //    tạo ra đúng ca mà hai cột này sinh ra để chặn, và cắt rồi thì không ghép lại được.
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>NULL = chưa ai rút lại. Đặt được CHỈ qua <see cref="RutLai"/>.</summary>
+    public DateTimeOffset? RetractedAt { get; private set; }
+
+    /// <summary>Lý do người đánh dấu ghi ra. Bắt buộc khi rút — xem <see cref="RutLai"/>.</summary>
+    public string? RetractedReason { get; private set; }
+
+    /// <summary>
+    /// AI đánh dấu. `B1-1` chốt **CHỈ NGƯỜI điền tay**, nên phải biết là người nào.
+    ///
+    /// ⚠ Trường này KHÔNG có trong đề xuất gốc của `AR-m` (chỉ nêu <c>RetractedAt</c> +
+    /// <c>RetractedReason</c>), thêm vào vì đúng bài học của `M2` phần (c): một dấu vết
+    /// không có tác giả thì không phân biệt được với một dấu vết do script đặt — mà "script
+    /// không được đặt" chính là nội dung của quyết định này.
+    /// </summary>
+    public string? RetractedBy { get; private set; }
+
+    public bool DaRutLai => RetractedAt is not null;
+
+    /// <summary>
+    /// Người đánh dấu một mẩu là ĐÃ BỊ NGƯỜI GỬI RÚT LẠI.
+    ///
+    /// 🛑 **KHÔNG có đường nào cho máy gọi hàm này.** `B1-1` chọn ít tín hiệu mà mỗi cái đều
+    /// đúng, hơn nhiều tín hiệu mà không biết cái nào tin được: người gửi rút lại bằng CÂU
+    /// CHỮ ("bỏ qua giúp em"), và suy ra từ câu chữ là ĐOÁN — trái `G6`/`AP3`. Vì thế
+    /// <c>CaseEvidenceSignal</c> KHÔNG mang ba trường này, và đường nạp không
+    /// có cách nào đặt chúng.
+    ///
+    /// ⚠ **Rút lại rồi thì KHÔNG rút lại lần hai được.** Cho ghi đè là để lần đánh dấu thứ
+    /// hai âm thầm xoá mất tác giả và lý do của lần đầu — tức mất đúng thứ ba trường này
+    /// sinh ra để giữ. Muốn sửa lý do thì đó là một quyết định khác, và chưa ai cần.
+    /// </summary>
+    public void RutLai(string nguoiDanhDau, string lyDo)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(nguoiDanhDau);
+        ArgumentException.ThrowIfNullOrWhiteSpace(lyDo);
+
+        if (DaRutLai)
+        {
+            throw new InvalidOperationException(
+                $"Mẩu này đã được đánh dấu rút lại lúc {RetractedAt:O} bởi \"{RetractedBy}\". " +
+                "Đánh dấu lần hai sẽ xoá mất tác giả và lý do của lần đầu.");
+        }
+
+        RetractedAt = DateTimeOffset.UtcNow;
+        RetractedBy = nguoiDanhDau.Trim();
+        RetractedReason = lyDo.Trim();
+    }
 }
 
 /// <summary>v0.2 §9 metadata. Dùng lại cho ba trạng thái coverage ở §6.3.</summary>

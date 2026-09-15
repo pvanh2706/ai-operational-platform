@@ -299,6 +299,49 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> ✅ **`AR-l` + `AR-m` ĐÃ THÀNH CODE — 2026-09-16, chung MỘT migration. Chi tiết: `07` §3 `IM-35`.**
+> Trước đó 47 file đã nằm ngoài git (cả code ngày 13 lẫn phiếu quyết định ngày 15) — đã vào
+> làm **3 commit** theo chủ đề.
+>
+> ```text
+> evidence_item  + SubTenantCode · RetractedAt · RetractedBy · RetractedReason + 1 index
+> POST /evidence/rut-lai              chỉ NGƯỜI đặt được dấu rút lại (B1-1)
+> GET  /internal/sub-tenant-coverage  điều kiện mở lại AR-l, hỏi được bằng một lượt gọi
+> ✅ 282/282 test xanh (170 + 19 + 93), trước 245 · 0 warning · 4 phép đột biến ra đỏ
+> ✅ chạy THẬT trên app + kp_dev: 25 phép kiểm, 0 sai
+> ```
+>
+> 🛑 **MỘT MÂU THUẪN PHẢI BIẾT, và nó không sửa được bằng code:** `C3-1` chọn *"bên gửi khai"*
+> vì đó là **nguồn duy nhất chắc chắn cho ≥2 giá trị phân biệt** — nhưng bên gửi duy nhất đang
+> tồn tại là script export Jira, và nó **không có gì để khai** (`customfield_12710` = `-1.0` ở
+> 32/32; suy từ tiêu đề thì bị cấm, đã đo). Chủ dự án chốt 2026-09-16: **bắt buộc khai +
+> đường nạp tự ĐẾM giá trị phân biệt và nói thẳng** khi cả lô chỉ có một.
+> → Nghĩa là bài học của `-1.0` giờ **chạy được**, không còn nằm trong tài liệu.
+>
+> 🛑 **VÀ PHÉP ĐẾM ẤY SUÝT NÓI DỐI NGAY LẦN CHẠY ĐẦU** — đo thật trên `kp_dev`:
+> ```text
+> mã PHÂN BIỆT        2  ['12027','17468']   ->  datDieuKienMoLai: TRUE
+> chưa khai (NULL)  137 / 141                 ->  97% kho không thực thi ranh giới được
+> ```
+> Hai mã kia đến từ đúng **hai dòng vừa tạo ra lúc thử**. Ai đọc `true` rồi gỡ cổng 409 là mở
+> ranh giới cho một kho mà 97% số mẩu không biết thuộc khách sạn nào. → KHÔNG sửa ngưỡng của
+> quyết định (đó là quyền của chủ dự án); thêm ô `canTro` nói ra phần còn thiếu, có test giữ.
+> ⚠ Đây là **lần thứ ba** cùng một hình dạng lỗi trong dự án, và lần này do chính ta sắp tạo ra.
+>
+> 🛑 **CỔNG 409 KHÔNG ĐƯỢC GỠ. `AR-l` VẪN MỞ.** Có TRƯỜNG không phải có DỮ LIỆU.
+> ✅ **`AR-m` ĐÓNG** — và hệ quả đúng thứ tự: **giờ mới được chốt cách cắt transcript.**
+>
+> **Còn lại của `docs/14`: 5/10 chưa code** — `AR-p` · `AR-n` · `AR-e` · `AR-i` · (`AR-q` không
+> cần code). Và hai việc dọn mà chính hôm nay sinh thêm:
+> ```text
+> · Export lại corpus: giải quyết CÙNG LÚC nhãn machineReadability cũ (AR-k) và 137 mẩu
+>   chưa có mã khách sạn. ⚠ Phải nạp vào KHO SẠCH — K-B3 cấm ghi đè, gửi chồng lên sẽ trả
+>   200 mà không đổi gì (response nay nói thẳng: subTenantNotApplied).
+> · Bộ Postman chưa có request cho hai endpoint mới. Và newman KHÔNG có trên máy này —
+>   docs/10 ghi là có, đó là dòng của máy CŨ. Đã sửa docs/10 (chỗ lỗi thời thứ sáu).
+> ```
+
+
 > ✅ **MƯỜI QUYẾT ĐỊNH CHỐT CÙNG LÚC — 2026-09-15.** Chủ dự án trả lời qua form hỏi đáp
 > (ba lượt), phiếu đầy đủ ở `docs/14`, lý do đã chép sang §5 của `07` — **704 dòng thêm,
 > 0 dòng xoá**, lập luận cũ còn nguyên.

@@ -244,6 +244,31 @@ def iso(ts: str | None) -> str | None:
         return ts  # dạng khác (đã có :, hoặc Z) — gửi nguyên, sai thì server nói rõ
 
 
+# --------------------------------------------- AR-l: mã khách sạn (subTenantCode)
+
+# Từ 2026-09-16 đường nạp BẮT BUỘC khai mã khách sạn, và connector này khai
+# "khong-xac-dinh" — một lời khai THẬT, không phải một chỗ trống được lấp cho qua.
+#
+# 🛑 VÌ SAO CONNECTOR JIRA KHÔNG KHAI ĐƯỢC MÃ THẬT, và đây là chỗ đã ĐO chứ không phải
+#    chưa làm tới:
+#      Mã khách sạn   [customfield_12710]  ->  -1.0 ở 32/32 case. Trường TỒN TẠI, phủ
+#                     100%, và là HẰNG SỐ — sentinel "chưa xác định" được thiết kế có ý
+#                     định rồi không bao giờ được điền.
+#      Tên khách sạn  [customfield_13326]  ->  25/32 rỗng; 7 case còn lại ghi TÊN TEAM
+#                     ("ezCloud - Customer Support"), không phải tên khách sạn.
+#    Và suy từ TIÊU ĐỀ thì bị cấm, cũng vì đã đo: chỉ 8/32 case có mã trong tiêu đề, và
+#    ngay trong phần đó tên tiêu đề còn lệch với thân bài (ES-346622 ghi "Mariha" trong
+#    khi email là mirahhotel.sales@). Sub-tenant là ranh giới BẢO MẬT — suy sai không
+#    phải một nhãn sai, nó là dữ liệu khách sạn A nằm trong SOP của khách sạn B.
+#
+# ⚠ HỆ QUẢ, ghi ra để không ai đọc nhầm một lượt export thành công là AR-l đã mở lại:
+#   lô export từ nguồn này có ĐÚNG 0 giá trị phân biệt. Server sẽ nói thẳng điều đó trong
+#   `subTenantWarning`, và chế độ shared vẫn TỪ CHỐI DUYỆT (409).
+#   Mở lại được khi ezCloud điền customfield_12710 cho thật, hoặc khi có một bảng ánh xạ
+#   mã khách sạn đi kèm — lúc đó sửa ĐÚNG hằng số này, không sửa chỗ nào khác.
+MA_KHACH_SAN = "khong-xac-dinh"
+
+
 # ------------------------------------------------- AR-k: gán machineReadability
 
 # Dấu hiệu nội dung do MÁY sinh ra và máy đọc lại được: payload, log, stack trace.
@@ -379,6 +404,9 @@ def build_signals(cfg: Config, issues: list[dict]) -> tuple[list[dict], list[dic
                 # Bên gửi khai, hệ thống không suy (IM-19) — và từ 2026-09-15 thì khai
                 # THEO HÌNH DẠNG chứ không khai hằng số. Xem doan_machine_readability.
                 "machineReadability": doan_machine_readability(description),
+                # AR-l — bên gửi PHẢI khai. Xem MA_KHACH_SAN ở trên: nguồn Jira không có
+                # trường nào dùng được, nên lời khai thật là "chưa xác định".
+                "subTenantCode": MA_KHACH_SAN,
             })
 
         for c in comments:
@@ -391,6 +419,7 @@ def build_signals(cfg: Config, issues: list[dict]) -> tuple[list[dict], list[dic
                 "content": body,
                 "observedAt": iso(c.get("created")),
                 "machineReadability": doan_machine_readability(body),
+                "subTenantCode": MA_KHACH_SAN,
             })
 
         if i % 20 == 0 or i == len(issues):
@@ -476,6 +505,14 @@ def main() -> None:
     push(cfg, "/signals/case-observed", cases, "case")
     push(cfg, "/signals/case-evidence", evidence, "evidence")
     print("XONG. Chạy lại script bất kỳ lúc nào đều vô hại — cả hai đường idempotent.")
+    print()
+    print(f"⚠ AR-l: lô này khai subTenantCode = \"{MA_KHACH_SAN}\" cho TẤT CẢ mẩu, vì nguồn")
+    print("  Jira không có trường nào dùng được (đã đo: customfield_12710 = -1.0 ở 32/32).")
+    print("  Tức 0 giá trị PHÂN BIỆT — ranh giới khách sạn CHƯA mở lại được, và chế độ")
+    print("  shared vẫn từ chối duyệt. Hỏi trạng thái: GET /internal/sub-tenant-coverage")
+    print()
+    print("⚠ Mẩu ĐÃ CÓ trong kho thì mã khách sạn mới KHÔNG ghi đè (K-B3). Gửi chồng lên")
+    print("  sẽ trả 200 mà không đổi gì — xem subTenantNotApplied trong response.")
 
 
 if __name__ == "__main__":

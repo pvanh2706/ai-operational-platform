@@ -26,7 +26,6 @@ namespace KnowledgePlatform.Infrastructure.Migrations
             modelBuilder.Entity("KnowledgePlatform.Domain.Cases.CanonicalCase", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("IngestedAt")
@@ -64,7 +63,6 @@ namespace KnowledgePlatform.Infrastructure.Migrations
             modelBuilder.Entity("KnowledgePlatform.Domain.Evidence.EvidenceItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("Content")
@@ -85,10 +83,25 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.Property<Guid?>("ObservedInCaseId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("RetractedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RetractedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("RetractedReason")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
                     b.Property<string>("SourceReference")
                         .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SubTenantCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -100,13 +113,14 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.HasIndex("TenantId", "SourceReference")
                         .IsUnique();
 
+                    b.HasIndex("TenantId", "SubTenantCode");
+
                     b.ToTable("evidence_item", "kp");
                 });
 
             modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.Assertion", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("ActorLabel")
@@ -156,7 +170,6 @@ namespace KnowledgePlatform.Infrastructure.Migrations
             modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.AssertionEvidence", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("AssertionId")
@@ -191,7 +204,6 @@ namespace KnowledgePlatform.Infrastructure.Migrations
             modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.KnowledgeRecord", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("CauseName")
@@ -229,7 +241,6 @@ namespace KnowledgePlatform.Infrastructure.Migrations
             modelBuilder.Entity("KnowledgePlatform.Domain.Tenancy.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")

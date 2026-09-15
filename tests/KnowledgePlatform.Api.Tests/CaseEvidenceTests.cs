@@ -32,11 +32,18 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
 
     private static string Unique(string prefix) => $"{prefix}:{Guid.CreateVersion7()}";
 
+    /// <param name="subTenantCode">
+    /// `AR-l` bắt buộc khai. Mặc định một mã THẬT chứ không phải <c>khong-xac-dinh</c>, cố ý:
+    /// nếu mặc định là sentinel thì mọi test sẽ chạy trên đúng trạng thái mà `AR-l` coi là
+    /// "chưa có gì", và phép đếm giá trị phân biệt sẽ không bao giờ được thử ở nhánh nó
+    /// phải làm việc. Bỏ trống thì là 400 — có test riêng cho ca đó.
+    /// </param>
     private static object Evidence(
         string sourceReference,
         string? caseSourceReference = null,
         string content = "Da kiem room mapping, khong thay lech",
-        string? machineReadability = null) =>
+        string? machineReadability = null,
+        string? subTenantCode = "17468") =>
         new
         {
             caseSourceReference,
@@ -44,6 +51,7 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
             content,
             observedAt = (DateTimeOffset?)null,
             machineReadability,
+            subTenantCode,
         };
 
     // =====================================================================
@@ -132,6 +140,13 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
     /// được có trường nào trông như thể các ô sau đã tồn tại. `S6` nói rõ: nạp nội
     /// dung KHÔNG tự sinh tri thức, nên một trường <c>assertions: []</c> hay
     /// <c>knowledgeRecords: []</c> ở đây sẽ là lời hứa suông.
+    ///
+    /// ⚠ **Hai ô thêm ngày 2026-09-16 (`AR-l`) KHÔNG phá luật trên, và đây là chỗ phải nói rõ
+    /// kẻo lần sau có người nới nó ra thật.** <c>distinctSubTenantCodes</c> và
+    /// <c>subTenantWarning</c> nói về THỨ VỪA ĐƯỢC GHI trong chính lô này — chúng là kết quả
+    /// của một phép đếm đã chạy, không phải chỗ dành sẵn cho một ô chưa build. Phép thử
+    /// KHÔNG được nới thành "bỏ qua các trường lạ": nó là danh sách ĐÓNG, và thêm ô nào thì
+    /// phải sửa ở đây kèm lý do.
     /// </summary>
     [Fact]
     public async Task Response_khong_hua_hen_gi_ve_cac_o_chua_build()
@@ -144,7 +159,9 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
 
         var keys = json.RootElement.EnumerateObject().Select(p => p.Name).OrderBy(n => n);
 
-        Assert.Equal(["created", "received", "results"], keys);
+        Assert.Equal(
+            ["created", "distinctSubTenantCodes", "received", "results", "subTenantWarning"],
+            keys);
     }
 
     // =====================================================================
@@ -472,6 +489,7 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
                 content = "Da kiem log parser, thay payload dang X bi drop",
                 observedAt = quanSatLuc,
                 machineReadability = (string?)null,
+                subTenantCode = "17468",
             },
         });
 

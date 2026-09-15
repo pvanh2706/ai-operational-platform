@@ -769,7 +769,7 @@
             "description": "Hai mẩu nội dung gắn vào Case mà **B1** vừa tạo.\n\n`caseSourceReference` trỏ bằng **khoá nguồn**, không phải `caseId`. Chủ đích: bên\ngửi là phần mềm của khách, nó biết `ES-1234` chứ không biết UUID nội bộ của ta.\n\nMẩu thứ nhất khai `machineReadability: High`, mẩu thứ hai bỏ trống → `Unknown`.\nBên gửi khai, hệ thống **không tự suy** — connector biết nó đang đẩy text hay\nđường dẫn ảnh, hệ thống nhìn vào một chuỗi thì không biết.",
             "body": {
               "mode": "raw",
-              "raw": "[\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef1}}\",\n    \"content\": \"Da kiem room mapping, khong thay lech\",\n    \"observedAt\": \"2026-02-11T09:12:00Z\",\n    \"machineReadability\": \"High\"\n  },\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef2}}\",\n    \"content\": \"Goi OTA xac nhan, ho bao phong da day\"\n  }\n]",
+              "raw": "[\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef1}}\",\n    \"content\": \"Da kiem room mapping, khong thay lech\",\n    \"observedAt\": \"2026-02-11T09:12:00Z\",\n    \"machineReadability\": \"High\",\n    \"subTenantCode\": \"17468\"\n  },\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef2}}\",\n    \"content\": \"Goi OTA xac nhan, ho bao phong da day\",\n    \"subTenantCode\": \"12027\"\n  }\n]",
               "options": {
                 "raw": {
                   "language": "json"
@@ -833,7 +833,7 @@
             "description": "**Phép thử quan trọng nhất của nhóm này.** Body giống hệt E1.\n\nKỳ vọng `created` về `0` và `evidenceId` **không đổi**.\n\nVì sao nó quan trọng hơn chống trùng Case: `S8` nói giá trị của bản nháp gom nằm\nở **phân bố** — *\"14/20 case đã làm bước này\"*. Một comment bị nhân đôi làm sai\nđúng con số đó, và sai theo hướng không ai nhìn ra: bản nháp vẫn đọc trôi chảy,\nchỉ có tỉ lệ là bịa.\n\nCơ chế: unique index `(TenantId, SourceReference)` trên `kp.evidence_item`.\n\n⚠ Gửi lại cùng khoá với **nội dung khác** thì bản đã lưu KHÔNG bị đổi — `K-B3`:\nevidence gắn với một thời điểm và một nguồn, ghi đè lặng lẽ là sửa lại quá khứ.",
             "body": {
               "mode": "raw",
-              "raw": "[\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef1}}\",\n    \"content\": \"Da kiem room mapping, khong thay lech\",\n    \"observedAt\": \"2026-02-11T09:12:00Z\",\n    \"machineReadability\": \"High\"\n  },\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef2}}\",\n    \"content\": \"Goi OTA xac nhan, ho bao phong da day\"\n  }\n]",
+              "raw": "[\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef1}}\",\n    \"content\": \"Da kiem room mapping, khong thay lech\",\n    \"observedAt\": \"2026-02-11T09:12:00Z\",\n    \"machineReadability\": \"High\",\n    \"subTenantCode\": \"17468\"\n  },\n  {\n    \"caseSourceReference\": \"{{dedupRef}}\",\n    \"sourceReference\": \"{{evRef2}}\",\n    \"content\": \"Goi OTA xac nhan, ho bao phong da day\",\n    \"subTenantCode\": \"12027\"\n  }\n]",
               "options": {
                 "raw": {
                   "language": "json"
@@ -881,7 +881,7 @@
             "description": "`caseSourceReference: null`. Kỳ vọng **200** và `caseId: null`.\n\nĐây là lý do đường nạp evidence là endpoint **riêng** chứ không phải một mảng lồng\ntrong tín hiệu case. `K-B9` đã chốt: một email của senior hay một tin Zalo **không\nthuộc case nào**, và với thực tế 60% fragment rải rác thì đó không phải trường hợp\nhiếm. Lồng vào tín hiệu case thì loại này vĩnh viễn không có đường vào — không\nphải \"chưa hỗ trợ\", mà là không thể.\n\n⚠ Nếu request này bắt đầu trả 400, cái mất không phải một tiện ích mà là toàn bộ\nđường vào của 60%.",
             "body": {
               "mode": "raw",
-              "raw": "[\n  {\n    \"caseSourceReference\": null,\n    \"sourceReference\": \"{{evRefFloat}}\",\n    \"content\": \"Senior noi: khong co incoming log thi loi phia OTA\",\n    \"machineReadability\": \"Medium\"\n  }\n]",
+              "raw": "[\n  {\n    \"caseSourceReference\": null,\n    \"sourceReference\": \"{{evRefFloat}}\",\n    \"content\": \"Senior noi: khong co incoming log thi loi phia OTA\",\n    \"machineReadability\": \"Medium\",\n    \"subTenantCode\": \"khong-thuoc-khach-san\"\n  }\n]",
               "options": {
                 "raw": {
                   "language": "json"
@@ -996,7 +996,7 @@
             "description": "`HIGHT` thay vì `High`. Kỳ vọng **400**, và thông báo nói luôn nhận giá trị nào.\n\nVì sao KHÔNG âm thầm về `Unknown`: nghe thì như \"chấp nhận rộng rãi\", nhưng nó\nbiến một lỗi cấu hình connector thành **dữ liệu sai vĩnh viễn** — cả kho evidence\ndán nhãn `Unknown` trong khi bên gửi tưởng đã khai `High`. Không ai phát hiện cho\ntới lúc có người hỏi vì sao §6.3 không phân biệt được ba trạng thái coverage.\n\nBỏ TRỐNG thì là `Unknown` và đó là hợp lệ — \"chưa ai nói\" là một câu trả lời thật.\nKhác hẳn với \"có người nói nhưng gõ sai\".",
             "body": {
               "mode": "raw",
-              "raw": "[\n  {\n    \"sourceReference\": \"{{evRefBadLabel}}\",\n    \"content\": \"Anh chup man hinh log khach gui\",\n    \"machineReadability\": \"HIGHT\"\n  }\n]",
+              "raw": "[\n  {\n    \"sourceReference\": \"{{evRefBadLabel}}\",\n    \"content\": \"Anh chup man hinh log khach gui\",\n    \"machineReadability\": \"HIGHT\",\n    \"subTenantCode\": \"17468\"\n  }\n]",
               "options": {
                 "raw": {
                   "language": "json"

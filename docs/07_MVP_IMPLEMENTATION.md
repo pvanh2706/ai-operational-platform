@@ -432,6 +432,173 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-35` · `AR-l` + `AR-m` vào chung MỘT migration — và phép đếm "mở lại được chưa" suýt nói dối ngay lần chạy đầu
+
+**Ngày 2026-09-16.** Hai quyết định còn lại nặng nhất của `docs/14` đã thành code. Gộp chung
+một migration vì cả hai đổi **cùng một bảng** và **cùng hợp đồng đường nạp** — tách ra là hai
+lượt migration trên `evidence_item` trong cùng một tuần, mà mỗi lượt đều phải được đối chiếu
+lại với 137 mẩu đang nằm sẵn trong `kp_dev`.
+
+```text
+evidence_item  + SubTenantCode      varchar(64)     AR-l
+               + RetractedAt        timestamptz     AR-m
+               + RetractedBy        varchar(256)    AR-m
+               + RetractedReason    varchar(1024)   AR-m
+               + index (TenantId, SubTenantCode)    để hỏi điều kiện mở lại không quét bảng
+```
+
+---
+
+### 🛑 Một mâu thuẫn phải đưa ra trước khi code: nguồn được chọn KHÔNG tồn tại
+
+`C3-1` chốt *"thêm một trường BẮT BUỘC ở đường nạp, bên gửi khai mã khách sạn"*, với lý do đó
+là **nguồn duy nhất chắc chắn cho ≥2 giá trị phân biệt**. Nhưng bên gửi duy nhất đang tồn tại
+là `export_jira_to_channel1.py`, và nó không có gì để khai — đó là điều chính `AR-l` đã đo:
+
+```text
+Mã khách sạn   customfield_12710  ->  -1.0 ở 32/32 case      HẰNG SỐ
+Tên khách sạn  customfield_13326  ->  25/32 rỗng, còn lại là TÊN TEAM
+suy từ tiêu đề                    ->  BỊ CẤM, đã đo: 8/32 có mã, và lệch với thân bài
+```
+
+Tức làm đúng chữ của quyết định thì hoặc **chặn đường nạp duy nhất đang chạy** (kể cả lượt
+export lại mà `AR-k` đang cần), hoặc **khai một hằng số** — đúng hình dạng `-1.0` mà chính mục
+này sinh ra để chặn.
+
+✅ **Chủ dự án chọn nhánh thứ ba, 2026-09-16:** bắt buộc khai, `khong-xac-dinh` là một lời khai
+**hợp lệ và tường minh**, và **đường nạp ĐẾM SỐ GIÁ TRỊ PHÂN BIỆT rồi nói thẳng ra** khi cả lô
+chỉ có một. Nghĩa là bài học của `-1.0` không còn nằm trong tài liệu nữa — nó chạy.
+
+---
+
+### `AR-l` — ba trạng thái, và đừng gộp chúng
+
+```text
+NULL                     mẩu nạp TRƯỚC luật này. Chưa ai từng được hỏi.
+khong-xac-dinh           bên gửi ĐÃ được hỏi và trả lời "chưa biết".
+khong-thuoc-khach-san    khẳng định KHÔNG thuộc khách sạn nào — việc nội bộ ezCloud
+                         (ES-346594), ezGolf (ES-346764), chuỗi nhiều cơ sở (ES-346615).
+mã thật                  giữ NGUYÊN VĂN (v0.2 R5). Phép đếm thì so không phân biệt hoa thường.
+```
+
+🛑 **Bỏ trống là 400, KHÔNG âm thầm về `khong-xac-dinh`.** Đây là chỗ dễ bị "sửa cho tiện" nhất
+về sau, nên ghi rõ: *"bên gửi đã cân nhắc và chưa biết"* khác *"bên gửi chưa đọc tài liệu"*, và
+nếu cửa vào tự điền hộ thì **về sau không có cột nào dựng lại được khác biệt đó**.
+
+⚠ **Cột NULL được ở DB dù hợp đồng BẮT BUỘC khai — một ngoại lệ có lý do.** Dự án ưu tiên chặn
+lúc biên dịch, nên `required` mới là phản xạ đúng. Nhưng `required` ở đây sẽ nói dối về 137 mẩu
+đã nằm trong `kp_dev`: cách duy nhất để chúng thoả là **bịa ra một giá trị**. Tính bắt buộc vì
+thế được thực thi ở **cửa vào**, và `NULL` giữ đúng nghĩa "chưa ai từng được hỏi".
+
+🛑 **Hai giá trị dành riêng KHÔNG tính vào điều kiện mở lại.** Nếu tính thì chỉ cần đổi từ
+`khong-xac-dinh` sang `khong-thuoc-khach-san` là "đạt ≥2 giá trị phân biệt", trong khi không
+khách sạn nào được phân biệt với khách sạn nào — ta sẽ tự dựng lại cái bẫy `-1.0` bằng tay mình.
+
+---
+
+### 🛑 Một ca BÁO XANH TRONG KHI HỎNG đã chặn được TRƯỚC khi nó xảy ra
+
+Kịch bản: export lại toàn bộ corpus kèm mã khách sạn, nhận `200 OK`, thấy `created: 0` — và tin
+rằng mã đã vào kho. Thực tế `K-B3` cấm ghi đè quá khứ nên **không mẩu nào đổi**, và `created: 0`
+trông y hệt một lượt bình thường (chính `IM-15` đã dạy `created 0` không phải lỗi).
+
+→ Không ghi đè là ĐÚNG. **Im lặng mới là sai.** Response nay mang `subTenantNotApplied` theo
+từng mẩu, và cảnh báo của lô nói thẳng rằng muốn mã vào những mẩu đó thì phải **nạp lại vào kho
+sạch**, chứ không phải gửi chồng lên.
+
+---
+
+### 🛑 Và phép đếm "mở lại được chưa" suýt nói dối NGAY LẦN CHẠY ĐẦU
+
+`AR-l` cố ý phát biểu điều kiện mở lại dạng **chạy được**: *"khi có MỘT nguồn cho ra ≥2 giá trị
+PHÂN BIỆT"*. Đã dựng `GET /internal/sub-tenant-coverage` để trả lời đúng câu đó. Chạy thật trên
+`kp_dev` ra:
+
+```text
+mã PHÂN BIỆT        2   ['12027', '17468']   ->  datDieuKienMoLai: TRUE
+chưa khai (NULL)  137 / 141                  ->  97% kho không có gì để thực thi ranh giới
+```
+
+**Cả hai con số đều đúng, và đặt cạnh nhau thì cái "TRUE" là một lời nói dối.** Hai mã kia đến
+từ đúng hai dòng vừa nạp lúc thử. Ai đọc `true` rồi gỡ cổng 409 là mở ranh giới cho một kho mà
+97% số mẩu không biết thuộc khách sạn nào.
+
+→ **KHÔNG sửa ngưỡng của quyết định** — đổi ngưỡng một quyết định đã chốt là việc của chủ dự án.
+  Thay vào đó thêm ô `canTro`: `datDieuKienMoLai` trả lời đúng câu chữ của `AR-l` và không hơn,
+  còn `canTro` nói ra phần còn thiếu. Có test giữ nó khỏi biến mất.
+⚠ **Đây là lần thứ ba cùng một hình dạng lỗi trong dự án** (sau `machineReadability = High`
+  128/128 và `Mã khách sạn = -1.0` 32/32), và lần này **do chính ta sắp tạo ra**. Khác biệt duy
+  nhất: lần này có một phép đếm nhìn thấy nó.
+
+---
+
+### `AR-m` — dấu rút lại, và vì sao khoá nguồn nằm trong THÂN
+
+Ba cột + `EvidenceItem.RutLai(nguoiDanhDau, lyDo)` là **đường duy nhất** đặt chúng.
+`CaseEvidenceSignal` KHÔNG mang ba trường này, nên connector không có cách nào tự suy từ câu chữ
+rồi ghi vào — đó là toàn bộ nội dung của `B1-1`, và có test gửi kèm `retractedAt`/`retractedBy`
+qua đường nạp để chứng minh chúng bị bỏ qua.
+
+⚠ **`RetractedBy` KHÔNG có trong đề xuất gốc** (`AR-m` chỉ nêu `RetractedAt` + `RetractedReason`).
+Thêm vào vì đúng bài học của `M2` phần (c): một dấu vết không có tác giả thì không phân biệt được
+với một dấu vết do script đặt — mà *"script không được đặt"* chính là nội dung của quyết định.
+
+🛑 **`POST /evidence/rut-lai` nhận khoá nguồn trong THÂN, không trong đường dẫn** — học thẳng từ
+`AR-g` trong cùng tuần: khoá chứa `/` không đọc ra được qua đường dẫn (ASP.NET giải mã `%2F`
+TRƯỚC khi định tuyến), và khoá của evidence còn chứa `#` (`jira:ES-1234#comment-7`). Không đi
+ngược `C4-1`: quyết định đó chọn hình dạng cho đường ĐỌC của case.
+
+🛑 **HAI DANH SÁCH, HAI KIỂU — không phải một danh sách kèm cờ `daRutLai`.** Một cờ boolean thoả
+được cả `AR-m` lẫn `G6` trên giấy, nhưng nó đặt trách nhiệm lọc lên MỌI nơi gọi về sau, và chỗ
+quên lọc đầu tiên sẽ **không đỏ test nào**. Hai KIỂU khác nhau thì quên lọc là không biên dịch
+được. Và `MauEvidenceDaRutLai` **không mang `NoiDung`**: giữ dấu vết mà vẫn trả nguyên văn thì
+đoạn overbooking của `ES-346661` vẫn đi ra bằng đúng endpoint này.
+
+⚠ **Rút lần hai thì 409, và cổng đó nằm ở HANDLER, không ở domain.** Phép đột biến số 4 (bỏ luật
+chống ghi đè trong `EvidenceItem`) chỉ làm **domain test** đỏ, còn test API vẫn xanh — vì handler
+tự kiểm trước khi gọi. Trùng lặp là cố ý (handler cần biết trước để trả đúng mã lỗi, domain là
+chốt cuối cho mọi nơi gọi tương lai), nhưng nó nghĩa là **đổi luật phải đổi hai chỗ** — đúng dư
+chấn mà `IM-22` đã ghi về biểu thức policy.
+
+---
+
+### Trạng thái verify
+
+```text
+✅ 282/282 xanh (170 domain + 19 hạ tầng + 93 API) · trước đó 245 · 0 warning
+✅ migration đã apply lên kp_dev thật, không đụng RLS (không có bảng mới)
+✅ CHẠY THẬT trên app đang chạy + kp_dev — 25 phép kiểm, 0 sai:
+      bỏ trống mã           -> 400, và thông báo nói ra CẢ HAI giá trị dành riêng
+      hai mã thật           -> distinct 2, không cảnh báo
+      hai sentinel          -> distinct 0, CÓ cảnh báo
+      gửi lại kèm mã mới    -> created 0, subTenantNotApplied true, cảnh báo nói ra
+      rút lại               -> mẩu rời danh sách dùng được, dấu vết còn, NỘI DUNG không ra
+      rút lần hai           -> 409, tác giả lần đầu còn nguyên
+      coverage              -> 137/145 chưa khai, canTro nói thẳng
+✅ bộ test biết ĐỎ — 4 phép đột biến:
+      tính sentinel như mã thật                  -> 1 test đỏ
+      mẩu đã rút vẫn nằm trong danh sách dùng    -> 2 test đỏ
+      bỏ trống mã vẫn nạp được                   -> 1 test đỏ
+      rút lần hai được ghi đè                    -> 1 test đỏ (domain — xem ghi chú ở trên)
+```
+
+⚠ **CHƯA LÀM, và đừng đọc mục này thành đã xong:**
+
+```text
+· Cổng 409 (shared TỪ CHỐI DUYỆT) KHÔNG được gỡ. AR-l vẫn MỞ — có trường không phải
+  có dữ liệu, và coverage đang nói rõ 137/145 mẩu chưa khai.
+· Corpus chưa export lại, nên kp_dev vẫn mang nhãn machineReadability CŨ (AR-k) và
+  137 mẩu không có mã khách sạn. Một lượt export lại giải quyết cả hai — nhưng nó phải
+  nạp vào KHO SẠCH, vì K-B3 cấm ghi đè.
+· Bộ Postman chưa có request cho /evidence/rut-lai và /internal/sub-tenant-coverage.
+  Và newman KHÔNG có trên máy này (docs/10 §? ghi là có — đó là dòng của máy CŨ), nên
+  lượt chạy thật ở trên đi bằng script gọi HTTP trực tiếp.
+· AR-n (che khối <NMua> lúc nạp) và AR-p (mượn case ngoài nhóm) vẫn chưa code, dù cùng
+  đụng đường nạp — cố ý không gộp thêm vào migration này.
+```
+
+---
+
 ## `IM-34` · Ba quyết định đầu tiên được HIỆN THỰC — và đường đọc evidence vừa ra đời đã phơi ra hai thứ
 
 **Ngày 2026-09-15, cùng ngày chốt.** Ba trong mười quyết định của `docs/14` đã code xong:
@@ -1879,6 +2046,17 @@ AR-j   Dữ liệu vận hành thật mang theo BÍ MẬT SỐNG. Che bằng lu�
 
 AR-l   Ranh giới KHÁCH SẠN A ↔ KHÁCH SẠN B có phải ranh giới bảo mật không? ← MỚI
        ✅ MỞ LẠI THEO HƯỚNG NÀO — CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §C3 = C3-1).
+       ✅ **ĐÃ CODE 2026-09-16 — nhưng MỤC NÀY VẪN MỞ.** `subTenantCode` là trường BẮT BUỘC ở
+          đường nạp (bỏ trống = 400), ba trạng thái NULL / `khong-xac-dinh` /
+          `khong-thuoc-khach-san` không gộp được vào nhau, và điều kiện mở lại hỏi được bằng
+          `GET /internal/sub-tenant-coverage`. Chi tiết: §3 `IM-35`.
+          🛑 **Có TRƯỜNG không phải có DỮ LIỆU.** Đo trên `kp_dev` ngay hôm code xong:
+          137/145 mẩu chưa khai (nạp trước luật), và 2 mã phân biệt duy nhất đến từ đúng hai
+          dòng tạo ra lúc thử. Cổng 409 KHÔNG được gỡ.
+          ⚠ Và một mâu thuẫn phải biết: nguồn được `C3-1` chọn ("bên gửi khai") KHÔNG tồn tại
+          cho connector Jira — `customfield_12710` là hằng số `-1.0`. Nên connector khai
+          `khong-xac-dinh`, tức lô export từ nguồn này có ĐÚNG 0 giá trị phân biệt. Chủ dự án
+          chốt 2026-09-16: bắt buộc khai + đường nạp tự ĐẾM giá trị phân biệt và nói thẳng.
        → THÊM MỘT TRƯỜNG BẮT BUỘC Ở ĐƯỜNG NẠP: bên gửi phải khai mã khách sạn.
          Lý do chọn: đây là nguồn DUY NHẤT chắc chắn cho ≥2 giá trị phân biệt — điều kiện
          mà chính mục này đặt ra để được mở lại. Suy từ tài khoản/email đã ĐO là không đáng
@@ -2084,6 +2262,14 @@ sau :   Đã che 2 chỗ   ·  cả hai giá trị KHÔNG còn trong payload
 
 AR-m   Nội dung ĐÃ BỊ NGƯỜI GỬI RÚT LẠI — chưa có chỗ nào đánh dấu.      ← MỚI
        ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §B1 = B1-1).
+       ✅ **ĐÃ CODE 2026-09-16 — mục này ĐÓNG.** Ba cột + `EvidenceItem.RutLai` (đường DUY
+          NHẤT đặt chúng) + `POST /evidence/rut-lai`. Đường nạp KHÔNG mang ba trường này nên
+          máy không có cách nào tự suy từ câu chữ — có test chứng minh. Mẩu đã rút rời khỏi
+          danh sách dùng được qua một KIỂU RIÊNG (không phải một cờ), và nội dung của nó
+          không đi ra qua đường đọc. Chi tiết: §3 `IM-35`.
+          ⚠ Thêm `RetractedBy` ngoài đề xuất gốc — lý do ở `IM-35`.
+          🛑 **Giờ MỚI được chốt cách cắt transcript**, đúng thứ tự mục này đặt ra. Trước hôm
+          nay thì không, và cắt rồi thì không ghép lại được.
        → THÊM CỘT `RetractedAt` + `RetractedReason` ở TẦNG MẨU, và CHỈ NGƯỜI điền tay.
          Máy KHÔNG được suy dấu hiệu rút lại từ câu chữ.
          Lý do chọn: suy từ câu chữ là ĐOÁN, trái `G6`/`AP3`. Chọn ít tín hiệu mà mỗi cái

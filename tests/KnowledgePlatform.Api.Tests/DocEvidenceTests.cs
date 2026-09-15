@@ -35,6 +35,7 @@ public sealed class DocEvidenceTests(ApiDatabaseFixture db) : IClassFixture<ApiD
                 content = "Khách báo ô ký hiệu trống khi phát hành.",
                 observedAt = "2026-09-01T08:00:00Z",
                 machineReadability = "Medium",
+                subTenantCode = "17468",
             },
             new
             {
@@ -43,6 +44,7 @@ public sealed class DocEvidenceTests(ApiDatabaseFixture db) : IClassFixture<ApiD
                 content = "{ \"code\": \"E0042\", \"message\": \"ky hieu khong ton tai\" }",
                 observedAt = "2026-09-01T09:30:00Z",
                 machineReadability = "High",
+                subTenantCode = "12027",
             },
         });
         r2.EnsureSuccessStatusCode();

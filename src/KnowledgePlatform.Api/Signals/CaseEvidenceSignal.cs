@@ -44,26 +44,76 @@ namespace KnowledgePlatform.Api.Signals;
 /// Thiếu thì là <c>Unknown</c> — enum đã có sẵn giá trị đó, và "chưa ai nói" là một
 /// câu trả lời thật. Sai chính tả thì **400**, không âm thầm về <c>Unknown</c>.
 /// </param>
+/// <param name="SubTenantCode">
+/// Mã khách sạn mà mẩu này thuộc về — `AR-l`, chốt 2026-09-15 (phiếu `docs/14` §C3 = C3-1).
+///
+/// 🛑 **BẮT BUỘC KHAI, và bỏ trống là 400 chứ KHÔNG tự hiểu thành "chưa biết".** Đây là chỗ
+/// dễ thấy thừa nhất của cả hợp đồng này, nên ghi rõ vì sao: hai câu *"bên gửi chưa biết"*
+/// và *"bên gửi chưa đọc tài liệu"* khác nhau đúng ở chỗ quan trọng nhất, và nếu cửa vào tự
+/// điền hộ thì về sau không có cách nào dựng lại khác biệt đó.
+///
+/// Nhận ba loại giá trị: một mã khách sạn thật · <c>khong-xac-dinh</c> (đã được hỏi, chưa
+/// biết) · <c>khong-thuoc-khach-san</c> (khẳng định KHÔNG thuộc khách sạn nào — việc nội bộ
+/// ezCloud, ezGolf, hoặc một chuỗi nhiều cơ sở chưa tách được).
+///
+/// ⚠ **Hai giá trị dành riêng KHÔNG tính vào điều kiện mở lại `AR-l`** (*"≥2 giá trị PHÂN
+/// BIỆT"*): đổi từ sentinel này sang sentinel kia không phân biệt được khách sạn nào với
+/// khách sạn nào. Xem <see cref="KnowledgePlatform.Domain.Evidence.SubTenantCodes"/>.
+///
+/// 🛑 Và ĐỪNG suy mã từ tiêu đề ticket — đã đo: 8/32 case có mã trong tiêu đề, và ngay phần
+/// đó còn lệch với thân bài. Suy sai ở đây không phải một nhãn sai; nó là dữ liệu của khách
+/// sạn A nằm trong SOP của khách sạn B.
+/// </param>
 public sealed record CaseEvidenceSignal(
     string? CaseSourceReference,
     string SourceReference,
     string Content,
     DateTimeOffset? ObservedAt,
-    string? MachineReadability);
+    string? MachineReadability,
+    string? SubTenantCode);
 
 /// <summary>Kết quả xử lý một mẩu evidence.</summary>
 /// <param name="CaseId"><c>null</c> = evidence rời, không gắn case nào (`K-B9`).</param>
 /// <param name="Created"><c>false</c> = đã có từ trước. KHÔNG phải lỗi — xem `IM-15`.</param>
+/// <param name="SubTenantNotApplied">
+/// <c>true</c> = mẩu này ĐÃ CÓ từ trước, bên gửi vừa khai một mã khách sạn KHÁC với mã đang
+/// lưu (hoặc mẩu cũ chưa có mã), và **mã mới KHÔNG được ghi đè**.
+///
+/// 🛑 Trường này tồn tại vì nếu không có nó thì đây là một ca BÁO XANH TRONG KHI HỎNG hoàn
+/// hảo: export lại toàn bộ corpus kèm mã khách sạn, nhận <c>200 OK</c>, thấy
+/// <c>created: 0</c> (đúng, và trông như bình thường vì `IM-15` đã dạy created 0 không phải
+/// lỗi), rồi tin rằng mã đã vào kho. Thực tế không mẩu nào đổi, và `AR-l` vẫn đứng yên.
+///
+/// Không ghi đè là CỐ Ý — `K-B3`: evidence gắn với MỘT thời điểm và MỘT nguồn, ghi đè lặng
+/// lẽ là sửa lại quá khứ. Muốn mã khách sạn vào 128 mẩu cũ thì phải nạp lại vào kho sạch,
+/// không phải gửi chồng lên.
+/// </param>
 public sealed record CaseEvidenceResult(
     string SourceReference,
     Guid EvidenceId,
     Guid? CaseId,
-    bool Created);
+    bool Created,
+    bool SubTenantNotApplied);
 
 /// <param name="Received">Tổng số nhận được — để bên gửi đối chiếu, không phải đoán.</param>
+/// <param name="DistinctSubTenantCodes">
+/// Số mã khách sạn PHÂN BIỆT trong lô, **không tính hai giá trị dành riêng**.
+///
+/// Đây là `AR-k`/`AR-l` viết thành code chứ không phải một lời dặn: *"đếm số giá trị PHÂN
+/// BIỆT, không đếm độ phủ — một giá trị = coi như rỗng."* Bài học đó đến từ hai trường đã
+/// vấp trong CÙNG một ngày (<c>machineReadability = High</c> ở 128/128 mẩu và
+/// <c>Mã khách sạn = -1.0</c> ở 32/32 case), và cả hai đều trông như đã có dữ liệu với mọi
+/// phép kiểm dạng "trường này có được điền không?".
+/// </param>
+/// <param name="SubTenantWarning">
+/// <c>null</c> = không có gì để nói. Có giá trị = lô này KHÔNG đẩy `AR-l` tiến thêm, và nói
+/// thẳng ra thay vì để bên gửi tự suy từ một con số.
+/// </param>
 public sealed record CaseEvidenceBatchResult(
     int Received,
     int Created,
+    int DistinctSubTenantCodes,
+    string? SubTenantWarning,
     IReadOnlyList<CaseEvidenceResult> Results);
 
 /// <summary>

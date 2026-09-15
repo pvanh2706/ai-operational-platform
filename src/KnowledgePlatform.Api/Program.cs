@@ -2,6 +2,7 @@ using KnowledgePlatform.Api.Knowledge;
 using KnowledgePlatform.Api.Signals;
 using KnowledgePlatform.Api.Startup;
 using KnowledgePlatform.Api.Tenancy;
+using KnowledgePlatform.Domain.Evidence;
 using KnowledgePlatform.Domain.Knowledge;
 using KnowledgePlatform.Domain.Sop;
 using KnowledgePlatform.Domain.Tenancy;
@@ -48,6 +49,7 @@ builder.Services.AddScoped<SignalKeyEndpointFilter>();
 builder.Services.AddScoped<CaseSignalHandler>();
 builder.Services.AddScoped<CaseEvidenceHandler>();
 builder.Services.AddScoped<CaseEvidenceReadHandler>();
+builder.Services.AddScoped<EvidenceRetractionHandler>();
 builder.Services.AddScoped<SopDraftIngestHandler>();
 builder.Services.AddScoped<KnowledgeApprovalHandler>();
 builder.Services.AddScoped<KnowledgeRevisionHandler>();
@@ -537,6 +539,83 @@ app.MapGet("/cases/{khoaNguon}/evidence", async (
     .AddEndpointFilter<SignalKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
+// --- AR-m: đánh dấu một mẩu ĐÃ BỊ NGƯỜI GỬI RÚT LẠI ---
+//
+// 🛑 Khoá nguồn nằm trong THÂN, không trong đường dẫn. `AR-g` vừa đo được (cùng tuần) rằng
+//    khoá chứa dấu `/` không đọc ra được qua đường dẫn — ASP.NET giải mã %2F TRƯỚC khi định
+//    tuyến. Khoá của evidence còn chứa `#` (`jira:ES-1234#comment-7`), thứ mà client nào
+//    quên mã hoá là mất nửa sau ngay tại trình duyệt. Đặt vào thân là tránh cả hai, và nó
+//    KHÔNG đi ngược `C4-1`: quyết định đó chọn hình dạng cho đường ĐỌC của case.
+//
+// ⚠ KHÔNG có đường nào cho máy gọi. Đường nạp không mang ba trường rút lại, và endpoint này
+//   bắt buộc khai người đánh dấu — `B1-1`: CHỈ NGƯỜI điền tay.
+app.MapPost("/evidence/rut-lai", async (
+        YeuCauRutLai yeuCau,
+        EvidenceRetractionHandler handler,
+        CancellationToken ct) =>
+    {
+        if (string.IsNullOrWhiteSpace(yeuCau.KhoaNguon))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Thiếu khoaNguon",
+                detail: "Phải nói rõ mẩu nào — khoá nguồn của chính mẩu đó, ví dụ \"jira:ES-346661#description\".");
+        }
+
+        if (string.IsNullOrWhiteSpace(yeuCau.NguoiDanhDau))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Thiếu nguoiDanhDau",
+                detail: "AR-m chốt CHỈ NGƯỜI điền tay, nên phải biết là người nào. Một dấu vết " +
+                        "không có tác giả thì không phân biệt được với một dấu vết do script đặt.");
+        }
+
+        if (string.IsNullOrWhiteSpace(yeuCau.LyDo))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Thiếu lyDo",
+                detail: "Vì sao mẩu này bị rút. Cố ý không có danh sách chọn sẵn: lý do thật của " +
+                        "ca ES-346661 là \"người gửi nói gửi nhầm, đoạn này là của case khác\".");
+        }
+
+        var kq = await handler.RutLaiAsync(yeuCau.KhoaNguon, yeuCau.NguoiDanhDau, yeuCau.LyDo, ct);
+
+        return kq.KetCuc switch
+        {
+            KetCucRutLai.KhongTimThay => Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Không thấy mẩu evidence nào mang khoá nguồn này",
+                detail: $"Không có mẩu nào mang khoá \"{yeuCau.KhoaNguon}\" trong phạm vi của khách hàng này."),
+
+            // 409 chứ không phải 200: lần đánh dấu thứ hai KHÔNG xảy ra, và trả 200 sẽ nói
+            // dối rằng lý do vừa gửi đã được ghi. Giữ lần đầu là cố ý — xem EvidenceItem.RutLai.
+            KetCucRutLai.DaRutLaiTuTruoc => Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Mẩu này đã được đánh dấu rút lại từ trước",
+                detail: $"Đã đánh dấu lúc {kq.Luc:O} bởi \"{kq.NguoiDanhDau}\". Lần này KHÔNG ghi đè — " +
+                        "ghi đè sẽ xoá mất tác giả và lý do của lần đầu."),
+
+            _ => Results.Ok(kq),
+        };
+    })
+    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+// --- AR-l: điều kiện MỞ LẠI, hỏi được bằng một lượt gọi ---
+//
+// Tài liệu phát biểu điều kiện mở lại dạng ĐO ĐƯỢC chứ không phải một ngày trong lịch:
+// "khi có MỘT nguồn cho ra ≥2 giá trị PHÂN BIỆT". Endpoint này trả lời đúng câu đó, và trả
+// ra CẢ các giá trị đã thấy — một con số "2" mà không nói ra hai giá trị nào thì không ai
+// kiểm lại được, trong khi đây là phép đếm quyết định việc gỡ một cổng bảo mật.
+//
+// ⚠ Nó KHÔNG tự gỡ cổng gì. Cổng 409 của chế độ shared vẫn nguyên; đây chỉ là cái thước.
+app.MapGet("/internal/sub-tenant-coverage", async (
+        CaseEvidenceReadHandler handler,
+        CancellationToken ct) => Results.Ok(await handler.DoPhuMaKhachSanAsync(ct)))
+    .AddEndpointFilter<TenantEndpointFilter>();
+
 
 app.Run();
 
@@ -575,5 +654,17 @@ static string? ValidateEvidence(CaseEvidenceSignal s) => s switch
     _ when !EvidenceReadability.TryParse(s.MachineReadability, out _)
         => $"machineReadability không nhận ra giá trị \"{s.MachineReadability}\". Nhận: {EvidenceReadability.Allowed}. " +
            "Bỏ trống thì là Unknown — cố ý không tự đoán hộ, xem CaseEvidenceSignal.",
+
+    // ⚠ Bỏ trống là 400, KHÔNG âm thầm về `khong-xac-dinh` — `AR-l`. Hai câu "bên gửi chưa
+    // biết" và "bên gửi chưa đọc tài liệu" khác nhau đúng ở chỗ quan trọng nhất, và tự điền
+    // hộ ở cửa vào thì về sau không dựng lại được. Đây là chỗ DUY NHẤT tính bắt buộc của
+    // trường này được thực thi (cột trong DB nullable có lý do — xem EvidenceItem).
+    _ when string.IsNullOrWhiteSpace(s.SubTenantCode)
+        => "subTenantCode không được để trống — AR-l: bên gửi PHẢI khai mã khách sạn. " +
+           $"Chưa biết thì khai \"{SubTenantCodes.KhongXacDinh}\"; không thuộc khách sạn nào " +
+           $"(việc nội bộ, ezGolf, chuỗi nhiều cơ sở) thì khai \"{SubTenantCodes.KhongThuocKhachSan}\". " +
+           "Cố ý không tự điền hộ: \"chưa biết\" khác \"chưa ai hỏi\".",
+    _ when !SubTenantCodes.TryChuanHoa(s.SubTenantCode, out _)
+        => $"subTenantCode dài quá {SubTenantCodes.MaxLength} ký tự.",
     _ => null,
 };
