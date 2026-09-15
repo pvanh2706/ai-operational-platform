@@ -111,11 +111,56 @@ def o_ghi(so_dong=2):
     return ["```"] + [""] * so_dong + ["```", ""]
 
 
-def dau_trang(so_cay: int, so_case: int) -> list:
+# ⚠ Số đếm phải theo SỐ CÂY THẬT. Bản đầu nhận `so_cay` rồi KHÔNG DÙNG và viết cứng
+# "hai" ở ba chỗ, nên sinh gói cho MỘT nhóm thì ngay dòng đầu đã nói sai với chính người
+# được nhờ đọc. Đây là tài liệu GỬI RA NGOÀI dự án — sai số ở câu mở đầu làm người ta
+# ngờ cả phần còn lại, mà thời gian của họ là thứ khan hiếm nhất ở đây.
+SO_CHU = {1: "một", 2: "hai", 3: "ba", 4: "bốn", 5: "năm"}
+
+
+def so_chu(n: int) -> str:
+    return SO_CHU.get(n, str(n))
+
+
+def doan_do_ghi_chep(cays: list) -> list:
+    """Câu mô tả mức ghi chép của ĐÚNG những cây trong gói này.
+
+    ⚠ Câu này từng là hằng số, và hằng số đó SAI kể từ cây thứ ba. Gói nhóm 1+2 mở đầu
+    bằng "ticket hầu như không ghi cách anh/chị biết" — đúng với 4/10 và 8/10 của hai
+    nhóm đầu theo cách đếm lúc đó, nhưng nhóm 3 ghi rõ 6/8. Gửi cho người làm nghề một
+    câu sai về chính công việc của họ là cách nhanh nhất để họ thôi đọc phần còn lại.
+    Nên câu này được TÍNH. ⚠ Ngưỡng là HAI PHẦN BA, không phải một nửa, và bản đầu đặt ở
+    một nửa đã sai ngay lần chạy đầu: bản máy sinh của nhóm 1 khai 5/10 — đúng ranh giới —
+    nên gói ĐANG CHỜ DUYỆT đổi lời sang "phần lớn chữ trong đó là chữ của chính anh/chị".
+    Ở mức một nửa thì câu đó là nói quá, và nói quá với đúng người biết rõ sự thật thì mất
+    nhiều hơn được. Ngưỡng cao còn giữ cho hai gói đã gửi (12, 16) sinh lại ra y nguyên.
+    """
+    ghi_ro = sum((c.get("phanBoBuocKiemDuocGhiLai", {}).get("ghi-ro-buoc-kiem") or {}).get("so", 0)
+                 for c in cays)
+    tong = sum(c["soCaseDungSau"] for c in cays)
+    if not tong or ghi_ro * 3 < tong * 2:
+        return [
+            "**Chỗ chúng tôi chắc chắn còn sai: ticket ghi được *kết luận*, nhưng hầu như không ghi",
+            "*cách anh/chị biết*.** Có ticket kết thúc bằng đúng tám chữ " + DOAN + " *\"Sai CCCD\"*. Những",
+            "chỗ như vậy chúng tôi **tự đoán**, và đã đánh dấu " + TU_DOAN + " ngay tại chỗ đoán.",
+            "Chỉ anh/chị nói được chỗ nào đoán sai.",
+        ]
     return [
-        "# 12 " + DOAN + " GÓI DUYỆT: hai bản nháp quy trình xử lý, cần người làm support sửa",
+        "**Nhóm này khác: %d/%d ticket CÓ ghi lại cách chẩn đoán**, nên bản dưới đây dựng được"
+        % (ghi_ro, tong),
+        "chi tiết hơn " + DOAN + " phần lớn chữ trong đó là chữ của chính anh/chị, chúng tôi chỉ xếp lại.",
+        "Những chỗ vẫn phải đoán thì được đánh dấu " + TU_DOAN + " ngay tại chỗ đoán.",
+        "**Điều đó làm câu hỏi đổi:** không phải \"chúng tôi đoán sai chỗ nào\" mà *\"xếp như vậy có",
+        "đúng thứ tự anh/chị làm không, và thiếu bước nào\"*.",
+    ]
+
+
+def dau_trang(so_cay: int, so_case: int, so_tai_lieu: str = "12", cays: list = None) -> list:
+    chu = so_chu(so_cay)
+    return [
+        "# " + so_tai_lieu + " " + DOAN + " GÓI DUYỆT: " + chu + " bản nháp quy trình xử lý, cần người làm support sửa",
         "",
-        "> **File này được SINH TỰ ĐỘNG** từ `scripts/jira-export/goi_duyet.py` và từ hai file",
+        "> **File này được SINH TỰ ĐỘNG** từ `scripts/jira-export/goi_duyet.py` và từ " + chu + " file",
         "> cây quyết định. Nếu bạn bảo trì repo thì đừng sửa trực tiếp vào đây " + DOAN + " sửa file",
         "> JSON rồi sinh lại. Người DUYỆT thì cứ ghi thoải mái vào bản của mình.",
         "",
@@ -123,13 +168,10 @@ def dau_trang(so_cay: int, so_case: int) -> list:
         "",
         "## Gửi anh/chị làm support",
         "",
-        "Chúng tôi đang thử dựng lại **quy trình xử lý** cho hai loại sự cố hay gặp về hoá đơn",
+        "Chúng tôi đang thử dựng lại **quy trình xử lý** cho " + chu + " loại sự cố hay gặp về hoá đơn",
         "điện tử, bằng cách đọc lại " + str(so_case) + " ticket đã đóng trên Jira. Kết quả ở dưới.",
         "",
-        "**Chỗ chúng tôi chắc chắn còn sai: ticket ghi được *kết luận*, nhưng hầu như không ghi",
-        "*cách anh/chị biết*.** Có ticket kết thúc bằng đúng tám chữ " + DOAN + " *\"Sai CCCD\"*. Những",
-        "chỗ như vậy chúng tôi **tự đoán**, và đã đánh dấu " + TU_DOAN + " ngay tại chỗ đoán.",
-        "Chỉ anh/chị nói được chỗ nào đoán sai.",
+    ] + doan_do_ghi_chep(cays or []) + [
         "",
         "**Mất bao lâu:** khoảng 20" + DOAN + "30 phút. **Không cần đọc lại ticket** " + DOAN + " mã ticket để",
         "ở đó cho anh/chị tra khi muốn, không phải để anh/chị đi kiểm tra chúng tôi.",
@@ -145,8 +187,37 @@ def dau_trang(so_cay: int, so_case: int) -> list:
     ]
 
 
+# Mỗi loại bảng tự khai KHOÁ của nó và tiêu đề cột cho người duyệt. Cứng hoá một loại
+# bảng là sai: ba nhóm dựng tới nay ra ba topology, và nhóm thứ ba tra bằng cặp (cột tiền,
+# nơi khai sai) — một khoá mà không màn hình nào đọc ra được, nó phải được dựng bằng cách
+# so cùng một hoá đơn ở ba nơi. Xem `hinhDang` của cây nhóm 3.
+LOAI_BANG = {
+    "bangTraMaLoi": {
+        "tieuDe": "Bảng tra mã lỗi",
+        "moDau": ["> \U0001f6d1 **Nếu cả file này chỉ sửa được một thứ, xin sửa bảng này.** Chính khách",
+                  "> đã hỏi “có bảng liệt kê mã lỗi không” và được trả lời là chưa có.", ""],
+        "cot": [("Nhà cung cấp", "ncc", False), ("Mã lỗi", "maLoi", True),
+                ("Trường bị từ chối", "truongBiTuChoi", False)],
+        "khoa": ("ncc", "maLoi"),
+        "hoiThem": "**Còn mã lỗi nào hay gặp mà bảng chưa có? Mã đó trỏ tới trường nào?**",
+    },
+    "bangDoiChieuCot": {
+        "tieuDe": "Bảng đối chiếu: cột nào lệch thì khai sai ở đâu",
+        "moDau": ["> \U0001f6d1 **Đây là phần chúng tôi cần anh/chị sửa nhất.** Cùng một câu “hoá đơn",
+                  "> sai tiền” ra tám nguyên nhân khác nhau ở bảng dưới, và chỗ khai sai thì nằm",
+                  "> rải ở ba nơi: PMS, trang quản trị ezInvoice, và bên nhà cung cấp.", ""],
+        "cot": [("Cột bị lệch", "cot", False), ("Khai sai ở đâu", "noiKhaiSai", False),
+                ("Lưu ý", "ghiChu", False)],
+        "khoa": ("cot", "noiKhaiSai"),
+        "hoiThem": "**Còn kiểu lệch tiền nào hay gặp mà bảng chưa có? Nó khai sai ở đâu?**",
+    },
+}
+
+
 def mot_cay(cay: dict, chi_so: int) -> list:
-    bang = (cay.get("bangTraMaLoi") or {}).get("dong") or []
+    cac_bang = [(ten, LOAI_BANG[ten], (cay.get(ten) or {}).get("dong") or [])
+                for ten in LOAI_BANG if cay.get(ten)]
+    bang = [(LOAI_BANG[ten], d) for ten, _, dong in cac_bang for d in dong]
     muc = iter(range(1, 20))
 
     def so():
@@ -154,7 +225,11 @@ def mot_cay(cay: dict, chi_so: int) -> list:
 
     r = ["---", "", "# Phần %d. %s" % (chi_so, cay["nhom"]), ""]
     hd = cay.get("hinhDang") or {}
-    dang = hd.get("nhom%d" % chi_so) if hd else None
+    # ⚠ Không suy dạng quy trình theo VỊ TRÍ trong gói. `hinhDang` của một cây ghi cả ba
+    # nhóm để đối chiếu, nên `nhom%d` theo thứ tự phần chỉ đúng khi gói gồm đủ các nhóm
+    # xếp đúng thứ tự — sinh gói riêng cho một nhóm là ra dạng của nhóm khác, im lặng.
+    # Cây khai `cuaNhomNay` thì đọc theo khai báo.
+    dang = hd.get(hd.get("cuaNhomNay") or ("nhom%d" % chi_so)) if hd else None
     if dang:
         r += ["*Dạng quy trình chúng tôi thấy: %s*" % chi_cho_nguoi_duyet(dang), ""]
     r += ["**Số ticket đứng sau phần này:** %d" % cay["soCaseDungSau"], ""]
@@ -196,19 +271,22 @@ def mot_cay(cay: dict, chi_so: int) -> list:
         if bay:
             r += ["> **Chỗ chúng tôi thấy dễ vấp " + DOAN + " có đúng vậy không?** %s" % bay, ""]
 
-    if bang:
-        r += ["## %s Bảng tra mã lỗi" % so(), ""]
-        r += ["> \U0001f6d1 **Nếu cả file này chỉ sửa được một thứ, xin sửa bảng này.** Chính khách",
-              "> đã hỏi “có bảng liệt kê mã lỗi không” và được trả lời là chưa có.", ""]
-        r += ["| Nhà cung cấp | Mã lỗi | Trường bị từ chối | Sửa ở đâu | Nguồn | Ticket | Sửa lại |",
-              "|---|---|---|---|---|---|---|"]
-        for d in bang:
-            r.append("| %s | `%s` | %s | `%s` | %s | %s | |"
-                     % (d["ncc"], d["maLoi"], chi_cho_nguoi_duyet(d["truongBiTuChoi"]),
-                        d["diToi"], nhan_chung_cu(d.get("chungCu")),
+    for ten_bang, luat, dong in cac_bang:
+        r += ["## %s %s" % (so(), luat["tieuDe"]), ""]
+        r += list(luat["moDau"])
+        tieu_de = [nhan for nhan, _, _ in luat["cot"]]
+        r += ["| %s | Sửa ở đâu | Nguồn | Ticket | Sửa lại |" % " | ".join(tieu_de),
+              "|" + "---|" * (len(tieu_de) + 4)]
+        for d in dong:
+            o = []
+            for _, truong, ma_nguon in luat["cot"]:
+                gt = chi_cho_nguoi_duyet(d.get(truong)) or DOAN
+                o.append("`%s`" % gt if ma_nguon else gt)
+            r.append("| %s | `%s` | %s | %s | |"
+                     % (" | ".join(o), d["diToi"], nhan_chung_cu(d.get("chungCu")),
                         ", ".join(d.get("case") or []) or DOAN))
         r.append("")
-        r += ["**Còn mã lỗi nào hay gặp mà bảng chưa có? Mã đó trỏ tới trường nào?**", ""]
+        r += [luat["hoiThem"], ""]
         r += o_ghi(3)
 
     r += ["## %s Cách sửa" % so(), ""]
@@ -232,8 +310,8 @@ def mot_cay(cay: dict, chi_so: int) -> list:
     doan = [(b["ma"], chi_cho_nguoi_duyet(n["quanSat"]))
             for b in cay["buocKiem"] for n in b["nhanh"]
             if n.get("chungCu") != "evidence-noi-ro"]
-    doan += [("bảng", "%s / %s" % (d["ncc"], d["maLoi"])) for d in bang
-             if d.get("chungCu") != "evidence-noi-ro"]
+    doan += [("bảng", " / ".join(str(d.get(k)) for k in luat["khoa"]))
+             for luat, d in bang if d.get("chungCu") != "evidence-noi-ro"]
     if doan:
         r += ["## %s %d chỗ chúng tôi TỰ ĐOÁN " % (so(), len(doan)) + DOAN
               + " xin trả lời từng chỗ", ""]
@@ -277,6 +355,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("cay", nargs="+", help="một hoặc nhiều file cây quyết định (.json)")
     ap.add_argument("--ra", required=True, help="file Markdown đầu ra")
+    ap.add_argument("--so", default="12",
+                    help="số hiệu tài liệu ở tiêu đề (mặc định 12). Gói sinh từ bản MÁY SINH "
+                         "là một tài liệu KHÁC với gói sinh từ bản người dựng, đừng để chúng mang cùng số.")
     args = ap.parse_args()
 
     for p in args.cay:
@@ -286,7 +367,7 @@ def main() -> int:
 
     cays = [doc(p) for p in args.cay]
     so_case = sum(c["soCaseDungSau"] for c in cays)
-    dong = dau_trang(len(cays), so_case)
+    dong = dau_trang(len(cays), so_case, args.so, cays)
     for i, c in enumerate(cays, 1):
         dong += mot_cay(c, i)
     dong += cuoi_trang()
@@ -297,8 +378,8 @@ def main() -> int:
     o_trong = sum(l.count("| |") for l in dong)
     tu_doan = sum(1 for c in cays for b in c["buocKiem"] for n in b["nhanh"]
                   if n.get("chungCu") != "evidence-noi-ro")
-    tu_doan += sum(1 for c in cays
-                   for d in (c.get("bangTraMaLoi") or {}).get("dong") or []
+    tu_doan += sum(1 for c in cays for ten in LOAI_BANG
+                   for d in (c.get(ten) or {}).get("dong") or []
                    if d.get("chungCu") != "evidence-noi-ro")
     print("Đã sinh %s" % args.ra)
     print("  %d cây · %d ticket · %d dòng" % (len(cays), so_case, len(dong)))

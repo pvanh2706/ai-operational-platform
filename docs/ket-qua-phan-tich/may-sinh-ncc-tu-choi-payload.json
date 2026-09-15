@@ -1,0 +1,381 @@
+{
+  "nhom": "NCC từ chối payload — tra mã lỗi, sửa dữ liệu nguồn, phát hành lại",
+  "soCaseDungSau": 10,
+  "trieuChungVao": [
+    {
+      "moTa": "Bấm xuất hoá đơn cho một đặt phòng thì hệ thống báo “đang xử lý vui lòng thử lại sau”, hoặc “hóa đơn tồn tại giao dịch đang xử lý”.",
+      "case": ["ES-346136", "ES-343712"]
+    },
+    {
+      "moTa": "“Khi em bấm phát hành thì tự nó đưa vào bản nháp chứ không phát hành được” — hoá đơn đã điền đủ thông tin khách nhưng không ra số.",
+      "case": ["ES-346027"]
+    },
+    {
+      "moTa": "Hoá đơn nháp chưa có số hoá đơn, nhưng hệ thống không cho phát hành lại vì “nói là có hóa đơn nháp rồi”.",
+      "case": ["ES-343348", "ES-345857"]
+    },
+    {
+      "moTa": "Hoá đơn nằm ở trạng thái NCC từ chối, trong khi khách đã tự liên hệ NCC và được báo “phần mềm hóa đơn bình thường”.",
+      "case": ["ES-345623"]
+    },
+    {
+      "moTa": "Vào màn Danh sách hoá đơn tìm bản nháp mà “mình vào mà ko thấy gì”, hoặc “Xem chi tiết cũng chưa có hđ phát hành”.",
+      "case": ["ES-343712", "ES-345857"]
+    },
+    {
+      "moTa": "Xuất hoá đơn báo lỗi, khách chỉ gửi được ảnh chụp màn báo lỗi; hoặc “hiện tại c ko ký đc hóa đơn”.",
+      "case": ["ES-345813", "ES-342328", "ES-345257"]
+    },
+    {
+      "moTa": "Hoá đơn của cả một đoàn (21 phòng) không lên, trong khi hoá đơn phòng lẻ thì lên bình thường.",
+      "case": ["ES-344862"]
+    }
+  ],
+  "buocKiem": [
+    {
+      "ma": "K1",
+      "cauHoi": "Bấm phát hành lại cho ĐÚNG đặt phòng/hoá đơn đang vướng (hỏi khách mã đặt phòng hoặc số hoá đơn trước), rồi đọc nguyên văn: màn hình báo câu gì, có mã lỗi hay tên trường nào trong câu đó không?",
+      "noiXem": "Màn xuất hoá đơn của chính đặt phòng đang vướng; xin khách chụp FULL màn hình thông báo, không chụp cắt.",
+      "quyenCan": null,
+      "nhanh": [
+        {
+          "quanSat": "Màn hình báo “hệ thống đang xử lý vui lòng thử lại sau”",
+          "diToi": "K2",
+          "case": ["ES-346136"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Màn hình báo “hóa đơn tồn tại giao dịch đang xử lý”",
+          "diToi": "K2",
+          "case": ["ES-343712"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Không có thông báo lỗi nào, chỉ thấy hoá đơn tự rơi vào bản nháp",
+          "diToi": "K2",
+          "case": ["ES-346027"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Hoá đơn hiện ở trạng thái NCC từ chối",
+          "diToi": "K3",
+          "case": ["ES-345623"],
+          "chungCu": "toi-suy-ra"
+        },
+        {
+          "quanSat": "Màn hình báo một mã lỗi có số (ví dụ “Lỗi 5000”)",
+          "diToi": "BANG",
+          "case": ["ES-345813"],
+          "chungCu": "toi-suy-ra"
+        },
+        {
+          "quanSat": "Khách chỉ gửi được ảnh chụp màn báo lỗi, trong ảnh không đọc ra mã lỗi hay tên trường",
+          "diToi": "K3",
+          "case": ["ES-342328", "ES-345257"],
+          "chungCu": "toi-suy-ra"
+        }
+      ],
+      "nguyenVan": "“Dạ anh đang xuất hóa đơn cho đặt phòng nào và hệ thống có thông báo gì khi mình xuất hóa đơn không ạ” (ES-346136); “dạ khi xuất hóa đơn, hệ thống báo gì ạ? anh/chị giúp em chụp full màn hình báo ạ” (ES-343712).",
+      "bayDaVapThat": "Hỏi “xuất cho đặt phòng nào” mới chỉ là hỏi ĐỐI TƯỢNG, chưa phải phép thử: ở ES-346136 phải hỏi thêm “hệ thống có thông báo gì” mới lấy được câu “báo hệ thống đang xử lý vui lòng thử lại sau”."
+    },
+    {
+      "ma": "K2",
+      "cauHoi": "Hoá đơn của đặt phòng này đang nằm ở đâu: trên màn Danh sách hoá đơn có bản ghi nào ở trạng thái Nháp và cột số hoá đơn còn trống không?",
+      "noiXem": "Danh sách hoá đơn. BỎ bộ lọc theo ngày hoá đơn — vào tới màn là hệ thống tự hiển thị toàn bộ hoá đơn từ mới nhất. Nếu tìm theo Số hoá đơn hoặc Mã đặt chỗ Khu kinh doanh không ra thì tìm ở ô Thông tin khác (ES-343712 tìm bằng 70305).",
+      "quyenCan": null,
+      "nhanh": [
+        {
+          "quanSat": "Thấy hoá đơn ở trạng thái Nháp, chưa có số hoá đơn",
+          "diToi": "K3",
+          "case": ["ES-343712", "ES-346027", "ES-343348"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Vào đúng màn Danh sách hoá đơn mà không thấy hoá đơn nào",
+          "diToi": "S1",
+          "case": ["ES-343712"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Hệ thống chặn phát hành lại với lý do đã có hoá đơn nháp, trong khi bản nháp đó chưa có số hoá đơn",
+          "diToi": "K5",
+          "case": ["ES-343348", "ES-345857"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Không có bản nháp nào, và Nhật ký kết nối cũng không có bản ghi phát hành nào cho đặt phòng đó",
+          "diToi": "NGOAI-PHAM-VI",
+          "case": [],
+          "chungCu": "toi-suy-ra"
+        }
+      ],
+      "nguyenVan": "“dạ anh/chị vào Danh sách hóa đơn, sẽ thấy hóa đơn đang ở trạng thái nháp … anh/chị chọn, và ấn Xem hóa đơn” (ES-343712).",
+      "bayDaVapThat": "Ở ES-343712 khách vào đúng màn mà “ko thấy ạ” vì đang lọc theo ngày hoá đơn; và nội bộ ghi “Màn tìm kiếm bị lỗi nên không tim theo Số hóa đơn hoặc Mã đặt chỗ Khu kinh doanh được”, phải tìm theo Thông tin khác. Kết luận “không có hoá đơn nháp” rút ra từ màn đang bị lọc là kết luận sai."
+    },
+    {
+      "ma": "K3",
+      "cauHoi": "Ở lần phát hành gần nhất của hoá đơn này, NCC trả về mã lỗi hoặc chuỗi response nào — đọc giá trị của ErrorCode / DescriptionErrorCode / “Ten Truong” trong bản ghi log?",
+      "noiXem": "Nhật ký >> Nhật ký kết nối >> chọn Loại: Kết nối ezinvoice, mở bản ghi của lần phát hành gần nhất cho hoá đơn/đặt phòng đó.",
+      "quyenCan": "Quyền vào mục Nhật ký / Nhật ký kết nối (nằm trong mục cấu hình). Khách ES-345623 trả lời thẳng “Đâu phải ai cũng có quyền vào mục cấu hình này đâu e”. Không có quyền thì phải nhờ quản lý/Admin khách sạn phân quyền, hoặc gửi mã cho team hỗ trợ tra hộ.",
+      "nhanh": [
+        {
+          "quanSat": "Log trả về một mã lỗi hoặc tên trường bị từ chối (ví dụ “ERR:1518”, ERR.1518, SDThoai, InvalidInvoiceDate)",
+          "diToi": "BANG",
+          "case": ["ES-345623"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Log có bản ghi phát hành nhưng chỉ ghi là lỗi, không kèm mã hay diễn giải",
+          "diToi": "S10",
+          "case": ["ES-343712"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Không mở được mục Nhật ký vì tài khoản đang dùng không có quyền vào mục cấu hình",
+          "diToi": "S10",
+          "case": ["ES-345623"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Mở được log nhưng hệ thống không hiện diễn giải cho mã lỗi đó",
+          "diToi": "S10",
+          "case": ["ES-345623"],
+          "chungCu": "evidence-noi-ro"
+        }
+      ],
+      "nguyenVan": "“Nếu trường hợp tương tự xảy ra anh vào muc Nhật ký >> Nhật ký kết nối >> chọn  Loại : Kết nối ezinvoice để kiểm tra log trước giúp em nehs ạ” (ES-345623).",
+      "bayDaVapThat": "Không thấy diễn giải KHÔNG có nghĩa là không có lỗi: ES-345623 ghi “hệ thống đang chỉ gửi diễn giải thông báo cho 1 số mã lỗi mà NCC xác nhận và gửi trong tài liệu cho bên em thôi”. Cũng ở ticket đó, khách xin bảng mã lỗi và được trả lời “hiện mã lỗi này bên NCC cũng chưa cung cấp chính xác cho bên em, nên hiện chưa thể gửi bảng mã lỗi cho khách sạn được ạ”."
+    },
+    {
+      "ma": "K4",
+      "cauHoi": "Trên hồ sơ khách và trên hoá đơn nháp của đặt phòng này, đọc từng ký tự sáu trường sau: CCCD có đúng 12 số không (đếm), mã số thuế có dấu cách thừa ở cuối không, số ID có trùng với số hộ chiếu của cùng khách đó không, ngày hoá đơn có trống / có phải 0001-01-01 không, số điện thoại người mua có chứa +84 hoặc dấu ngoặc () không, tên và địa chỉ người mua có đúng không?",
+      "noiXem": "Xem hoá đơn của bản nháp (các trường tên, địa chỉ, MST, CCCD, số điện thoại, ngày hoá đơn) và hồ sơ khách của đặt phòng đó (CCCD / Hộ chiếu / ID).",
+      "quyenCan": null,
+      "nhanh": [
+        {
+          "quanSat": "CCCD nhập trên hệ thống dài 13 số, trong khi CCCD đúng chỉ có 12 số",
+          "diToi": "S2",
+          "case": ["ES-346136"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Mã số thuế người mua có dấu cách thừa ở phía sau",
+          "diToi": "S3",
+          "case": ["ES-346027"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Số ID và số hộ chiếu của cùng một khách đang ghi trùng nhau",
+          "diToi": "S4",
+          "case": ["ES-342328"],
+          "chungCu": "toi-suy-ra"
+        },
+        {
+          "quanSat": "Ngày hoá đơn trống hoặc là 0001-01-01",
+          "diToi": "S5",
+          "case": ["ES-345857"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Số điện thoại người mua có mã quốc gia +84 và/hoặc dấu ngoặc (), dạng +84xxx(xxx)",
+          "diToi": "S6",
+          "case": ["ES-345257"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Trường giấy tờ đang điền ở ô CCCD nhưng NCC vẫn báo sai định dạng giấy tờ",
+          "diToi": "S7",
+          "case": ["ES-344862"],
+          "chungCu": "toi-suy-ra"
+        },
+        {
+          "quanSat": "Khách khẳng định các trường đều đúng mà vẫn không phát hành được",
+          "diToi": "NGOAI-PHAM-VI",
+          "case": ["ES-343348"],
+          "chungCu": "toi-suy-ra"
+        }
+      ],
+      "nguyenVan": "“dạ chị kiểm tra lại các thông tin như tên, địa chỉ, mst, cccd xem có đúng chưa ạ” (ES-343348); “anh/chị giúp e kiểm tra xem có thừa dấu cách sau mã số thuế không ạ” (ES-346027).",
+      "bayDaVapThat": "Ở ES-343348 khách trả lời “đúng mà”, nhưng comment đóng ticket lại ghi “Sai CCCD” — lời khẳng định của khách không thay được việc đọc từng ký tự của trường, và ticket đó chỉ ra kết luận sau khi nhân viên vào máy bằng ultraview."
+    },
+    {
+      "ma": "K5",
+      "cauHoi": "Bản nháp đang tồn tại nên được phát hành lại, hay phải điều chỉnh/xoá trước: mở Xem hoá đơn của bản nháp đó, thông tin trong đó đã đúng sau khi sửa chưa?",
+      "noiXem": "Danh sách hoá đơn > chọn hoá đơn ở trạng thái Nháp > Xem hoá đơn (trong đó có nút Phát hành hoá đơn).",
+      "quyenCan": null,
+      "nhanh": [
+        {
+          "quanSat": "Thông tin trên bản nháp đã đúng",
+          "diToi": "S8",
+          "case": ["ES-343712", "ES-346027", "ES-343348"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Thông tin trên bản nháp còn sai",
+          "diToi": "S9",
+          "case": ["ES-345857"],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Bản nháp đúng thông tin, phát hành lại vẫn bị trả về vì số hoá đơn không liên tục",
+          "diToi": "S11",
+          "case": ["ES-343712"],
+          "chungCu": "toi-suy-ra"
+        }
+      ],
+      "nguyenVan": "“Anh/ Chị thao tác xử lí tiếp hóa đơn nháp đó giúp em ạ. Nếu đúng  thông tin thì thực hiện phát hành ạ. Còn nếu sai thì mình điều chỉnh hoặc xóa hóa đơn nháp đó đi ạ.” (ES-345857).",
+      "bayDaVapThat": "Ở ES-343348 hệ thống chặn phát hành lại vì “có hóa đơn nháp rồi” trong khi chính bản nháp đó “chưa có số hđ” — nếu tin thông báo chặn mà không mở bản nháp ra xem thì case đứng im."
+    }
+  ],
+  "bangTraMaLoi": {
+    "dong": [
+      {
+        "ncc": "VNPT (ticket chỉ có câu khách “đã liên hệ vnpt thì phần mềm hóa đơn bình thường”, nhân viên nhắc Loại: Kết nối ezinvoice)",
+        "maLoi": "ERR:1518",
+        "truongBiTuChoi": "Thông tin giấy tờ của khách, trường CCCD / Hộ chiếu — nhân viên nói “thường do thông tin giấy tờ”, không khẳng định chắc",
+        "diToi": "S7",
+        "case": ["ES-345623"],
+        "chungCu": "evidence-noi-ro"
+      },
+      {
+        "ncc": "Ticket không ghi tên nhà cung cấp",
+        "maLoi": "ERR.1518",
+        "truongBiTuChoi": "CCCD không đúng định dạng — xử lý được bằng cách chuyển số giấy tờ sang trường Hộ chiếu",
+        "diToi": "S7",
+        "case": ["ES-344862"],
+        "chungCu": "toi-suy-ra"
+      },
+      {
+        "ncc": "VNPT (comment ghi “Response này là từ phía NCC VNPT phản hồi về cho HT”)",
+        "maLoi": "SDThoai không hợp lệ — “The 'SDThoai' element has an invalid value according to its data type”",
+        "truongBiTuChoi": "Số điện thoại người mua: dữ liệu truyền lên có dạng +84xxx(xxx), chứa mã quốc gia +84 và dấu ngoặc ()",
+        "diToi": "S6",
+        "case": ["ES-345257"],
+        "chungCu": "evidence-noi-ro"
+      },
+      {
+        "ncc": "Ticket không ghi tên nhà cung cấp",
+        "maLoi": "InvalidInvoiceDate — “Ngày hóa đơn không hợp lệ”",
+        "truongBiTuChoi": "Ngày hoá đơn: response trả về InvDate 0001-01-01T00:00:00+07:06",
+        "diToi": "S5",
+        "case": ["ES-345857"],
+        "chungCu": "evidence-noi-ro"
+      },
+      {
+        "ncc": "Ticket không ghi tên nhà cung cấp",
+        "maLoi": "5000",
+        "truongBiTuChoi": "Mã số thuế HOẶC tên người mua — ticket không tách được là trường nào trong hai trường",
+        "diToi": "S3",
+        "case": ["ES-345813"],
+        "chungCu": "toi-suy-ra"
+      },
+      {
+        "ncc": "misa",
+        "maLoi": "Không có mã số trong ticket, chỉ có diễn giải “số hóa đơn không liên tục”",
+        "truongBiTuChoi": "Số hoá đơn / dải số phát hành — không phải một trường trên hồ sơ khách, nên không có dữ liệu nguồn để sửa",
+        "diToi": "S11",
+        "case": ["ES-343712"],
+        "chungCu": "toi-suy-ra"
+      }
+    ]
+  },
+  "buocSua": [
+    {
+      "ma": "S1",
+      "viec": "Bỏ bộ lọc theo ngày hoá đơn trên màn Danh sách hoá đơn; nếu tìm theo Số hoá đơn hoặc Mã đặt chỗ Khu kinh doanh không ra thì tìm ở ô Thông tin khác bằng mã do team hỗ trợ cung cấp, rồi quay lại K2.",
+      "case": ["ES-343712"]
+    },
+    {
+      "ma": "S2",
+      "viec": "Sửa CCCD trong hồ sơ khách về đúng 12 số (ticket gặp bản ghi đang là 13 số), rồi mở lại hoá đơn nháp và phát hành lại.",
+      "case": ["ES-346136"]
+    },
+    {
+      "ma": "S3",
+      "viec": "Xoá dấu cách thừa sau mã số thuế người mua và kiểm tra lại tên người mua trên hoá đơn nháp, rồi phát hành lại từ Xem hoá đơn.",
+      "case": ["ES-346027", "ES-345813"]
+    },
+    {
+      "ma": "S4",
+      "viec": "Sửa số giấy tờ của khách để ô ID và ô hộ chiếu không còn ghi trùng số nhau, rồi xuất lại hoá đơn.",
+      "case": ["ES-342328"]
+    },
+    {
+      "ma": "S5",
+      "viec": "Sửa ngày hoá đơn trên hoá đơn nháp (response trả 0001-01-01 nghĩa là ngày chưa được điền đúng), rồi phát hành lại.",
+      "case": ["ES-345857"]
+    },
+    {
+      "ma": "S6",
+      "viec": "Sửa số điện thoại người mua về định dạng NCC nhận: bỏ mã quốc gia +84 và bỏ dấu ngoặc mở/đóng. Ticket ghi rõ hệ thống đang cho nhập tự do ký tự nên dữ liệu sai lọt được qua; nếu khách buộc phải dùng format đặc biệt thì báo khách liên hệ trực tiếp NCC.",
+      "case": ["ES-345257"]
+    },
+    {
+      "ma": "S7",
+      "viec": "Đổi trường giấy tờ: nếu số đang nhập ở ô CCCD mà NCC báo sai định dạng thì nhập sang ô Hộ chiếu (ES-344862 làm đúng việc này thì xuất được), rồi xuất lại.",
+      "case": ["ES-344862", "ES-345623"]
+    },
+    {
+      "ma": "S8",
+      "viec": "Mở Danh sách hoá đơn > chọn hoá đơn nháp > Xem hoá đơn > bấm nút Phát hành hoá đơn để phát hành lại.",
+      "case": ["ES-346027", "ES-343348", "ES-343712"]
+    },
+    {
+      "ma": "S9",
+      "viec": "Nếu bản nháp còn sai thông tin: điều chỉnh bản nháp đó, hoặc xoá bản nháp đó đi rồi phát hành lại.",
+      "case": ["ES-345857"]
+    },
+    {
+      "ma": "S10",
+      "viec": "Khi không đọc được mã lỗi (tài khoản không có quyền vào mục Nhật ký, hoặc log không kèm diễn giải): yêu cầu quản lý/Admin khách sạn phân quyền vào mục cấu hình đó, hoặc gửi mã PMS + mã đặt phòng + số hoá đơn cho team hỗ trợ để tra log hộ.",
+      "case": ["ES-345623", "ES-343712"]
+    },
+    {
+      "ma": "S11",
+      "viec": "Với lỗi phía NCC báo do số hoá đơn không liên tục: thử phát hành lại từ bản nháp (đây là toàn bộ cách xử lý mà ticket ghi lại, không có sửa dữ liệu nguồn nào).",
+      "case": ["ES-343712"]
+    }
+  ],
+  "buocXacNhan": {
+    "viec": "Mở lại màn Danh sách hoá đơn (không đặt bộ lọc ngày) và xác nhận hoá đơn của đặt phòng đó đã rời trạng thái Nháp và ĐÃ CÓ SỐ HOÁ ĐƠN hiển thị — vì trong nhóm này có case bản nháp tồn tại mà “chưa có số hđ”. Nếu trước đó có tra log thì bản ghi của lần phát hành mới trong Nhật ký kết nối không còn ErrorCode. Chỉ đóng case khi khách tự xác nhận nhìn thấy hoá đơn đã xuất, ví dụ “khách đã xuất được hóa đơn”.",
+    "case": ["ES-346136", "ES-346027", "ES-342328", "ES-344862", "ES-345857"]
+  },
+  "phanBoBuocKiemDuocGhiLai": {
+    "ghi-ro-buoc-kiem": {
+      "so": 5,
+      "case": ["ES-346136", "ES-346027", "ES-345623", "ES-344862", "ES-343712"]
+    },
+    "suy-ra-duoc-nhung-khong-ghi": {
+      "so": 2,
+      "case": ["ES-345257", "ES-345857"]
+    },
+    "chi-ghi-ket-luan": {
+      "so": 1,
+      "case": ["ES-345813"]
+    },
+    "buoc-kiem-ngoai-ticket": {
+      "so": 2,
+      "case": ["ES-343348", "ES-342328"]
+    },
+    "khong-phai-chan-doan": {
+      "so": 0,
+      "case": []
+    }
+  },
+  "_haiCaseLech": null,
+  "khoangTrongPhaiBiet": [
+    "Không ticket nào ghi thứ tự kiểm. Thứ tự K1 → K5 là tôi tự xếp theo nguyên tắc bước không cần quyền và không cần vào máy khách thì làm trước; không có ticket nào chống lưng cho chính thứ tự này.",
+    "Không biết ERR:1518 (ES-345623) và ERR.1518 (ES-344862) có phải cùng một mã hay không: hai ticket viết khác dấu, trỏ tới hai diễn giải khác nhau (giấy tờ nói chung / CCCD sai định dạng), và ES-344862 không ghi tên nhà cung cấp. Tôi để hai dòng riêng trong bảng thay vì gộp — nếu gộp sai thì bảng sẽ trỏ nhầm trường.",
+    "Chỉ hai dòng bảng biết chắc nhà cung cấp (VNPT ở ES-345623 và ES-345257, misa ở ES-343712). Ba dòng còn lại không có tên NCC trong ticket, nên khoá (ncc, mã lỗi) của các dòng đó chưa thật sự là khoá: nếu có NCC thứ hai trả cùng mã 5000 hoặc InvalidInvoiceDate thì bảng này không phân biệt được.",
+    "Không ticket nào nói rõ sửa ở HỒ SƠ KHÁCH hay sửa trên HOÁ ĐƠN NHÁP thì mới ăn: ES-346136 nói CCCD “đang nhập trên hệ thống”, ES-346027 nói vào xem hoá đơn nháp rồi sửa. Tôi viết bước sửa nêu cả hai chỗ, đây là chỗ người duyệt nên chốt lại.",
+    "Mã lỗi 5000 (ES-345813): ticket không nói mã đó đọc được ở đâu, cũng không tách được là mã số thuế hay tên người mua sai; khách không phản hồi thêm sau câu hướng dẫn nên không biết sửa gì thì hết lỗi. Dòng bảng cho mã 5000 vì thế trỏ tới một bước sửa gộp hai trường.",
+    "Không có bảng mã lỗi chính thức từ NCC: ES-345623 ghi “hiện mã lỗi này bên NCC cũng chưa cung cấp chính xác cho bên em, nên hiện chưa thể gửi bảng mã lỗi cho khách sạn được ạ”. Bảng tra trong bản nháp này dựng từ 10 ticket, không phải tài liệu NCC, nên nó thiếu mọi mã chưa từng xuất hiện trong 10 ticket đó.",
+    "ES-343348 và ES-342328 kết luận sau khi nhân viên vào máy khách bằng ultraview. Ticket không ghi họ mở màn nào, nhìn trường nào, nên hai nhánh “ID trùng số hộ chiếu” và “khách nói đúng nhưng thực ra sai CCCD” là tôi dựng lại, không phải chép từ thao tác đã ghi.",
+    "ES-344862 có nghịch lý chưa giải thích được: khách nói “em đã nhập hộ chiếu nhiều lần nhưng vẫn không được”, rồi nhân viên nói “Em có vừa đổi lại sang Hộ chiếu rồi” thì xuất được. Không biết thao tác của nhân viên khác thao tác của khách ở chỗ nào — nên bước sửa S7 có thể đang thiếu một chi tiết.",
+    "ES-343712 (misa, số hoá đơn không liên tục) chỉ được xử lý bằng “thử phát hành lại”: không rõ vì sao số hoá đơn không liên tục, và không có gì trong ticket nói phải làm gì nếu thử lại vẫn hỏng.",
+    "Hai ticket có phần nội dung ngoài nhóm này mà tôi đã bỏ qua: ES-344862 có đoạn đầu về khoản thanh toán âm 2.250.000, ES-345857 có đoạn cuối về báo cáo ACR001 chạy chậm. Tôi chỉ dùng phần liên quan tới phát hành hoá đơn.",
+    "Mã ticket của case FTE Ba Dinh Hotel bị che ở dòng tiêu đề (ES-[ĐÃ CHE]); tôi dùng mã ES-345857 vì chính ticket đó chứa comment “jira:ES-345857#comment-801929” và mã ES-345857 nằm trong danh sách mã được phép. Nếu suy luận này sai thì mọi chỗ dẫn ES-345857 phải soát lại.",
+    "Không ticket nào ghi NCC thường mất bao lâu mới trả kết quả, nên không biết trạng thái “đang xử lý, vui lòng thử lại sau” treo bao lâu thì mới được coi là hỏng chứ không phải đang chạy bình thường.",
+    "ES-345257 cho biết số điện thoại “được tự fill do Cms kéo thông tin từ booking về”. Không ticket nào ghi sửa ở đâu để lần kéo dữ liệu sau không ghi đè lại giá trị vừa sửa, nên bước sửa S6 có thể chỉ chữa được một lần."
+  ]
+}

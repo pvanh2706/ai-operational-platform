@@ -1,0 +1,540 @@
+{
+  "_ghiChu": "Bản nháp SOP THỨ BA, dựng tay 2026-09-15 trong lúc chờ support duyệt gói bản B của nhóm 1. Mục đích giống bản thứ hai: thử xem hình dạng đầu ra có chịu được một nhóm nữa không. Câu trả lời: KHÔNG — nhóm này không phải cây phân nhánh (nhóm 1) cũng không phải bảng tra (nhà cung cấp, mã lỗi) (nhóm 2), mà là BẢNG ĐỐI CHIẾU BA NƠI theo từng CỘT TIỀN, và nó cần một tiền đề mà hai nhóm kia không có. Xem trường `hinhDang`.",
+  "_canhBao": "chungCu = 'toi-suy-ra' là do người viết suy từ kết luận của nhân viên, không phải từ bước kiểm được ghi lại.",
+  "_khongChuaDuLieuKhach": "Cố ý KHÔNG chứa mã số thuế, mã đặt phòng, tên khách sạn, tên người, ID/mật khẩu điều khiển từ xa, URL có id, hay SỐ TIỀN cụ thể của một hoá đơn. Mã lỗi của nhà cung cấp và TÊN TRƯỜNG trong payload thì có — chúng là từ vựng kỹ thuật. Tra nguyên văn: python scripts/jira-export/nhom_sop.py --nhom \"PMS\"",
+  "_canhBaoDuLieuThuongMai": "🛑 KHÁC hai nhóm trước: vật liệu của nhóm này CÓ dữ liệu thương mại thật — một ticket ghi nguy cơ mất hợp đồng chuỗi, việc tạm ngưng ký căn thứ hai, và tên người phụ trách kinh doanh. Không dòng nào của nó vào bản nháp này. Nhưng nó làm câu B2b của docs/14 (`AR-n`, dữ liệu THƯƠNG MẠI) thôi là giả thuyết: nhóm nguyên nhân dày thứ ba trong taxonomy đã chứa loại dữ liệu đó.",
+  "nhom": "Lệch cấu hình tiền/thuế/định dạng số giữa PMS – ezInvoice.Admin – NCC",
+  "chuDe": "hoá đơn điện tử",
+  "nguonNhom": "docs/ket-qua-phan-tich/taxonomy-19-nhom-hoa-don.json",
+  "soCaseDungSau": 8,
+  "corpus": "150 case hoá đơn đã đóng, xuất 2026-09-05, trải 24 ngày",
+  "duyet": {
+    "ngay": null,
+    "nguoiDuyet": null,
+    "goiDaGui": null,
+    "ketQua": "CHƯA GỬI DUYỆT. Dựng xong 2026-09-15.",
+    "soChoDaSua": null
+  },
+  "hinhDang": {
+    "nhom1": "cây phân nhánh LỒNG NHAU — mỗi bước kiểm thu hẹp bước sau, bốn nguyên nhân là bốn tầng phân quyền",
+    "nhom2": "BẢNG TRA + vòng lặp 4 bước — khoá một dòng là (nhà cung cấp, mã lỗi) → ra TRƯỜNG bị từ chối",
+    "nhom3": "BẢNG ĐỐI CHIẾU BA NƠI — khoá một dòng là (CỘT TIỀN bị lệch, NƠI khai sai) → ra cách sửa. Đầu vào của bảng KHÔNG đọc được từ màn hình nào: nó phải được DỰNG RA bằng cách mở cùng một hoá đơn ở ba nơi rồi so từng cột.",
+    "cuaNhomNay": "nhom3",
+    "🛑_yNghiaKienTruc": "Ba nhóm, ba topology. Và nhóm này KHÔNG biểu diễn được bằng `SopDraftSchema` hiện tại: schema có `bangTraMaLoi` với khoá cứng (ncc, maLoi), không có chỗ cho một bảng khoá (cot, noiKhaiSai). Bản nháp này vì thế dùng một trường NGOÀI schema là `bangDoiChieuCot`. Kết luận: trường bảng phải TỔNG QUÁT — khoá của bảng là thứ bản nháp KHAI RA, không phải thứ schema đặt trước.",
+    "🛑_tienDeRiengCuaNhomNay": "Hai nhóm trước chỉ có MỘT nơi để nhìn. Nhóm này có BA, và cùng một hoá đơn cho ra SỐ KHÁC NHAU tuỳ nơi xuất. Nên trước mọi bước kiểm phải chốt: bản đang cãi nhau được xuất từ đâu. Bỏ bước đó thì hai người nhìn hai màn hình khác nhau và cùng tin là mình đúng — đã xảy ra thật, hai lần, ở ES-344027 và ES-344307."
+  },
+  "trieuChungVao": [
+    {
+      "moTa": "\"sao hđ bên chị xuất ra toàn để 0% từ đầu tháng 7 tới giờ\" — thuế suất trên hoá đơn về 0% trong khi cấu hình vẫn ghi có thuế, và đã kéo dài nhiều tháng trước khi có ai báo.",
+      "case": [
+        "ES-342493"
+      ]
+    },
+    {
+      "moTa": "\"hóa đơn xuất ra lỗi\" / \"lỗi tiền\" — khách chỉ gửi ảnh, chữ duy nhất mô tả sự cố là \"sai chỗ trục thành tiền\".",
+      "case": [
+        "ES-341296"
+      ]
+    },
+    {
+      "moTa": "Xem trước PDF ở hai nơi ra HAI đơn giá khác nhau cho cùng một dòng, chênh đúng bằng khoản chiết khấu.",
+      "case": [
+        "ES-344307"
+      ]
+    },
+    {
+      "moTa": "Cột Số lượng hiển thị 4 chữ số thập phân, khách muốn 1; và cột Đơn giá / Thành tiền không đồng nhất với nhau.",
+      "case": [
+        "ES-344027"
+      ]
+    },
+    {
+      "moTa": "\"khách sạn xuất hóa đơn các sản phẩm thuế 10% sang bên trang nhà cung cấp hiển thị 0%\" — kèm log.",
+      "case": [
+        "ES-344810"
+      ]
+    },
+    {
+      "moTa": "\"hóa đơn đang bị làm tròn sai ở cột tổng tiền thanh toán => tiền đang không khớp giữa các cột\", khách phải sửa tay từng tờ khi xuất.",
+      "case": [
+        "ES-344141"
+      ]
+    },
+    {
+      "moTa": "Nhà cung cấp phản hồi rằng dữ liệu bên mình truyền sang đang sai — không phải khách phát hiện mà là NCC báo ngược lại.",
+      "case": [
+        "ES-342309"
+      ]
+    },
+    {
+      "moTa": "Nhân một dòng ra thì số lượng × đơn giá không ra đúng thành tiền mong muốn, lệch vài chục đồng ở tổng sau thuế.",
+      "case": [
+        "ES-343367"
+      ]
+    }
+  ],
+  "buocKiem": [
+    {
+      "ma": "K0",
+      "cauHoi": "Bản hoá đơn đang bị kêu sai được XEM / XUẤT từ đâu: từ PMS, hay từ trang quản trị ezInvoice (admin.invoice), hay là bản PDF cuối cùng bên nhà cung cấp? Và bản mà người đang nói chuyện với bạn nhìn thấy có phải cùng một nơi không?",
+      "noiXem": "Hỏi thẳng người báo, và tự mở lại cùng một hoá đơn ở cả hai nơi của ezCloud (Xem trước PDF tại PMS và Xem trước PDF tại ezInvoice.Admin) để biết hai bản có khác nhau không.",
+      "quyenCan": "Xem được cả PMS lẫn trang quản trị ezInvoice của khách sạn đó.",
+      "viSaoTruoc": "Vì cùng một hoá đơn có thể ra hai con số khác nhau ở hai nơi. Mọi bước kiểm sau đều là phép SO SÁNH, mà so sai nguồn thì kết luận sai theo.",
+      "nhanh": [
+        {
+          "quanSat": "Hai nơi cho ra hai con số khác nhau cho cùng một dòng.",
+          "diToi": "BANG",
+          "case": [
+            "ES-344307",
+            "ES-344027"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Hai nơi của ezCloud giống nhau, nhưng bản PDF cuối bên nhà cung cấp mới là bản sai.",
+          "diToi": "K3",
+          "case": [
+            "ES-344141",
+            "ES-344810"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Chưa xác định được người báo đang nhìn bản nào — chỉ có một tấm ảnh chụp hoá đơn.",
+          "diToi": "K0",
+          "case": [
+            "ES-341296",
+            "ES-343367"
+          ],
+          "chungCu": "toi-suy-ra"
+        }
+      ],
+      "nguyenVan": "\"ẢNh hóa đơn em xuất ở trên là xuất tại PMS hay admin.invoice vậy em / Vì chị xem các hóa đơn khách sạn đã xuất thì đang xuất từ admin.invoice và hôm nay vẫn thể hiện 4 chữ số thập phân\" (ES-344027)",
+      "bayDaVapThat": "🛑 Bước này sinh ra từ hai lần vấp thật, và cả hai lần đều kết thúc bằng việc một bên báo ĐÃ XONG trong khi bên kia vẫn thấy sai. ES-344027: nội bộ kiểm trên bản xuất từ PMS thấy đúng, khách xuất từ trang quản trị vẫn ra 4 chữ số — mất hai ngày cho đúng chỗ lệch đó. ES-344307: cấu hình đã đồng nhất, PDF tại PMS đúng, PDF xuất có điều chỉnh từ trang quản trị vẫn sai."
+    },
+    {
+      "ma": "K1",
+      "cauHoi": "CỘT nào trên hoá đơn lệch: thuế suất, loại hoá đơn, đơn giá, số chữ số thập phân, hay tiền thuế / tổng cộng? Và lệch so với cái gì — so với PMS, hay so với con số khách tính tay?",
+      "noiXem": "Đặt cạnh nhau: bản xem trước tại PMS, bản xem trước tại ezInvoice.Admin, và bản PDF bên nhà cung cấp. So theo CỘT, không so cảm tính \"tiền sai\".",
+      "quyenCan": null,
+      "nhanh": [
+        {
+          "quanSat": "Thuế suất ra 0% trong khi đáng lẽ phải có thuế.",
+          "diToi": "BANG",
+          "case": [
+            "ES-342493",
+            "ES-344810"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Cột thuế và thành tiền sai cùng lúc, và loại hoá đơn hai bên vốn đã khác nhau.",
+          "diToi": "BANG",
+          "case": [
+            "ES-341296"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Đơn giá lệch, phần chênh đúng bằng khoản chiết khấu.",
+          "diToi": "BANG",
+          "case": [
+            "ES-344307"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Số chữ số sau dấu phẩy không như mong muốn, hoặc ba cột không cùng số chữ số.",
+          "diToi": "BANG",
+          "case": [
+            "ES-344027"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Từng dòng đúng nhưng dòng Tổng cộng / tiền thuế không khớp.",
+          "diToi": "K2",
+          "case": [
+            "ES-344141",
+            "ES-343367"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Nhà cung cấp nói một TRƯỜNG trong dữ liệu truyền sang mang sai giá trị.",
+          "diToi": "K4",
+          "case": [
+            "ES-342309"
+          ],
+          "chungCu": "evidence-noi-ro"
+        }
+      ],
+      "nguyenVan": "\"Hiện hóa đơn đang bị làm tròn sai ở cột tổng tiền thanh toán => tiền đang không khớp giữa các cột. Nhờ team kiểm tra xem vấn đề làm tròn này từ phía nào\" (ES-344141)",
+      "bayDaVapThat": "Câu khách nói hầu như luôn là \"hoá đơn sai tiền\" — cùng một câu cho sáu nguyên nhân khác nhau ở bảng dưới. Không quy được về CỘT thì bước tiếp theo là đoán."
+    },
+    {
+      "ma": "K2",
+      "cauHoi": "Nhân lại bằng tay: số lượng × đơn giá có ra đúng thành tiền không, và cộng thuế vào có ra đúng tổng mong muốn không?",
+      "noiXem": "Chính dòng bị kêu sai trên bản PDF, và con số tổng mà khách nói là đúng. Làm trên giấy / máy tính, không cần vào hệ thống.",
+      "quyenCan": null,
+      "nhanh": [
+        {
+          "quanSat": "Nhân lại KHÔNG tái tạo được tổng, và đơn giá đang là số chẵn.",
+          "diToi": "S7",
+          "case": [
+            "ES-343367"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Dữ liệu ezCloud truyền đi mang số lẻ, còn bản hiển thị bên nhà cung cấp là số nguyên.",
+          "diToi": "S7",
+          "case": [
+            "ES-344141"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Nhân lại ra đúng, tổng vẫn sai.",
+          "diToi": "K3",
+          "case": [],
+          "chungCu": "toi-suy-ra"
+        }
+      ],
+      "nguyenVan": "\"Với thành tiền 14991200 thì tiền sau thuế sẽ là 17000020.8. Lệch với tổng tiền đúng 17000000. => thành tiền phải là số khác. Do đơn giá khách để chẵn nên khi nhân lại sẽ lệch tiền\" (ES-343367)",
+      "bayDaVapThat": "🛑 Đây là bước kiểm RẺ NHẤT của cả nhóm — làm được mà không cần quyền, không cần vào hệ thống, không cần hỏi ai — mà lại đứng sau cùng trong cả hai ticket dùng nó. ES-343367 đi một vòng sửa dòng chi tiết cho khớp trước, rồi tổng sau thuế lệch theo, mới quay lại làm phép nhân. Sửa cho khớp một cột bằng cách đổi số của cột đó là cách làm hỏng cột kế bên."
+    },
+    {
+      "ma": "K3",
+      "cauHoi": "Cùng một mục cấu hình đó được khai thế nào ở CẢ BA nơi — PMS, ezInvoice.Admin, và mẫu/loại hoá đơn bên nhà cung cấp — ba giá trị có bằng nhau không?",
+      "noiXem": "Mục cấu hình tương ứng với cột đang lệch ở PMS; cùng mục đó ở ezInvoice.Admin; và mẫu hoá đơn / loại hoá đơn đang đăng ký bên nhà cung cấp.",
+      "quyenCan": "Quyền vào cấu hình ở cả PMS lẫn ezInvoice.Admin. Phần bên nhà cung cấp thường phải nhờ khách mở hoặc hỏi nhà cung cấp.",
+      "nhanh": [
+        {
+          "quanSat": "Hai nơi của ezCloud khai khác nhau.",
+          "diToi": "BANG",
+          "case": [
+            "ES-344307",
+            "ES-344027"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Hai nơi của ezCloud giống nhau, nhưng LOẠI hoá đơn bên nhà cung cấp khác loại đang cấu hình bên PMS.",
+          "diToi": "S2",
+          "case": [
+            "ES-341296"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Mức thuế đang dùng chưa có phương thức hiển thị nào được khai trong cấu hình hoá đơn.",
+          "diToi": "S5",
+          "case": [
+            "ES-344810",
+            "ES-342309"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Cấu hình thuế/phí vừa được đổi gần đây và tuỳ chọn tương ứng ở Cấu hình kết nối chưa được bật lại.",
+          "diToi": "S1",
+          "case": [
+            "ES-342493"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Ba nơi khai giống nhau mà số vẫn lệch.",
+          "diToi": "K4",
+          "case": [
+            "ES-344307"
+          ],
+          "chungCu": "evidence-noi-ro"
+        }
+      ],
+      "nguyenVan": "\"Tại PMS: Cấu hình Chiết khấu đang chọn 'Cộng vào cột đơn giá hàng hóa/dịch vụ' ... Tại ezInvoice.Admin: Cấu hình Chiết khấu đang chọn 'Tách riêng thành cột tiền chiết khấu' ... cần đồng nhất option cấu hình giữa PMS và ezInvoice.Admin\" (ES-344307)",
+      "bayDaVapThat": "Không ticket nào nói nơi nào là NGUỒN SỰ THẬT khi hai bên lệch. Trong corpus, người xử lý luôn sửa ezInvoice.Admin cho khớp PMS — nhưng không ai phát biểu đó là luật, nên đây có thể chỉ là thói quen của một người."
+    },
+    {
+      "ma": "K4",
+      "cauHoi": "Đường kết nối có đang trỏ đúng chỗ không: token hiển thị ở PMS có trùng với token ở ezInvoice.Admin không, và bản xuất tuỳ chỉnh có báo lỗi kết nối nào không?",
+      "noiXem": "Mục token/kết nối ở ezInvoice.Admin, đối chiếu với token hiển thị trong PMS. Kèm nhật ký đồng bộ của lần xuất gần nhất để xem dữ liệu truyền đi mang thuế suất nào.",
+      "quyenCan": "Quyền xem cấu hình kết nối và nhật ký đồng bộ — thường là người nội bộ, khách không tự làm được.",
+      "nhanh": [
+        {
+          "quanSat": "Hai token khác nhau, và bản xuất tuỳ chỉnh báo HOTEL_NOT_FOUND.",
+          "diToi": "S6",
+          "case": [
+            "ES-344810"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Token đúng, dữ liệu truyền đi đã mang đúng giá trị, nhưng bản hiển thị bên nhà cung cấp vẫn khác.",
+          "diToi": "S8",
+          "case": [
+            "ES-344141"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Cấu hình đúng ở cả hai nơi mà chức năng xem trước / phát hành không áp theo cấu hình đó.",
+          "diToi": "S8",
+          "case": [
+            "ES-344307"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Một TRƯỜNG trong dữ liệu truyền đi mang ý nghĩa khác với thứ nhà cung cấp kỳ vọng ở trường đó.",
+          "diToi": "S8",
+          "case": [
+            "ES-342309"
+          ],
+          "chungCu": "evidence-noi-ro"
+        }
+      ],
+      "nguyenVan": "\"Token kết nối tại ezInvoice Admin và token hiển thị tại PMS đang là 2 token khác nhau (Có thể do đã xóa token cũ và tạo 1 token mới nhưng chưa cập nhật lại => Xuất tùy chỉnh hiện tại đang báo lỗi HOTEL_NOT_FOUND do không đúng token)\" (ES-344810)",
+      "bayDaVapThat": "🛑 Ở đây có hai nguyên nhân chồng lên nhau trong CÙNG một ticket — token sai VÀ thiếu khai phương thức hiển thị thuế — và sửa một cái thì lỗi vẫn còn, chỉ đổi thông điệp (sửa token xong thì phát hành báo một mã lỗi khác). Một SOP một-nguyên-nhân-một-lần sẽ dừng sớm ở đây."
+    },
+    {
+      "ma": "K5",
+      "cauHoi": "Sau khi sửa cấu hình: đặt phòng đang thử có được lấy lại dữ liệu theo cấu hình MỚI không, hay nó vẫn đang giữ dữ liệu sinh ra theo cấu hình cũ?",
+      "noiXem": "Trạng thái của chính đặt phòng đó (đã trả phòng hay chưa) trước khi bấm xem trước / xuất lại.",
+      "quyenCan": "Quyền thao tác trên đặt phòng, gồm cả hoàn tác trả phòng.",
+      "nhanh": [
+        {
+          "quanSat": "Đặt phòng đã trả phòng — phải hoàn tác trả phòng rồi mới xuất lại thì dữ liệu mới theo cấu hình mới.",
+          "diToi": "K-XN",
+          "case": [
+            "ES-344810"
+          ],
+          "chungCu": "evidence-noi-ro"
+        },
+        {
+          "quanSat": "Cấu hình đã sửa, xuất lại vẫn ra số cũ, và không phải do trạng thái đặt phòng.",
+          "diToi": "K4",
+          "case": [
+            "ES-342493"
+          ],
+          "chungCu": "toi-suy-ra"
+        }
+      ],
+      "nguyenVan": "\"Lưu ý: Đối với BK đã CO, cần undo CO rồi mới thực hiện xuất hóa đơn tùy chỉnh hoặc Xem trước/Xuất để dữ liệu được lấy theo cấu hình mới nhất\" (ES-344810)",
+      "bayDaVapThat": "Bước này chỉ được viết ra MỘT lần trong cả nhóm, dưới dạng một dòng lưu ý cuối một comment dài. Nếu nó đúng là điều kiện chung thì mọi lần \"đã sửa mà vẫn sai\" đều phải đi qua đây trước khi kết luận là bug — và đó chính là chỗ tôi cần người làm nghề xác nhận."
+    }
+  ],
+  "bangDoiChieuCot": {
+    "_ynghia": "🛑 TRƯỜNG NÀY NẰM NGOÀI `SopDraftSchema`. Nó ở đây vì nhóm này không có hình cây và cũng không tra được bằng mã lỗi: thứ phân biệt các nguyên nhân là CẶP (cột tiền bị lệch, nơi khai sai). Xem `hinhDang`.",
+    "_khoaCuaMotDong": "(cột tiền bị lệch, nơi khai sai) — hai chiều, và chiều thứ hai chỉ biết được sau khi đã mở cùng một hoá đơn ở ba nơi.",
+    "dong": [
+      {
+        "cot": "Thuế suất về 0%",
+        "noiKhaiSai": "PMS — Cấu hình kết nối ezInvoice: đổi cấu hình thuế/phí xong chưa bật lại tuỳ chọn tương ứng",
+        "diToi": "S1",
+        "case": [
+          "ES-342493"
+        ],
+        "chungCu": "evidence-noi-ro",
+        "ghiChu": "Kéo dài nhiều tháng trước khi ai đó báo — sai lặng lẽ, không có thông báo lỗi nào."
+      },
+      {
+        "cot": "Thuế suất về 0% ở bản bên nhà cung cấp",
+        "noiKhaiSai": "Cấu hình hoá đơn — thiếu phương thức hiển thị cho chính mức thuế đang dùng",
+        "diToi": "S5",
+        "case": [
+          "ES-344810",
+          "ES-342309"
+        ],
+        "chungCu": "evidence-noi-ro",
+        "ghiChu": "Ở một ticket còn chồng thêm token sai; sửa một cái thì lỗi chỉ đổi thông điệp."
+      },
+      {
+        "cot": "Cột thuế và thành tiền cùng sai",
+        "noiKhaiSai": "LOẠI hoá đơn khai lệch giữa PMS và nhà cung cấp (bán hàng ↔ VAT)",
+        "diToi": "S2",
+        "case": [
+          "ES-341296"
+        ],
+        "chungCu": "evidence-noi-ro",
+        "ghiChu": "Hoá đơn bán hàng không có thuế, hoá đơn VAT bắt buộc có — hai bên khai khác nhau thì cột thuế không có cách nào đúng."
+      },
+      {
+        "cot": "Đơn giá lệch đúng bằng khoản chiết khấu",
+        "noiKhaiSai": "Cấu hình Chiết khấu khai khác nhau giữa PMS (cộng vào đơn giá) và ezInvoice.Admin (tách riêng cột)",
+        "diToi": "S3",
+        "case": [
+          "ES-344307"
+        ],
+        "chungCu": "evidence-noi-ro",
+        "ghiChu": "Đồng nhất hai nơi xong VẪN lệch — phần còn lại là lỗi sản phẩm, phải chuyển kỹ thuật."
+      },
+      {
+        "cot": "Số chữ số thập phân của Số lượng / Đơn giá / Thành tiền",
+        "noiKhaiSai": "Chỉ khai một phía (PMS) mà không khai bên ezInvoice.Admin",
+        "diToi": "S4",
+        "case": [
+          "ES-344027"
+        ],
+        "chungCu": "evidence-noi-ro",
+        "ghiChu": "Riêng cột Thành tiền còn phụ thuộc mẫu hoá đơn bên nhà cung cấp — có mẫu không cho hiển thị phần lẻ, nên khai đủ hai nơi vẫn có thể không ra như mong muốn."
+      },
+      {
+        "cot": "Tiền thuế / dòng Tổng cộng không khớp các cột",
+        "noiKhaiSai": "Không ai khai sai — ezCloud truyền số có phần lẻ, nhà cung cấp làm tròn khi hiển thị",
+        "diToi": "S7",
+        "case": [
+          "ES-344141"
+        ],
+        "chungCu": "evidence-noi-ro",
+        "ghiChu": "Lý do nền được nêu trong ticket: tiền thuế thường không được để lẻ, nên nhà cung cấp làm tròn ở dòng Tổng cộng. Cách sửa là giảm số lẻ ở phía ezCloud, không phải bắt nhà cung cấp đổi."
+      },
+      {
+        "cot": "Thành tiền của một dòng không tái tạo được từ số lượng × đơn giá",
+        "noiKhaiSai": "Không phải cấu hình — đơn giá được để tròn số nên phép nhân không về đúng tổng",
+        "diToi": "S7",
+        "case": [
+          "ES-343367"
+        ],
+        "chungCu": "evidence-noi-ro",
+        "ghiChu": "Sửa thành tiền cho khớp thì tổng sau thuế lệch theo. Chỗ sửa đúng là số chữ số thập phân của ĐƠN GIÁ."
+      },
+      {
+        "cot": "Một trường trong dữ liệu truyền sang mang sai giá trị",
+        "noiKhaiSai": "Ánh xạ trường giữa ezCloud và nhà cung cấp hiểu khác nhau (một bên đưa tiền thuế, bên kia chờ tổng tiền)",
+        "diToi": "S8",
+        "case": [
+          "ES-342309"
+        ],
+        "chungCu": "evidence-noi-ro",
+        "ghiChu": "Không sửa được bằng cấu hình ở bất kỳ nơi nào — phải hai bên kỹ thuật thống nhất lại ý nghĩa của trường."
+      }
+    ]
+  },
+  "buocSua": [
+    {
+      "ma": "S1",
+      "viec": "Vào Cấu hình > Cấu hình kết nối của ezInvoice, bật lại tuỳ chọn thuế tương ứng sau khi khách sạn đổi cấu hình thuế/phí, rồi lưu.",
+      "case": [
+        "ES-342493"
+      ]
+    },
+    {
+      "ma": "S2",
+      "viec": "Đưa LOẠI hoá đơn khai ở PMS về đúng loại khách sạn đang đăng ký bên nhà cung cấp (hoá đơn bán hàng thì không có thuế, hoá đơn VAT thì bắt buộc có).",
+      "case": [
+        "ES-341296"
+      ]
+    },
+    {
+      "ma": "S3",
+      "viec": "Đặt cùng một option Chiết khấu ở PMS và ở ezInvoice.Admin.",
+      "case": [
+        "ES-344307"
+      ]
+    },
+    {
+      "ma": "S4",
+      "viec": "Khai số chữ số thập phân cho Số lượng và Đơn giá ở CẢ HAI nơi — PMS và ezInvoice.Admin — chứ không chỉ một bên.",
+      "case": [
+        "ES-344027"
+      ]
+    },
+    {
+      "ma": "S5",
+      "viec": "Khai phương thức hiển thị cho đúng mức thuế khách sạn đang dùng trong cấu hình hoá đơn.",
+      "case": [
+        "ES-344810",
+        "ES-342309"
+      ]
+    },
+    {
+      "ma": "S6",
+      "viec": "Cập nhật token kết nối ở PMS cho trùng token đang có ở ezInvoice.Admin (thường xảy ra sau khi token cũ bị xoá và tạo lại).",
+      "case": [
+        "ES-344810"
+      ]
+    },
+    {
+      "ma": "S7",
+      "viec": "Cho đơn giá 2 chữ số thập phân và để các cột tiền còn lại 0 chữ số, để phép nhân tái tạo được tổng và để bản hiển thị bên nhà cung cấp không phải làm tròn.",
+      "case": [
+        "ES-344141",
+        "ES-343367"
+      ]
+    },
+    {
+      "ma": "S8",
+      "viec": "Khi ba nơi đã khai giống nhau mà số vẫn lệch: ghi lại dữ liệu truyền đi của đúng hoá đơn đó rồi chuyển kỹ thuật (hoặc làm việc với nhà cung cấp nếu là ánh xạ trường), và báo khách cách làm tạm cho tới khi có bản sửa.",
+      "case": [
+        "ES-344307",
+        "ES-344141",
+        "ES-342309"
+      ]
+    },
+    {
+      "ma": "S9",
+      "viec": "Với những hoá đơn ĐÃ phát hành sai trước khi sửa cấu hình: hướng dẫn khách điều chỉnh hoặc thay thế trên nhà cung cấp theo đúng nghiệp vụ kế toán — sửa cấu hình không tự sửa được hoá đơn đã phát hành.",
+      "case": [
+        "ES-341296",
+        "ES-342493"
+      ]
+    }
+  ],
+  "buocXacNhan": {
+    "viec": "Xuất lại (hoặc xem trước) trên ĐÚNG đặt phòng đã lỗi, TỪ ĐÚNG NƠI mà khách vẫn dùng hằng ngày — nếu khách xuất từ trang quản trị thì phải kiểm ở đó, không kiểm hộ bằng bản xuất từ PMS — rồi đối chiếu CẢ BỐN cột (số lượng, đơn giá, thành tiền, tiền thuế/tổng cộng) trên bản PDF thực tế bên nhà cung cấp, không chỉ cột vừa sửa. Nếu đặt phòng đã trả phòng thì hoàn tác trả phòng trước khi xuất lại.",
+    "case": [
+      "ES-344027",
+      "ES-344307",
+      "ES-344810",
+      "ES-342493"
+    ],
+    "khoangTrong": "🛑 5/8 ticket của nhóm này có ít nhất một vòng ĐÃ SỬA RỒI VẪN SAI, hoặc sửa xong thì hỏng sang cột khác. Đó là lý do điều kiện đóng ở đây dài hơn hai nhóm trước và không được rút gọn thành 'đã sửa cấu hình xong'. Hai nhóm kia không có đặc điểm này."
+  },
+  "phanBoBuocKiemDuocGhiLai": {
+    "_ynghia": "Nhóm 1 ghi rõ 4/10, nhóm 2 ghi rõ 8/10, nhóm này 6/8. Vật liệu cũng dày hơn hẳn: 63 mẩu cho 8 case (7,9 mẩu/case) so với 1,4 và 2,1 của hai nhóm trước.",
+    "🎯_moiTuongQuanDangChuY": "6/6 ticket có LEO THANG NỘI BỘ (chuyển qua lại giữa support, kỹ thuật, dev) đều ghi rõ bước kiểm. Hai ticket chỉ là chat thẳng với khách thì một ghi rõ, một không có chữ nào. Giả thuyết: bước kiểm được viết ra khi hồ sơ phải đi qua NGƯỜI KHÁC TRONG CÔNG TY, chứ không phải khi ca khó hơn. Nếu đúng thì lượng tri thức thu được từ ticket là hàm của QUY TRÌNH NỘI BỘ, không phải của độ khó — và đó là thứ thay đổi được. Câu này cần hỏi ở khảo sát docs/15.",
+    "ghi-ro-buoc-kiem": {
+      "so": 6,
+      "case": [
+        "ES-341296",
+        "ES-344307",
+        "ES-344027",
+        "ES-344810",
+        "ES-344141",
+        "ES-343367"
+      ]
+    },
+    "suy-ra-duoc-nhung-khong-ghi": {
+      "so": 1,
+      "case": [
+        "ES-342309"
+      ]
+    },
+    "chi-ghi-ket-luan": {
+      "so": 0,
+      "case": []
+    },
+    "buoc-kiem-ngoai-ticket": {
+      "so": 1,
+      "case": [
+        "ES-342493"
+      ]
+    },
+    "khong-phai-chan-doan": {
+      "so": 0,
+      "case": []
+    }
+  },
+  "_haiCaseLech": null,
+  "khoangTrongPhaiBiet": [
+    "Thứ tự các bước kiểm là do tôi đặt. Không ticket nào ghi thứ tự. Riêng K2 (nhân lại bằng tay) tôi đặt sớm vì nó rẻ nhất và không cần quyền gì — nhưng trong cả hai ticket dùng tới nó, nó lại được làm SAU CÙNG. Có thể người làm nghề có lý do để không bắt đầu từ đó.",
+    "Không biết nơi nào là NGUỒN SỰ THẬT khi PMS và ezInvoice.Admin khai khác nhau. Trong corpus người xử lý luôn sửa ezInvoice.Admin theo PMS, nhưng không ai nói đó là luật — có thể chỉ là thói quen của một người.",
+    "Bảng đối chiếu chỉ phủ 8 cột/nguyên nhân đã gặp trong 8 ticket này. Không có danh sách đầy đủ các mục cấu hình ảnh hưởng tới tiền, nên không biết bảng còn thiếu bao nhiêu dòng.",
+    "Không có bảng nói mẫu hoá đơn nào của nhà cung cấp cho hiển thị mấy chữ số thập phân — ticket chỉ nói 'không phải mẫu nào cũng cho'. Thiếu nó thì S4 và S7 vẫn phải thử rồi mới biết.",
+    "Phần hoá đơn ĐÃ phát hành sai (S9) không có điều kiện đóng nào trong hồ sơ: một ticket nói hàng trăm hoá đơn đã xuất sai suốt nhiều tháng, nhưng không ticket nào ghi lại việc xử lý số hoá đơn cũ đó kết thúc ra sao.",
+    "K5 (hoàn tác trả phòng để lấy lại dữ liệu theo cấu hình mới) chỉ xuất hiện MỘT lần, trong một dòng lưu ý. Không biết nó là điều kiện chung hay chỉ đúng với một tình huống.",
+    "Không biết khi nào một ca của nhóm này phải được leo thang. Một ticket được đẩy ưu tiên cao nhất vì lý do nằm ngoài kỹ thuật; những ticket khác cùng dạng thì không."
+  ]
+}

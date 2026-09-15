@@ -213,7 +213,27 @@ def kiem_cay(tax, duong_dan: str) -> int:
     ma_dich.add("NGOAI-PHAM-VI")
     if cay.get("buocXacNhan"):
         ma_dich.add("K-XN")
-    bang = (cay.get("bangTraMaLoi") or {}).get("dong") or []
+    # ⚠ Tên trường bảng KHÔNG được cứng hoá thành `bangTraMaLoi`, và lý do là một phép đo
+    # chứ không phải phòng xa: ba nhóm dựng tới nay ra BA topology. Nhóm 1 là cây phân
+    # nhánh, nhóm 2 tra bằng khoá (nhà cung cấp, mã lỗi), nhóm 3 tra bằng khoá (cột tiền,
+    # nơi khai sai) — và khoá thứ hai của nhóm 3 KHÔNG đọc được từ màn hình nào, nó phải
+    # được dựng ra bằng cách so cùng một hoá đơn ở ba nơi. Một bảng khai khoá của chính
+    # nó, phép kiểm đọc theo khai báo đó.
+    BANG_BIET = {
+        "bangTraMaLoi": {
+            "khoa": ("ncc", "maLoi"),
+            "batBuoc": ("ncc", "maLoi", "truongBiTuChoi", "diToi"),
+            "nhan": "(nhà cung cấp, mã lỗi)",
+        },
+        "bangDoiChieuCot": {
+            "khoa": ("cot", "noiKhaiSai"),
+            "batBuoc": ("cot", "noiKhaiSai", "diToi"),
+            "nhan": "(cột tiền, nơi khai sai)",
+        },
+    }
+    cac_bang = [(ten, luat, (cay.get(ten) or {}).get("dong") or [])
+                for ten, luat in BANG_BIET.items() if cay.get(ten)]
+    bang = [d for _, _, dong in cac_bang for d in dong]
     if bang:
         ma_dich.add("BANG")
     trong_nhanh = set()
@@ -229,33 +249,51 @@ def kiem_cay(tax, duong_dan: str) -> int:
     # Bảng tra: một DÒNG là một nhánh, nên phải qua đúng những phép kiểm như nhánh.
     # Thêm một ràng buộc riêng: khoá của một dòng là (nhà cung cấp, mã lỗi), không phải
     # mã lỗi một mình — hai NCC trả cùng một mã vẫn có thể trỏ tới hai trường khác nhau.
-    khoa_da_gap = set()
-    for i, d in enumerate(bang):
-        ten = "bảng dòng %d (%s/%s)" % (i + 1, d.get("ncc"), str(d.get("maLoi"))[:24])
-        trong_nhanh |= set(d.get("case") or [])
-        for truong in ("ncc", "maLoi", "truongBiTuChoi", "diToi"):
-            if not d.get(truong):
-                chan.append("%s: thiếu trường %r." % (ten, truong))
-        if d.get("diToi") and d["diToi"] not in ma_dich:
-            chan.append("%s: trỏ tới %r — không có bước nào mang mã đó." % (ten, d["diToi"]))
-        if d.get("chungCu") not in ("evidence-noi-ro", "toi-suy-ra"):
-            chan.append("%s: thiếu chungCu hợp lệ." % ten)
-        khoa = (d.get("ncc"), d.get("maLoi"))
-        if khoa in khoa_da_gap:
-            chan.append("%s: khoá (nhà cung cấp, mã lỗi) BẮT TRÙNG — hai dòng cùng khoá thì "
-                        "tra ra hai trường khác nhau, không ai biết dùng dòng nào." % ten)
-        khoa_da_gap.add(khoa)
+    for ten_bang, luat, dong in cac_bang:
+        khoa_da_gap = set()
+        for i, d in enumerate(dong):
+            dau = "/".join(str(d.get(k))[:24] for k in luat["khoa"])
+            ten = "%s dòng %d (%s)" % (ten_bang, i + 1, dau)
+            trong_nhanh |= set(d.get("case") or [])
+            for truong in luat["batBuoc"]:
+                if not d.get(truong):
+                    chan.append("%s: thiếu trường %r." % (ten, truong))
+            if d.get("diToi") and d["diToi"] not in ma_dich:
+                chan.append("%s: trỏ tới %r — không có bước nào mang mã đó." % (ten, d["diToi"]))
+            if d.get("chungCu") not in ("evidence-noi-ro", "toi-suy-ra"):
+                chan.append("%s: thiếu chungCu hợp lệ." % ten)
+            khoa = tuple(d.get(k) for k in luat["khoa"])
+            if khoa in khoa_da_gap:
+                chan.append("%s: khoá %s BẮT TRÙNG — hai dòng cùng khoá thì tra ra hai cách "
+                            "sửa khác nhau, không ai biết dùng dòng nào." % (ten, luat["nhan"]))
+            khoa_da_gap.add(khoa)
 
     la = sorted(trong_nhanh - trong_nhom - ngoai_nhom_duoc_phep)
     if la:
         chan.append("case ở trong cây mà KHÔNG thuộc nhóm và không được giải thích ở "
                     "_haiCaseLech: %s" % ", ".join(la))
 
+    # ⚠ Quy ước "khoá chú thích bắt đầu bằng _" KHÔNG đủ, và đây là lỗi đã xảy ra thật
+    # 2026-09-15: cây nhóm 3 đặt một chú thích tên `🎯_moiTuongQuan…`, tức tiền tố emoji rồi
+    # mới tới `_` — đúng lối đặt tên mà chính repo này dùng ở `duyet` và `hinhDang`. Vòng lặp
+    # cũ coi nó là một ô phân bố và chết bằng `TypeError: string indices must be integers`,
+    # một thông báo không chỉ về phía cây. Nên xét theo HÌNH DẠNG GIÁ TRỊ, không theo tên:
+    # thiếu `so`/`case` thì không phải ô phân bố. Nhưng KHÔNG im lặng bỏ qua — một ô thật bị
+    # gõ sai tên sẽ biến mất khỏi phép cộng, và phép cộng là thứ duy nhất bắt được nó.
+    O_BAT_BUOC = {"ghi-ro-buoc-kiem", "suy-ra-duoc-nhung-khong-ghi", "chi-ghi-ket-luan",
+                  "buoc-kiem-ngoai-ticket", "khong-phai-chan-doan"}
     pb = cay.get("phanBoBuocKiemDuocGhiLai") or {}
-    dem, tat_ca = 0, []
+    dem, tat_ca, bo_qua = 0, [], []
     for k, v in pb.items():
-        if k.startswith("_"):
+        if not (isinstance(v, dict) and "so" in v and "case" in v):
+            if k in O_BAT_BUOC:
+                chan.append("phân bố %r có nhưng không đúng hình dạng {so, case}." % k)
+            else:
+                bo_qua.append(k)
             continue
+        if k not in O_BAT_BUOC:
+            chan.append("phân bố có ô lạ %r — năm ô là tập ĐÓNG, thêm ô thì phép cộng "
+                        "không còn nghĩa." % k)
         dem += v["so"]
         tat_ca += v["case"]
         if v["so"] != len(v["case"]):
@@ -278,7 +316,11 @@ def kiem_cay(tax, duong_dan: str) -> int:
     if bang:
         nhanh_co_nguon += sum(1 for d in bang if d.get("chungCu") == "evidence-noi-ro")
         tong_nhanh += len(bang)
-        print("  bảng tra        : %d dòng, khoá (nhà cung cấp, mã lỗi)" % len(bang))
+        for ten_bang, luat, dong in cac_bang:
+            print("  bảng            : %s — %d dòng, khoá %s"
+                  % (ten_bang, len(dong), luat["nhan"]))
+    if bo_qua:
+        print("  chú thích bỏ qua: %s" % ", ".join(bo_qua))
     print("  nhánh có nguồn  : %d/%d (còn lại là suy ra từ kết luận)" % (nhanh_co_nguon, tong_nhanh))
     # Trạng thái duyệt phải HIỆN RA, không nằm im trong file. Một cây đã qua một lượt
     # duyệt "không sửa gì" trông giống hệt một cây chưa ai đọc — nói ra để không ai

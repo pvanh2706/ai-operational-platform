@@ -457,3 +457,153 @@ Cộng hai câu **kiểm chứng được** — trả lời hời hợt sẽ l�
 
 Hai câu này không hỏi *"cây có đúng không"* — chúng hỏi một việc người trả lời làm hằng
 ngày, rồi để mình tự so. Đó là khác biệt giữa một câu hỏi và một phép kiểm.
+
+---
+
+## 11. CÂY THỨ BA (2026-09-15) — hình dạng thứ ba, và schema KHÔNG chứa nổi nó
+
+> Dựng trong lúc chờ support duyệt gói `docs/16`. Nhóm thử: *Lệch cấu hình tiền/thuế/định
+> dạng số giữa PMS – ezInvoice.Admin – NCC* (8 case, **63 mẩu** — dày gấp 3 lần nhóm 1 và
+> nhóm 2 cộng lại về mẩu-trên-case: 7,9 so với 1,4 và 2,1). Bản máy đọc được:
+> [`cay-quyet-dinh-lech-cau-hinh-tien.json`](ket-qua-phan-tich/cay-quyet-dinh-lech-cau-hinh-tien.json).
+> Gói gửi người duyệt: [`17_GOI_DUYET_LECH_TIEN.md`](17_GOI_DUYET_LECH_TIEN.md).
+
+**Câu §9 hỏi lần nữa, và câu trả lời lại là KHÔNG — lần này theo một chiều mới.**
+
+```text
+nhóm 1   CÂY PHÂN NHÁNH LỒNG NHAU     5 bước kiểm · 13 nhánh · 0 bảng
+nhóm 2   BẢNG TRA, khoá (NCC, mã lỗi)  3 bước kiểm ·  6 dòng bảng
+nhóm 3   BẢNG ĐỐI CHIẾU BA NƠI,        6 bước kiểm ·  8 dòng bảng
+         khoá (CỘT TIỀN, NƠI khai sai)
+```
+
+🛑 **Khác biệt không nằm ở số chiều của khoá mà ở chỗ khoá ĐẾN TỪ ĐÂU.** Khoá của nhóm 2
+đọc thẳng được: mã lỗi là thứ hệ thống trả về. Khoá của nhóm 3 **không có trên màn hình
+nào** — nó phải được *dựng ra* bằng cách mở cùng một hoá đơn ở ba nơi rồi so từng cột.
+Nên nhóm này có một **bước kiểm số 0** mà hai nhóm kia không cần: *bản đang bị kêu sai
+được xuất từ đâu?*
+
+Bước `K0` đó không phải phòng xa. Nó sinh từ hai lần vấp thật, và cả hai lần đều kết
+thúc bằng việc **một bên báo ĐÃ XONG trong khi bên kia vẫn thấy sai**: `ES-344027` kiểm
+trên bản xuất từ PMS thấy đúng, khách xuất từ trang quản trị vẫn ra 4 chữ số thập phân;
+`ES-344307` cấu hình đã đồng nhất, PDF tại PMS đúng, PDF từ trang quản trị vẫn lệch.
+
+### 11.1 Hệ quả cho schema: trường bảng phải TỔNG QUÁT
+
+`SopDraftSchema` có `bangTraMaLoi` với khoá **cứng** `(ncc, maLoi)`. Nhóm 3 không có chỗ
+để vào. Bản nháp này vì thế dùng một trường **ngoài schema**: `bangDoiChieuCot`.
+
+→ **Trường bảng phải để bản nháp KHAI RA khoá của nó**, thay vì schema đặt trước. Hai
+phép kiểm đã được mở rộng đúng theo hướng đó (`nhom_sop.py --kiem-cay` và `goi_duyet.py`
+đều đọc khoá theo khai báo, và đều bắt trùng khoá trên chính khoá được khai).
+
+### 11.2 Một đặc điểm riêng: **5/8 case có vòng "đã sửa rồi vẫn sai"**
+
+Hai nhóm trước không có đặc điểm này. Ở nhóm 3 nó là chuyện thường: sửa cấu hình xong
+vẫn sai (`ES-342493`), đồng nhất hai nơi xong vẫn lệch vì lỗi sản phẩm (`ES-344307`),
+sửa token xong thì lỗi chỉ **đổi thông điệp** (`ES-344810`), sửa một dòng cho khớp thì
+tổng sau thuế lệch theo (`ES-343367`).
+
+→ Điều kiện đóng của nhóm này **không rút gọn được** thành *"đã sửa cấu hình"*. Nó phải
+là: xuất lại từ **đúng nơi khách vẫn dùng**, trên đúng đặt phòng đã lỗi, rồi đối chiếu
+**cả bốn cột** trên bản PDF thật bên nhà cung cấp — không chỉ cột vừa sửa.
+
+### 11.3 Một mối tương quan đáng hỏi ở khảo sát vận hành
+
+```text
+6/6 case có LEO THANG NỘI BỘ (support ↔ kỹ thuật ↔ dev)  ->  đều ghi rõ bước kiểm
+2/2 case chỉ chat thẳng với khách                        ->  1 ghi rõ, 1 không có chữ nào
+```
+
+Giả thuyết: **bước kiểm được viết ra khi hồ sơ phải đi qua người khác trong công ty**,
+không phải khi ca khó hơn. Nếu đúng thì lượng tri thức lấy được từ ticket là hàm của
+**quy trình nội bộ** — một thứ thay đổi được — chứ không phải của độ khó. Đây là câu nên
+hỏi thẳng ở `docs/15`, và nó mạnh hơn mọi phép đo trên corpus vì nó chỉ ra một **can
+thiệp**, không chỉ một quan sát.
+
+### 11.4 Dữ liệu THƯƠNG MẠI không còn là giả thuyết
+
+Vật liệu nhóm này chứa nguy cơ mất hợp đồng chuỗi, việc tạm ngưng ký căn thứ hai, và tên
+người phụ trách kinh doanh. Không dòng nào vào bản nháp — nhưng câu **B2b** của
+`docs/14` (`AR-n`) từ nay có một ca thật đứng sau: nhóm nguyên nhân dày thứ ba trong
+taxonomy đã chứa loại dữ liệu đó.
+
+---
+
+## 12. `diff(A,B)` — phép ĐẾM chạy được bằng script, và ba con số đầu tiên
+
+> `scripts/jira-export/diff_ab.py` (2026-09-15). Chạy lại: `python scripts/jira-export/diff_ab.py --tat-ca`
+
+Trước hôm nay `diff(A,B)` được làm **bằng mắt**: đọc hai file rồi gõ tay một bảng sáu số.
+Việc đó hỏng ở hai chỗ, và cả hai đã xảy ra thật.
+
+### 12.1 Lỗ thứ nhất: hai bản dùng hai bộ NHÃN, và không phép kiểm nào bắt được
+
+Năm ô của `phanBoBuocKiemDuocGhiLai` chốt ngày **2026-09-11** (`AR-q`). Hai cây bản A viết
+**09-07/08**, tức trước đó, nên chúng đặt tên ô theo ý người viết lúc ấy:
+
+```text
+bản A nhóm 1   suy-ra-duoc-tu-mau-nhung-khong-ghi · buoc-kiem-xay-ra-ngoai-ticket
+bản A nhóm 2   ghi-ro-buoc-kiem-va-co-ma-loi-nguyen-van · ghi-ro-buoc-kiem-nhung-khong-co-ma-loi
+               · buoc-kiem-xay-ra-qua-remote-chi-con-ket-luan
+bản B (máy)    đúng năm ô của schema
+```
+
+`--kiem-cay` **cộng mọi ô bất kể tên**, nên phép cộng vẫn khớp và không có cảnh báo nào.
+Nhưng `M2` so A với B **theo ô** — mà mọi ô đều "khác tên". Một phép so im lặng vô nghĩa.
+
+Đã xử lý 2026-09-15: nhãn được migrate về tập đóng, **giữ nguyên từng con số và từng mã
+case** (xếp lại theo định nghĩa mới sẽ là viết lại kết luận cũ bằng tiêu chí mà người viết
+lúc đó không có — chỗ đó ghi vào `_nhanDaDoi` của chính hai file). Và `--kiem-cay` nay
+**chặn** một ô lạ thay vì cộng nó vào.
+
+⚠ Lỗ này lộ ra vì một lý do đáng ghi: phép kiểm cũ bỏ qua khoá bắt đầu bằng `_`, còn cây
+nhóm 3 đặt một chú thích tên `🎯_moiTuongQuan…` — **tiền tố emoji rồi mới tới `_`**, đúng
+lối đặt tên mà chính repo này dùng ở `duyet` và `hinhDang`. Nó chết bằng `TypeError`, và
+đi tìm nguyên nhân thì gặp chỗ hỏng thật. Phép kiểm nay xét **hình dạng giá trị**, không
+xét tên.
+
+### 12.2 Ba con số, hai nhóm độc lập
+
+```text
+                                   nhóm 1          nhóm 2
+(a) bất đồng PHÂN BỐ theo ticket   3/10  30,0%     3/10  30,0%
+(b) chênh lệch MÔ TẢ (chuẩn theo A)      31,0%           52,8%
+(c) chênh TỈ LỆ NHÁNH CÓ NGUỒN      3,8 điểm %      30,8 điểm %
+                                   A 54% · B 50%   A 94% · B 63%
+```
+
+🎯 **(a) bằng nhau đúng 3/10 ở hai nhóm dựng độc lập, hai lượt sinh độc lập.** Đó là con
+số `M2` đầu tiên đến từ một phép đếm chạy lại được, chứ không từ một lần đọc.
+
+**Chiều lệch thì NGƯỢC nhau, và đó mới là chỗ đáng đọc:**
+
+- **Nhóm 1 — máy xếp CAO hơn người** ở 2/3 ca. Nặng nhất: `ES-343733`, A xếp
+  `buoc-kiem-ngoai-ticket` (support phải xin điều khiển từ xa mới kiểm được), B xếp
+  `ghi-ro-buoc-kiem`. Đó **đúng ca biên mà schema viết hẳn một đoạn để cảnh báo**:
+  *kết luận gõ vào ticket KHÔNG kéo ticket ra khỏi ô "kiểm ngoài ticket"*. Máy đọc định
+  nghĩa đó rồi vẫn vấp đúng chỗ đó.
+- **Nhóm 2 — máy xếp THẤP hơn người** ở 3/3 ca. ⚠ Đọc có điều kiện: bản A nhóm 2 viết
+  trước khi năm ô có định nghĩa, nên một phần chênh lệch này là chênh lệch **tiêu chí**,
+  không hẳn là chênh lệch nhận định.
+
+🛑 **(c) ở nhóm 2 là con số khó chịu nhất: A 94% → B 63%.** Máy dựng **24 nhánh** so với
+11 của người, nhưng phần mở rộng đó phần lớn **không có ca thật đứng sau**. Nhiều hơn
+không phải tốt hơn, và `(b)` — vốn chỉ đếm độ chi tiết — sẽ chấm ngược nếu đọc một mình.
+Đó là lý do script **không** trả về một điểm tổng.
+
+### 12.3 Script bắt được bằng máy đúng thứ trước đây phải tìm bằng tay
+
+Mục *ĐỘ PHỦ NGUỒN* của nhóm 1 in ra: `chỉ A dẫn: ES-343036`. Đó chính là case mà bản A
+**mượn từ nhóm khác** để dựng một bước loại trừ, và là chỗ bản B không với tới được vì
+luật chống-bịa-nguồn rào máy trong một nhóm (`docs/07` §3). Trước đây phát hiện đó tốn
+một lượt đọc tay; nay nó là một dòng trong bảng.
+
+→ Câu **A3** (`AR-p`) của `docs/14` vì thế có thêm một phép đo đứng sau, không chỉ một ca.
+
+### 12.4 Vẫn CHƯA chốt cách tính — và script cố ý không chốt hộ
+
+`docs/11` §8 mục 3 vẫn mở: mức chứng cứ đặt ở tầng nhánh hay tầng SOP, và diff có đọc
+theo nhánh-không-nguồn hay không. Script in **ba cách tính cạnh nhau, có nhãn, không có
+điểm tổng** — một script tự chọn một cách rồi in ra "32%" sẽ biến một câu chưa quyết
+thành một con số trông như đã quyết.
