@@ -5,7 +5,7 @@
 >
 > Sửa gì ở lần cập nhật 2026-09-10, ghi ra để biết chỗ nào từng sai:
 > §1 thiếu hẳn `appsettings.Local.json` (nó sinh ra 2026-09-08, sau bản trước) và
-> `redact-list.json` · §2 ghi "phải 105/105 xanh", giờ là **147** · §4 thiếu bốn file
+> `redact-list.json` · §2 ghi "phải 105/105 xanh", giờ là **157** · §4 thiếu bốn file
 > kết quả, gồm **bản A và bản B của `M2`** · §5.2 chỉ ghi cp1252 ở chiều GHI, thiếu
 > chiều ĐỌC (`open()`), và chiều đọc đã cắn 3 lần trong một phiên · §6 liệt ba câu chờ
 > quyết mà cả ba đã chuyển trạng thái, nên **§6 đã viết lại hoàn toàn**.
@@ -39,6 +39,39 @@ Hệ quả phải biết:
 Muốn dọn history về sau: `git filter-repo --replace-text <file>` với danh sách giá trị
 lấy từ `scripts/jira-export/redact-list.json` (file đó nằm ngoài repo, xem §3). Sau khi
 dọn thì mọi SHA đổi, nên phải force-push và mọi bản clone khác phải clone lại.
+
+### 0.1 · Phép kiểm chạy được — `scripts/quet_credential_repo.py` (2026-09-11)
+
+Mục này trước đây chỉ là một lời dặn, và lời dặn thì **không chặn được gì**: ngày
+2026-09-11, trong lúc viết test cho chính cổng che, bốn credential thật đã bị chép vào
+`docs/07`, `SecretShapeScanner.cs` và `EgressRedactionTests.cs` — dù đầu file test đó đã
+có sẵn dòng *"MỌI GIÁ TRỊ TRONG FILE NÀY LÀ GIẢ, đừng ai thêm vào"*. Bắt được vì có người
+nhớ quét tay. Giờ không phải nhớ nữa:
+
+```bash
+python scripts/quet_credential_repo.py              # cây làm việc — mã thoát 1 nếu bẩn
+python scripts/quet_credential_repo.py --lich-su    # thêm toàn bộ git history
+```
+
+Nó quét theo **GIÁ TRỊ** chứ không theo hình dạng: dựng tập giá trị thật từ các nguồn
+NGOÀI git (corpus, `redact-list.json`) rồi tìm đúng chúng trong file TRONG git. Quét theo
+hình dạng ở đây là sai chỗ — mã nguồn đầy giá trị giả và số bình thường, và bản đầu của
+chính script này đã ra **401 báo động giả** trước khi đổi sang mô hình cặp.
+⚠ Máy chưa kéo corpus về thì nó thoát **mã 2** và nói rõ "đây KHÔNG phải sạch", chứ không
+báo xanh — một phép kiểm không có gì để đối chiếu mà báo xanh là phép kiểm nguy hiểm.
+Chỗ đã được chấp nhận khai ở `scripts/quet-credential-daduyet.json` (chỉ chứa giá trị ĐÃ CHE).
+
+**Con số của history, lần đầu đo được (2026-09-11):**
+
+```text
+15 giá trị thật khác nhau còn trong git history, mỗi cái ở 14-52 commit:
+  · mật khẩu VNPT + tài khoản dịch vụ + tài khoản portal
+  · 6 ID và mật khẩu Ultraviewer
+  · 5 email khách hàng / khách sạn
+```
+→ Khớp với mô tả sẵn có ở trên, và giờ **đếm được** thay vì ước lượng. Nó không đổi quyết
+định (vẫn không viết lại history), nhưng nó là lý do để việc **xoay mật khẩu VNPT** đừng
+bị quên: đó vẫn là cách rẻ nhất làm phần lớn giá trị trong history thành vô hại.
 
 ---
 
@@ -111,8 +144,12 @@ dotnet ef database update --project src/KnowledgePlatform.Infrastructure \
 # 3. Tenant cho máy dev
 psql -U kp_app -h localhost -d kp_dev -f scripts/dev-seed-tenant.sql
 
-# 4. Kiểm — phải 147/147 xanh (90 domain + 15 hạ tầng + 42 API)
+# 4. Kiểm — phải 157/157 xanh (96 domain + 19 hạ tầng + 42 API)
 dotnet test src/KnowledgePlatform.slnx
+
+# 4b. Kiểm rò credential vào file git theo dõi. Chạy ĐƯỢC ngay cả khi chưa có corpus —
+#     lúc đó nó thoát mã 2 và nói rõ là CHƯA KIỂM ĐƯỢC, không báo xanh giả. Xem §0.1.
+python scripts/quet_credential_repo.py
 
 # 5. Kiểm THẬT SỰ: app khởi động được và thấy kp_dev
 dotnet run --project src/KnowledgePlatform.Api --launch-profile http
@@ -124,7 +161,7 @@ curl localhost:5119/internal/tenant-boundary   # đếm bằng SQL thô, KHÔNG 
 🛑 **BƯỚC 5 KHÔNG THỪA — bước 4 có thể XANH GIẢ.** `dotnet test` không đọc `kp_dev` lấy
 một dòng: bộ Infrastructure trỏ vào `kp_test`, bộ API trỏ vào `kp_api_test`, cả hai **tự
 chạy migration** và bộ API còn **tự tạo tenant riêng**. Nên bỏ qua hoặc làm hỏng bước 2
-và bước 3 thì bước 4 **vẫn 147/147**. Chỉ bước 5 mới chạm vào thứ ba bước đầu vừa dựng.
+và bước 3 thì bước 4 **vẫn 157/157**. Chỉ bước 5 mới chạm vào thứ ba bước đầu vừa dựng.
 Nếu bước 3 bị bỏ, app sẽ **từ chối khởi động** — đó là hành vi cố ý, không phải lỗi.
 
 ⚠ **Ba chỗ vấp đã đo trên máy cũ, sẽ lặp lại trên máy mới:**

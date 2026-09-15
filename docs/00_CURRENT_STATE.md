@@ -299,6 +299,205 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> ✅ **MƯỜI QUYẾT ĐỊNH CHỐT CÙNG LÚC — 2026-09-15.** Chủ dự án trả lời qua form hỏi đáp
+> (ba lượt), phiếu đầy đủ ở `docs/14`, lý do đã chép sang §5 của `07` — **704 dòng thêm,
+> 0 dòng xoá**, lập luận cũ còn nguyên.
+>
+> ```text
+> AR-q  dùng NGUYÊN TRẠNG bộ định nghĩa 5 ô      -> M2 có thước được công nhận
+> AR-a  ba giá trị rieng-tu/noi-bo/toan-cong-ty  -> siết thành enum ở code
+> AR-p  CHO mượn case ngoài nhóm, kèm BA điều kiện -> phép kiểm đổi sang "trong corpus"
+> AR-m  thêm cột Retracted*, CHỈ người điền tay  -> MỞ ĐƯỜNG cho việc cắt transcript
+> AR-n  bên thứ ba: che lúc nạp · thương mại: người duyệt xác nhận
+> AR-k  bên gửi khai, SỬA SCRIPT EXPORT          -> endpoint vốn đã đúng (IM-19)
+> AR-e  API key theo từng khách hàng
+> AR-i  biến môi trường ConnectionStrings__Default
+> AR-l  nguồn để mở lại = trường BẮT BUỘC ở đường nạp
+> AR-g  GET /cases/{sourceReference}/evidence
+> ```
+>
+> 🛑 **CHỐT ≠ ĐÃ CODE. Không cái nào trong mười cái trên đã được hiện thực.** Mọi rủi ro
+> ở README §"Rủi ro đang mở" **vẫn mở** — chúng giờ có hướng, chưa có bản vá. Hai chỗ
+> đáng nhớ nhất: `phamViXem` vẫn nhận chuỗi tự do, và cổng 409 của `AR-l` vẫn là TRÁNH.
+>
+> ⚠ **Và một dữ kiện đưa ra để người đọc sau tự cân:** cả **11/11** phiếu đều chọn phương
+> án `(đề xuất)`. Các đề xuất đều có số đo chống lưng, nhưng đó **không phải 11 lần cân
+> nhắc độc lập** — đừng đọc sự đồng thuận này thành bằng chứng độc lập cho từng câu.
+>
+
+> 🎯 **LÀM TRONG LÚC CHỜ DUYỆT — 2026-09-15.** Ba việc không phụ thuộc phản hồi của
+> support hay của chủ dự án, và cả ba đều tốn **$0 tiền API**. Chi tiết: `07` §3 `IM-33`,
+> `11` §11 và §12.
+>
+> ```text
+> 1  BẢN B nhóm 2 (NCC từ chối payload) — sinh qua --xuat-payload + một ngữ cảnh SẠCH
+>    (cấm đọc repo / git log / mọi bản nháp có sẵn). Payload che 11 chỗ — nhóm 1 che 0.
+> 2  CÂY THỨ BA, nhóm "Lệch cấu hình tiền/thuế" (8 case, 63 mẩu — DÀY NHẤT 19 nhóm).
+>    Gói duyệt: docs/17_GOI_DUYET_LECH_TIEN.md
+> 3  diff(A,B) thành một phép ĐẾM chạy lại được: scripts/jira-export/diff_ab.py
+> ```
+>
+> **Ba con số `M2` đầu tiên đến từ phép đếm, không từ một lần đọc:**
+>
+> ```text
+>                                    nhóm 1          nhóm 2
+> (a) bất đồng PHÂN BỐ theo ticket   3/10  30,0%     3/10  30,0%
+> (b) chênh lệch MÔ TẢ               31,0%           52,8%
+> (c) chênh TỈ LỆ NHÁNH CÓ NGUỒN     3,8 điểm %      30,8 điểm %  (A 94% · B 63%)
+> ```
+>
+> 🎯 `(a)` **bằng nhau đúng 3/10 ở hai nhóm độc lập**, nhưng **chiều lệch ngược nhau**:
+> nhóm 1 máy xếp CAO hơn người, nhóm 2 máy xếp THẤP hơn ở cả 3 ca. Ca nặng nhất là
+> `ES-343733` — máy đưa một ca chẩn-đoán-qua-remote vào ô `ghi-ro-buoc-kiem`, đúng ca biên
+> mà định nghĩa năm ô viết hẳn một đoạn để cảnh báo. 🛑 `(c)` nhóm 2: máy dựng **24 nhánh**
+> so với 11 của người mà phần mở rộng phần lớn **không có ca thật đứng sau** — nhiều hơn
+> không phải tốt hơn, nên `diff_ab.py` cố ý KHÔNG in điểm tổng.
+>
+> 🛑 **HAI LỖ TÌM ĐƯỢC, cả hai đều thuộc loại báo-xanh-trong-khi-hỏng:**
+>
+> ```text
+> · Bản A và bản B dùng HAI BỘ NHÃN khác nhau cho năm ô của AR-q (A viết 09-07/08,
+>   năm ô chốt 09-11). --kiem-cay cộng mọi ô BẤT KỂ TÊN nên phép cộng vẫn khớp và
+>   không cảnh báo gì — trong khi M2 so A với B THEO Ô. Đã migrate nhãn, giữ nguyên
+>   từng con số và từng mã case; --kiem-cay nay CHẶN ô lạ.
+> · goi_duyet.py mở đầu bằng một câu HẰNG SỐ ("ticket hầu như không ghi cách anh/chị
+>   biết") — SAI với nhóm 3, nơi 6/8 ticket CÓ ghi. Câu này nay được TÍNH, ngưỡng
+>   2/3. Đặt ngưỡng ở 1/2 đã hỏng ngay: gói ĐANG CHỜ DUYỆT (docs/16, 5/10) đổi lời
+>   sang "phần lớn chữ là của chính anh/chị" — nói quá với đúng người biết sự thật.
+> ```
+>
+> **Hình dạng đầu ra: ba nhóm, BA topology.** Nhóm 3 tra bằng khoá `(cột tiền lệch, nơi
+> khai sai)` — một khoá **không có trên màn hình nào**, phải dựng ra bằng cách mở cùng một
+> hoá đơn ở ba nơi rồi so từng cột. `SopDraftSchema` có `bangTraMaLoi` khoá CỨNG `(ncc,
+> maLoi)` nên **không chứa nổi** nó. Hai phép kiểm đã đọc khoá theo khai báo; schema thì
+> chưa sửa — chờ cùng lượt với `A3`/`AR-p`.
+>
+> ⚠ **Chưa làm, và là việc của người khác:** bản B của nhóm 3 (cần một ngữ cảnh sạch nữa),
+> và bản B của nhóm 3 mới làm `diff(A,B)` có cặp thứ ba.
+
+> 🎯 **CHỦ DỰ ÁN CHỐT PHẠM VI CHẠY THỬ — 2026-09-13.** Câu hỏi đặt ra là *"còn bao lâu
+> nữa thì hoàn thành và chạy thử được"*, và câu trả lời trung thực là **con số phụ thuộc
+> chữ "chạy thử" nghĩa là gì** — ba nghĩa cho ba số cách nhau rất xa. Đã đo lại bằng cách
+> chạy thật, không đọc tài liệu:
+>
+> ```text
+> ✅ dotnet build     0 error, 0 warning
+> ✅ dotnet test      157/157 xanh (96 domain + 19 hạ tầng + 42 API)
+> ✅ API host         5 endpoint, chạy được
+> ```
+>
+> ⚠ Nhưng 5 endpoint đó là `/health`, `/health/ready`, `/internal/tenant-boundary` và
+> **hai đường NẠP**. **Không có cửa nào cho một câu hỏi đi vào.** Ba phép kiểm riêng,
+> vì chính chúng quyết định con số:
+>
+> ```text
+> Ai gọi KnowledgeRecord.Approve()?   KHÔNG NƠI NÀO trong src/ và tools/.
+>                                     Luồng duyệt có ở Domain nhưng không với tới được.
+> Bản nháp SOP đi đâu?                tools/SoanNhapRunner Program.cs:279 File.WriteAllText
+>                                     ra JSON. KHÔNG CHẠM DB.
+> API host có bề mặt AI không?        grep "Anthropic|Sop" trong Program.cs -> 0 dòng.
+>                                     AI chỉ nằm trong CLI runner, chưa nối vào host.
+> ```
+> → Đường nạp và đường sinh nháp **đều chạy, nhưng chưa nối vào nhau.**
+>
+> **Ba nghĩa của "chạy thử", ba con số:**
+> ```text
+> 1  Thử đường NẠP          CHẠY ĐƯỢC HÔM NAY. dotnet run + postman/newman:
+>                           tín hiệu -> case -> evidence -> kiểm cách ly tenant.
+> 2  Thử SINH NHÁP SOP      CHẠY ĐƯỢC HÔM NAY qua --xuat-payload (tốn $0).
+>                           Bản B nhóm 1 đã có ở docs/ket-qua-phan-tich/.
+> 3  Vòng tròn THẬT         ~5-6 ngày công. Thiếu 4 mảnh:
+>    issue -> hướng dẫn       a  nháp JSON -> knowledge_record + assertion trong DB  ~1
+>                             b  endpoint duyệt (Domain có Approve, chỉ cần nối)     ~0,5
+>                             c  endpoint HỎI + port định tuyến Python -> C#         ~2
+>                             d  cổng "KHÔNG BIẾT" + đo ngưỡng                       ~1
+>                             +  test cho cả 4 đường                                 ~1
+> ```
+>
+> 🛑 **NHƯNG NÚT CỔ CHAI KHÔNG NẰM Ở CODE — ghi rõ kẻo tính lịch sai.** Ba thứ chặn, và
+> không thứ nào sửa được bằng cách code nhanh hơn:
+> ```text
+> · Kho tri thức RỖNG — 0/19 nhóm có SOP đã duyệt. Build xong endpoint hỏi thì nó trả
+>   "không biết" cho 19/19 nhóm. Cần người làm support trả lời gói duyệt docs/12.
+> · Credit Anthropic hết, và việc nạp CẦN TỔ CHỨC DUYỆT.
+> · AR-l là cổng CỨNG và nó đụng thẳng vào mảnh (b): tài liệu của chính dự án đã dặn
+>   phải mở lại TRƯỚC khi có luồng duyệt thật, vì rò xảy ra ở khâu XUẤT BẢN SOP.
+>   Build (b) mà lờ nó đi là xây đúng cái cổng mà tài liệu dặn đừng mở sớm.
+> ```
+>
+> 🟢 **VẾ B CỦA `M2` ĐÃ CÓ ĐƯỜNG VÀO — cùng ngày, lượt hai. Chi tiết: `07` §3 `IM-32`.**
+> `POST /knowledge/{id}/sua` (người sửa, KHÔNG đè bản A) và `GET /knowledge/{id}` (đọc cả
+> lịch sử — chỗ `diff(A,B)` đọc được). Chạy thật trên `kp_dev`, trên chính record đã duyệt
+> buổi sáng: sửa → hai bản cùng nằm trong response · record tự thành `NEEDS_REVIEW` · `/hoi`
+> trả bản MỚI · duyệt lại thì sạch cờ. **216/216 test xanh** (trước 194) · 0 warning.
+>
+> 🛑 **BẪY NẶNG NHẤT TÌM ĐƯỢC, và nó KHÔNG riêng đường này.** Mọi entity đặt `Id` bằng
+> `Guid.CreateVersion7()` trong bộ khởi tạo, nhưng EF theo QUY ƯỚC coi khoá chính kiểu Guid
+> là `ValueGenerated.OnAdd` — và khoá OnAdd đã có giá trị thì EF suy ra entity **ĐÃ TỒN TẠI**.
+> Thêm một `Assertion` vào một `KnowledgeRecord` ĐANG ĐƯỢC THEO DÕI → gắn `Modified` thay vì
+> `Added` → sinh `UPDATE` vào một dòng không tồn tại.
+> ```text
+> DbUpdateConcurrencyException: expected to affect 1 row(s), but actually affected 0
+>   -> thông điệp nói về "concurrency" và trỏ HOÀN TOÀN SAI CHỖ
+> ```
+> ⚠ **Vì sao nó không lộ ra sớm hơn** — và đó mới là phần đáng sợ: đường nạp bản nháp
+> `Add()` **nguyên cả đồ thị** một lần, khi đó cả cụm được gắn `Added` nên không ai thấy gì.
+> Nó chỉ hiện ra ở chỗ ĐẦU TIÊN thêm con vào một cha đã nạp — tức **nằm chờ sẵn cho mọi
+> đường tương lai**, mỗi đường sẽ tự phát hiện lại nó bằng một lỗi nói về chuyện khác.
+> → Đã sửa ở GỐC bằng một luật **suy TỪ MODEL** (không phải danh sách viết tay — cùng lý do
+>   `IM-7`). **Không cần migration:** thay đổi chỉ ở cách EF phân loại trạng thái, không đụng DDL.
+>
+> 🟢 **CẬP NHẬT CUỐI NGÀY 2026-09-13 — ĐÃ BUILD XONG CẢ BỐN MẢNH, VÀ ĐÃ CHẠY THẬT.**
+> Ước lượng ở trên là ~3-4 ngày công; thực tế xong trong cùng phiên. Ba endpoint mới:
+> `POST /knowledge/sop-draft` · `POST /knowledge/{id}/approve` · `POST /hoi`.
+>
+> ```text
+> Chạy thật trên kp_dev, không chỉ xanh trong test:
+>   kho trước     knowledge = 0
+>   nạp nháp      may-sinh-phan-quyen-ky-hieu.json -> 8 record Draft, cảnh báo S8 mồ côi
+>   HỎI trước     ES-346039 -> KHÔNG BIẾT · "nhom-chua-co-sop-duoc-duyet"   ← CỬA 2
+>   duyệt         7 record có đường nhận ra (CỐ Ý bỏ record mồ côi)
+>   HỎI lại       ES-346039 -> 7 hướng dẫn, tất cả ACTIVE / noi-bo
+>   kho sau       Active 7 · Draft 1
+> ✅ 194/194 test xanh (114 + 19 + 61), trước là 157 · 0 warning
+> ✅ 2 phép đột biến trên hai cổng an toàn -> 3 test đỏ đúng chỗ
+> ```
+> 🛑 **Cổng `AR-l` giờ là CODE:** chế độ shared TỪ CHỐI DUYỆT (409). Duyệt LÀ xuất bản.
+>   Đây vẫn là TRÁNH, không phải GIẢI — `AR-l` còn nguyên.
+> 🛑 **Hai lỗi thật do test bắt, không do đọc code:** khử trùng theo `CauseName` toàn tenant
+>   **gộp âm thầm** nguyên nhân của hai nhóm khác nhau (nạp 3, tạo 1, trả 200) — đã sửa
+>   sang cặp `(nhóm, CauseName)`; và một test **xanh khi chạy một mình, đỏ khi chạy cả bộ**
+>   vì `Guid.CreateVersion7()` xếp theo thời gian nên 12 ký tự ĐẦU là timestamp.
+> ⚠ **Đừng đọc demo xanh thành "tính năng dùng được".** Định tuyến đang là bản TRA SẴN
+>   (tra bảng có sẵn đáp án); kho chỉ có MỘT nhóm và là bản B máy sinh, chưa người làm
+>   support nào sửa; ngưỡng cổng KHÔNG BIẾT chưa được đo. Chi tiết: `07` §3 `IM-31`.
+>
+> ✅ **QUYẾT ĐỊNH (chủ dự án tích chọn qua form, 2026-09-13):**
+> ```text
+> 1  Phạm vi = DEMO MỘT NHÓM, dữ liệu fixture, MỘT tenant, KHÔNG xuất bản ra ngoài.
+>    Khoá cứng chế độ dedicated.  -> ~3-4 ngày công thay vì 5-6.
+>    Lý do chọn nhánh hẹp KHÔNG phải để đi nhanh, mà vì nó TRÁNH ĐƯỢC AR-l một cách
+>    trung thực: không có người thứ hai đọc thì không có đường rò qua khâu xuất bản.
+>    ⚠ Đây là TRÁNH, không phải GIẢI. AR-l vẫn phải mở lại trước khi có người thật dùng.
+> 2  Build sao cho CHẠY ĐƯỢC KHÔNG CẦN CREDIT.
+> ```
+>
+> ⚠ **HỆ QUẢ PHẢI BIẾT, và nó là cái giá thật của quyết định 2:** định tuyến = phân loại
+> = gọi model. Không credit thì không gọi được. Nên mảnh (c) sẽ tra **kết quả định tuyến
+> ĐÃ ĐO SẴN** trong `docs/ket-qua-phan-tich/dinh-tuyen-150-case.json`, sau một interface
+> mỏng — đúng khuôn `ISopDrafter` mà `AR3` đã chốt, đổi impl sau khi có credit.
+> ```text
+> ✅ demo CHỨNG MINH   đường ống chạy: hỏi -> định tuyến -> kho -> trả SOP / "không biết"
+> ✅ demo CHỨNG MINH   hình dạng response, hành vi cổng "không biết", contract để chỉnh
+> ❌ demo KHÔNG        độ chính xác định tuyến. 84,1% đã đo ở Python và VẪN nằm ở đó.
+> ❌ demo KHÔNG        chất lượng SOP máy sinh — vẫn là bản B đã sinh sẵn cho nhóm 1.
+> ```
+> → Mục đích chủ dự án nêu là *"test được rồi mới chỉnh sửa tiếp"*, và với mục đích đó
+>   thì đủ dùng: chỉnh được contract, hình dạng câu trả lời, và ngưỡng cổng. Nhưng
+>   **đừng đọc demo xanh thành "tính năng đã dùng được"** — đó đúng là chỗ `docs/13` đã
+>   cảnh báo một lần rồi.
+
+
 > 🛑 **ĐỌC KHỐI NÀY, ĐỪNG ĐỌC PHẦN NGAY DƯỚI NÓ.** Cập nhật 2026-09-08.
 > Phần `text` phía dưới là **bản của 2026-08-30** và đã chết: nó ghi việc (a)/(b) là
 > "việc kế tiếp" trong khi cả hai đã xong, và (c) FTS đã bị lùi lại sau phép đếm.

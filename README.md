@@ -79,6 +79,48 @@ curl localhost:5119/health/ready               # DB sống + ranh giới tenant 
 curl localhost:5119/internal/tenant-boundary   # ranh giới tenant, đo từ trong request
 ```
 
+**Vòng tri thức — nạp → duyệt → hỏi** (2026-09-13). Đây là đường đi hết một vòng, chạy
+được ngay trên máy dev, không cần credit API:
+
+```bash
+# 1. Nạp bản nháp SOP do máy sinh. Nó vào kho ở trạng thái Draft — nạp KHÔNG phải duyệt.
+curl -X POST localhost:5119/knowledge/sop-draft \
+     -H "Content-Type: application/json" \
+     --data-binary @docs/ket-qua-phan-tich/may-sinh-phan-quyen-ky-hieu.json
+
+# 2. Hỏi TRƯỚC khi duyệt -> phải ra KHÔNG BIẾT, dù định tuyến ĐÚNG nhóm.
+curl -X POST localhost:5119/hoi \
+     -H "Content-Type: application/json" \
+     -d '{"maTicket":"ES-346039"}'
+#    -> bietTraLoi: false · lyDoKhongBiet: "nhom-chua-co-sop-duoc-duyet"
+
+# 3. Duyệt một bản ghi (lấy id từ response bước 1). S7: nội dung + quyền xem MỘT hành động.
+curl -X POST localhost:5119/knowledge/<id>/approve \
+     -H "Content-Type: application/json" \
+     -d '{"nguoiDuyet":"tên bạn","phamViXem":"noi-bo"}'
+
+# 4. Hỏi lại -> giờ mới ra hướng dẫn, kèm mức kiểm chứng của TỪNG phát biểu.
+curl -X POST localhost:5119/hoi \
+     -H "Content-Type: application/json" \
+     -d '{"maTicket":"ES-346039"}'
+
+# 5. Người support SỬA lại — bản B của M2. Bản gốc KHÔNG bị đè.
+#    Lấy assertionId từ bước 6 bên dưới.
+curl -X POST localhost:5119/knowledge/<id>/sua \
+     -H "Content-Type: application/json" \
+     -d '{"nguoiSua":"tên bạn","sua":[{"assertionId":"<assertion-id>",
+          "noiDungMoi":"cách xử lý đúng","mucKiemChung":"Verified"}]}'
+#    -> record tự thành NEEDS_REVIEW (V3 gắn cờ, KHÔNG rút khỏi /hoi)
+
+# 6. Đọc lại CẢ HAI bản — đây là chỗ diff(A,B) của M2 đọc được.
+curl localhost:5119/knowledge/<id>
+```
+
+⚠ **Đừng đọc bước 4 xanh thành "tính năng đã dùng được".** Bộ định tuyến đang cắm là bản
+**TRA SẴN**: nó tra bảng kết quả đã đo ở [`docs/13`](docs/13_DINH_TUYEN_ISSUE_MOI.md), không
+gọi model. Nó chứng minh **đường ống** chạy, không chứng minh độ chính xác — con số 84,1%
+vẫn nằm ở `docs/13`, không nằm ở đây. Đầy đủ: [`docs/07`](docs/07_MVP_IMPLEMENTATION.md) §3 `IM-31`.
+
 Cái thứ ba là cái đáng xem. Nó đếm bằng **SQL thô cố ý không có điều kiện tenant** —
 nếu con số nhỏ hơn tổng số dòng thật trong bảng, nghĩa là database đang chặn hộ.
 
@@ -420,13 +462,17 @@ trong đó có **đường nhận tín hiệu** tạo Case.
 ```
 · Truy vấn "tìm N case cũ liên quan"           → việc kế tiếp. AR4: Postgres
                                                  full-text search trước
-· Phần gọi AI soạn nháp quy trình              → bề mặt AI của MVP chỉ có 2 hàm
-· Luồng duyệt
+✅ Phần gọi AI soạn nháp quy trình         XONG 2026-09-08/10 — ISopDrafter + SoanNhapRunner
+✅ Luồng duyệt                        XONG 2026-09-13 — POST /knowledge/{id}/approve
+✅ Cửa cho một CÂU HỎI                XONG 2026-09-13 — POST /hoi + cổng KHÔNG BIẾT
+✅ Đường nạp bản NGƯỜI SỬA (M2)       XONG 2026-09-13 — POST /knowledge/{id}/sua
+                                      + GET /knowledge/{id} để đọc CẢ HAI bản
+   (bốn dòng trên giữ lại để thấy chúng TỪNG thiếu — docs/07 §3 IM-31, IM-32)
 · Hai loại tín hiệu còn lại của Kênh 1         → hiện chỉ có "có việc mới ở nguồn".
                                                  Còn: đổi trạng thái · người dùng hỏi
 · Kênh 2 — đường nạp/đồng bộ tài liệu (AR5)
 · Bảng Document lưu tài liệu khách nạp lên     → đích của kênh 2, chưa có entity
-· Phép so bản nháp AI với bản người sửa
+· Phép ĐẾM diff(A,B) trên cả nhóm              → dữ liệu đã đủ (IM-32), thiếu phép đếm
 · ProcessDefinition / ProcessRun               → thiết kế xong, chưa code
 · Xác thực người gọi ở chế độ nhiều khách hàng → câu hỏi SẢN PHẨM, không phải code
 · Test cho phần tri thức (Assertion, lifecycle) → hiện chỉ tenant + Kênh 1 có test
@@ -444,18 +490,18 @@ trong đó có **đường nhận tín hiệu** tạo Case.
 |---|---|
 | 🛑 **Dữ liệu vận hành thật mang theo bí mật SỐNG, và đó là MẪU HÀNH VI chứ không phải ca lẻ** | Đo trên corpus Jira thật 2026-09-04: **40 chỗ nghi credential trên 18/345 mẩu = 5,2%**, tức cứ ~19 mẩu evidence có một mẩu chứa thông tin đăng nhập. Phần lớn là cặp ID + mật khẩu Ultraviewer mà khách gõ thành hai tin nhắn liên tiếp; cộng hai JWT token và một mật khẩu tài khoản hoá đơn điện tử VNPT **còn sống** (nhà cung cấp trả `OK` hai lần trong chính mẩu đó). <br><br>⚠ Đây không phải sự cố của một ticket — đó là **cách support team làm việc**: xin Ultraviewer để remote vào máy khách. Nên không xử lý được bằng cách sửa vài mẩu; phải là luật chạy mỗi lần nạp. Đã có `scripts/jira-export/check_corpus.py` (trả mã thoát ≠ 0, cắm được CI). <br><br>⚠ **Lọc theo từ khoá cùng dòng KHÔNG dùng được** — đo được là bắt **11%**. Khách gõ ID rồi mật khẩu ở hai tin nhắn trần, còn chữ "Ultraview" nằm ở lượt nói TRƯỚC ĐÓ của nhân viên: bộ lọc mù, mà model đọc thì thừa ngữ cảnh để hiểu đúng. Luật theo BỐN HÌNH DẠNG thật đạt recall **100%** (13/13) với 0 lần ăn nhầm — nhưng đó là **cận trên**, vì luật được sửa theo chính corpus dùng để đo nó. (`AR-j`) |
 | 🛑 **Một trường phủ 100% với MỘT giá trị duy nhất — đã vấp HAI LẦN trong một ngày** | `machineReadability` = `High` ở **128/128** mẩu evidence, và `Mã khách sạn` của Jira = `-1.0` ở **32/32** case. Cùng một hình dạng lỗi, và nó **tệ hơn trường rỗng**: trường rỗng thì ai cũng thấy là thiếu, còn trường phủ-100%-một-giá-trị thì *trông như đã có dữ liệu* — mọi phép kiểm "trường này có được điền không?" đều trả lời CÓ. Ai viết `WHERE machineReadability = 'High'` rồi báo "đã lọc rồi" thì vừa lọc xong 100% dữ liệu. <br><br>→ **Luật đã rút ra:** với mọi trường dùng làm ranh giới hay bộ lọc, **đếm số giá trị PHÂN BIỆT, không đếm độ phủ.** Một giá trị = coi như rỗng. (`AR-k`, `AR-l`) |
-| 🛑 **Ranh giới khách sạn A ↔ khách sạn B chưa được thực thi, và hiện KHÔNG CÓ nguồn nào để thực thi** | **✅ Đây là QUYẾT ĐỊNH có ý thức từ 2026-09-07, không phải chỗ bị bỏ quên:** đã chốt nhánh *lùi* — nạp evidence không có sub-tenant, không thêm cột, và ghi rõ ở đây rằng ranh giới này **chưa được thực thi ở bất kỳ tầng nào**. Mở lại khi có một nguồn cho **≥2 giá trị phân biệt**, và phải mở lại **trước** lúc có luồng duyệt thật. <br><br>Hôm nay `tenant` = ezCloud, nên mọi khách sạn nằm chung một kho. Đã chốt rằng đây LÀ ranh giới bảo mật, nhưng đo trên Jira thật thì không trường nào dùng được: `Mã khách sạn` là hằng số `-1.0`, `Tên khách sạn / Resort` thì 25/32 rỗng và phần còn lại ghi tên **team**. <br><br>⚠ **RLS không cứu được kiểu rò này** — rò xảy ra ở khâu **xuất bản SOP**, không ở khâu truy vấn hàng: Path A gom evidence của nhiều khách sạn (đúng quyền, RLS xanh) rồi sinh một bản nháp được duyệt và hiện cho mọi người. Dữ liệu đi qua ranh giới bằng cửa chính. <br><br>⚠ Và ĐỪNG suy sub-tenant từ tiêu đề: chỉ 8/32 case có mã trong tiêu đề, và tên trong tiêu đề lệch với thân bài (`ES-346622` ghi "Mariha" nhưng email là `mirahhotel.sales@`). (`AR-l`) |
+| 🛑 **Ranh giới khách sạn A ↔ khách sạn B chưa được thực thi, và hiện KHÔNG CÓ nguồn nào để thực thi** | **✅ Đây là QUYẾT ĐỊNH có ý thức từ 2026-09-07, không phải chỗ bị bỏ quên:** đã chốt nhánh *lùi* — nạp evidence không có sub-tenant, không thêm cột, và ghi rõ ở đây rằng ranh giới này **chưa được thực thi ở bất kỳ tầng nào**. Mở lại khi có một nguồn cho **≥2 giá trị phân biệt**, và phải mở lại **trước** lúc có luồng duyệt thật. <br><br>✅ **CHỐT 2026-09-15 nguồn để mở lại:** thêm một **trường BẮT BUỘC ở đường nạp** — bên gửi khai mã khách sạn. ⚠ **Chưa code.** Trong lúc chờ, cổng chạy được là: chế độ shared **TỪ CHỐI DUYỆT** (409) — xem `IM-31`. Đó là TRÁNH, không phải GIẢI. <br><br>Hôm nay `tenant` = ezCloud, nên mọi khách sạn nằm chung một kho. Đã chốt rằng đây LÀ ranh giới bảo mật, nhưng đo trên Jira thật thì không trường nào dùng được: `Mã khách sạn` là hằng số `-1.0`, `Tên khách sạn / Resort` thì 25/32 rỗng và phần còn lại ghi tên **team**. <br><br>⚠ **RLS không cứu được kiểu rò này** — rò xảy ra ở khâu **xuất bản SOP**, không ở khâu truy vấn hàng: Path A gom evidence của nhiều khách sạn (đúng quyền, RLS xanh) rồi sinh một bản nháp được duyệt và hiện cho mọi người. Dữ liệu đi qua ranh giới bằng cửa chính. <br><br>⚠ Và ĐỪNG suy sub-tenant từ tiêu đề: chỉ 8/32 case có mã trong tiêu đề, và tên trong tiêu đề lệch với thân bài (`ES-346622` ghi "Mariha" nhưng email là `mirahhotel.sales@`). (`AR-l`) |
 | ⚠ **"Đã xong" đi NGƯỢC với hàm lượng tri thức — bộ lọc tự nhiên nhất sẽ vứt đúng phần có giá trị** | Corpus 12 tháng có **100% case đã đóng** mà chỉ **1,6 mẩu dùng được mỗi case** — mỏng hơn corpus 4 ngày (2,5) vốn chỉ 22% đã đóng, và 25% case có **0** mẩu dùng được. Trên corpus nhỏ đã đọc kỹ: cả 7/7 case đã đóng chỉ ghi *hết triệu chứng* ("Done nhé" — 23 ký tự; một case đóng bằng đúng một tấm ảnh), còn nguyên nhân thật nằm ở case **CÒN MỞ**. <br><br>Lý do chạm vào **tiền đề sản phẩm**, không phải chất lượng corpus: bước kết luận không biến mất, nó **xảy ra ở nơi khác** — 6 case chuyển sang phiên remote desktop, 2 case "gọi khách không được", 1 case ghi thẳng *"như đã trao đổi qua điện thoại"*. Chính các mẩu credential ở trên là **biên lai** của những lần chẩn đoán không để lại chữ nào trong ticket. Trong 128 mẩu, Kibana — bước 1 của quy trình 5 bước — được nhắc **0 lần**. |
 | ⚠ **Đường nhận tín hiệu chỉ có một cái chốt tạm** | Nó là endpoint **ghi**: không xác thực thì bất kỳ ai cũng bơm được Case giả vào dữ liệu khách hàng — không crash, không báo, chỉ làm sai kho tri thức và sai thước đo tháng đầu. Hiện có một khoá dùng chung (`Ingest:SignalApiKey`), và **thiếu nó là không start được**. Nhưng khoá dùng chung không phân biệt được khách A với khách B, không thu hồi theo từng khách, không chống replay. Nó là cái chốt trong lúc chờ `AR-e`, không phải câu trả lời. |
-| ⚠ **Chế độ nhiều khách hàng dùng chung chưa có xác thực** | Tenant đến từ header `X-Tenant-Key`, và chưa có gì kiểm người gọi có quyền dùng khoá đó — biết khoá là đọc được dữ liệu. Nên chế độ này **từ chối khởi động** trừ khi được thừa nhận tường minh bằng một cờ cấu hình. Cờ đó không bảo vệ gì; nó chỉ làm việc deploy một API chưa xác thực thành **quyết định** thay vì **sơ suất**. Cần quyết ở tầng sản phẩm: API key theo khách? mTLS? chữ ký trên payload? (`AR-e`) <br><br>⚠ **Không chặn khách hàng đầu tiên** — bản deploy riêng lấy tenant từ cấu hình, không từ người gọi. |
+| ⚠ **Chế độ nhiều khách hàng dùng chung chưa có xác thực** | Tenant đến từ header `X-Tenant-Key`, và chưa có gì kiểm người gọi có quyền dùng khoá đó — biết khoá là đọc được dữ liệu. Nên chế độ này **từ chối khởi động** trừ khi được thừa nhận tường minh bằng một cờ cấu hình. Cờ đó không bảo vệ gì; nó chỉ làm việc deploy một API chưa xác thực thành **quyết định** thay vì **sơ suất**. ✅ **CHỐT 2026-09-15: API key theo từng khách hàng**, thu hồi được riêng. ⚠ **Chưa code** — tới lúc đó chế độ shared vẫn từ chối khởi động trừ khi có cờ thừa nhận. (`AR-e`) <br><br>⚠ **Không chặn khách hàng đầu tiên** — bản deploy riêng lấy tenant từ cấu hình, không từ người gọi. |
 | ⚠ **Hai cơ chế phía tri thức chưa bị thử phá** | 3 trong 5 cơ chế giờ có test (RLS guard, mắt xích tenant, và interface tenant). Hai cơ chế còn lại — bắt buộc khai nguồn gốc, và danh sách trạng thái chỉ có 3 giá trị — chỉ được **trình biên dịch** chặn. Chặn lúc biên dịch mạnh hơn test, nhưng nó không kiểm được cái mà nó không thấy: một nơi gọi truyền `Origin` **sai** vẫn biên dịch bình thường. Đó đúng là kiểu lỗi mà `AP3` gọi là im lặng nhất. |
 | ⚠ **Đã từng có lỗ fail-open trong chính cơ chế canh gác — đã sửa 2026-09-01, nhưng còn dư chấn** | `RlsGuard` bản cũ chỉ hỏi *"bảng này có policy nào không"*, không hỏi policy đó **nói gì**. Policy của PostgreSQL gộp bằng **OR**, nên chỉ cần thêm một policy `USING (true)` là khách A đọc được dữ liệu khách B — **trong khi guard vẫn báo xanh**. Đã đo thật, câu SQL tái hiện nằm ở `07` §3 `IM-22`. Guard giờ đối chiếu biểu thức policy và quét cả view/materialized view; 6 test + 5 đột biến giữ. <br><br>⚠ **Dư chấn còn lại:** biểu thức policy giờ nằm ở **hai chỗ** — hằng số trong `RlsGuard` và câu SQL trong migration. Trùng lặp là cố ý (suy từ migration thì migration sai sẽ tự hợp lệ hoá chính nó), nhưng nó nghĩa là đổi policy phải đổi hai chỗ. <br><br>⚠ Và `/health/ready` cố ý dùng phép kiểm **nông hơn** startup, để deploy cuốn chiếu không rút cả đội tiến trình khoẻ ra khỏi luồng. Chiều "quên khai entity mới" vì thế chỉ được chặn **lúc khởi động**, không phải liên tục. |
-| ⚠ Chưa chốt lấy chuỗi kết nối / mật khẩu DB từ đâu ở deploy thật | Hình dạng đã có: host đọc từ `IConfiguration`, nên biến môi trường hoặc secret provider nào của .NET cũng cắm được mà không sửa code, và thiếu nó là không start được. Còn phải chọn dùng secret store nào (`AR-i` — tên cũ `AR-d`, đánh lại 2026-09-03 vì trùng số hiệu). |
+| ✅ Chuỗi kết nối / mật khẩu DB — **ĐÃ CHỐT 2026-09-15: biến môi trường** `ConnectionStrings__Default` | Hình dạng đã có: host đọc từ `IConfiguration`, nên biến môi trường hoặc secret provider nào của .NET cũng cắm được mà không sửa code, và thiếu nó là không start được. Còn phải chọn dùng secret store nào (`AR-i` — tên cũ `AR-d`, đánh lại 2026-09-03 vì trùng số hiệu). |
 | ⚠ **Mọi kết luận từ dữ liệu thật hiện đứng trên MỘT khách, MỘT nguồn** | Toàn bộ số đo của 2026-09-04/05 lấy từ Jira của ezCloud, chủ đề hoá đơn. Chúng dùng được để **thiết kế** và để **bác một giả định cũ không có bằng chứng** — nhưng KHÔNG dùng được để chốt kiến trúc, vì `G1` nói Jira là **connector** chứ không phải product boundary, và `G12` nói đặc điểm dữ liệu của một khách là **tham số** chứ không phải hằng số thiết kế. Một deal CRM có trường có kiểm soát (stage, giá trị, ngành); một ticket Jira là văn xuôi tự do — số đo trên cái này không mang sang cái kia. <br><br>🛑 **Phân biệt đã suýt bị làm mờ, ghi lại vì nó sẽ tái diễn:** dùng dữ liệu thật để **tìm lỗi trong code** thì n=1 là đủ (đó là phát biểu về *sự tồn tại* — một mẫu chứng minh được, và cách này đã trả về bug 500 timezone, trường phân loại hằng số, luật che chỉ bắt 11%, lỗi lấy mẫu). Dùng nó để **chốt kiến trúc** thì n=1 không đủ (đó là phát biểu về *phân bố*). Ngày 2026-09-05 một kết luận đã bị viết ở sai mức và phải hạ cấp — xem `07` §5 `R-K4`. |
 | ✅ ~~Kết luận "không cần vector DB" đứng trên n=1~~ — **PHÉP ĐẾM ĐÃ CHẠY 2026-09-04/05** | Giả định *"5-10 loại nguyên nhân"* **đã bị bác**: đo được **~19 nhóm** (18-30) cho MỘT chủ đề. Và phép thử retrieval cho thấy tín hiệu văn bản chỉ **AUC 0,61** — FTS được 34% trong khi **đoán mù được 31%**. <br><br>⚠ Nhưng xem dòng ngay trên: đó là số đo trên **một khách, một nguồn**, nên nó là **phép đo**, không phải quyết định kiến trúc. Chi tiết: [`docs/09_RK4_DEM_NGUYEN_NHAN.md`](docs/09_RK4_DEM_NGUYEN_NHAN.md). |
 | ⚠ **"Tìm văn bản lặp lại nhiều lần thì ra SOP" — đã bị bác bằng số, và bản nháp SOP đầu tiên cho thấy vì sao** | Đo trên cả 150 case: **115 cặp** case chia nhau một khối văn bản lặp **nguyên văn** ≥300 ký tự, và đúng **1 khối** trong đó chứa bước làm thật (91 là câu trả lời mẫu, 21 là nhắc việc tự động, 2 là form nội bộ). Độ chính xác của cách làm hiển nhiên nhất: **0,9%**. <br><br>✅ Nhưng chính khối đó là một phát hiện tốt: một SOP hoàn chỉnh có B1/B2 kèm nhánh điều kiện, **cùng một nhân viên gõ lại nguyên văn ở hai case cách nhau 21 ngày**. Tức *"10%"* của con số 10/30/60 không nằm trong tài liệu — nó nằm trong luồng ticket và trong bộ đệm copy-paste của một người. Với nhóm này, việc của Path A là **tìm lại và tái dùng**, không phải phát minh. <br><br>🛑 Và điều nặng nhất: bốn nguyên nhân của nhóm dày nhất có **triệu chứng khách kể trùng nhau**, lại **cùng kết thúc ở một trang quản trị** xuất hiện ở 3 nhóm nguyên nhân khác nhau. Thứ phân nhánh **không nằm trong văn bản** — nó là một bước kiểm phải THỰC HIỆN. Đó là cơ chế đứng sau con số AUC 0,61 ở hàng dưới. Chi tiết: [`docs/11_CAY_QUYET_DINH_SOP.md`](docs/11_CAY_QUYET_DINH_SOP.md). |
 | ⚠ **Bộ lọc tự nhiên thứ hai sẽ vứt đi đúng phần có giá trị: "chỉ lấy phần khách đọc được"** | Dựng bản nháp SOP cho nhóm thứ hai (*NCC từ chối payload*, 10 case) thì **8/10 case ghi rõ bước kiểm** — tốt hơn nhóm đầu (4/10) — nhưng phần dày lên **nằm trọn ở các mẩu NỘI BỘ**: thread phản biện giữa triển khai và kỹ thuật, nơi người ta dán nguyên văn payload nhà cung cấp trả về. Một bộ lọc *"chỉ lấy phần khách đọc được"* — nghe rất hợp lý, vì đó là phần sạch và lịch sự — sẽ vứt đi **5/10 bước kiểm** của nhóm này. Đây là lần thứ hai một **bộ lọc tự nhiên** vứt đúng phần có giá trị, sau *"chỉ lấy case đã đóng"*. <br><br>🛑 Và một quan hệ không ai nhìn ra khi xếp SOP theo nguyên nhân: bước kiểm **đầu tiên** của nhóm này (xem mã lỗi trong Nhật ký kết nối) **bị chặn bởi đúng nguyên nhân của nhóm kia** (phân quyền) — khách nói thẳng: *"Đâu phải ai cũng có quyền vào mục cấu hình này đâu em"*. Hai nhóm độc lập về nguyên nhân lại phụ thuộc nhau khi thao tác. Chi tiết: [`docs/11` §9](docs/11_CAY_QUYET_DINH_SOP.md). |
-| ⚠ Nhãn quyền xem để dạng chuỗi tự do | Chưa ai chốt danh sách giá trị cho phép. Cố ý không tự phát minh ở tầng code. |
+| ✅ ~~Nhãn quyền xem để dạng chuỗi tự do~~ — **ĐÃ SIẾT 2026-09-15** | ✅ **CHỐT 2026-09-15:** ba giá trị `rieng-tu` · `noi-bo` · `toan-cong-ty`. <br><br>✅ **ĐÃ CODE cùng ngày:** enum ba mức, dạng lưu kebab, giá trị ngoài tập bị 400 kèm danh sách. 7 record `noi-bo` cũ đọc lại nguyên vẹn, **không cần migration**. <br><br>⚠ Dạng lưu là kebab chứ KHÔNG phải tên C# — dùng `HasConversion<string>()` cho "nhất quán" sẽ làm 7 dòng cũ không đọc được. (`AR-a`, `IM-34`) |
 
 ---
 
@@ -477,7 +523,35 @@ trong đó có **đường nhận tín hiệu** tạo Case.
 10 docs/09_RK4_DEM_NGUYEN_NHAN.md      một loại vấn đề có bao nhiêu nguyên nhân
 11 docs/11_CAY_QUYET_DINH_SOP.md       bản nháp SOP đầu tiên, dựng tay trên dữ
                                        liệu thật — hình dạng đầu ra của Path A
+12 docs/13_DINH_TUYEN_ISSUE_MOI.md     một ticket vừa đến thuộc nhóm nào —
+                                       84,1% vs đoán mù 11,4%, và ba chỗ phải đọc kỹ
 ```
+
+**Bốn file để ĐIỀN, không phải để đọc** (sinh 2026-09-15):
+
+```
+14 docs/14_QUYET_DINH_CHO_CHU_DU_AN.md   11 quyết định chờ chủ dự án, dạng tích ô.
+                                          Nhóm A (3 câu) đang CHẶN việc tiếp theo.
+15 docs/15_KHAO_SAT_VAN_HANH.md          7 câu cho người làm support: cách họ THẬT SỰ
+                                          làm việc, so với cái ticket ghi lại được.
+16 docs/16_GOI_DUYET_BAN_MAY_SINH.md     bản nháp SOP do MÁY sinh, để support sửa.
+                                          Đây là vế B của M2 — sinh lại bằng
+                                          scripts/jira-export/goi_duyet.py
+17 docs/17_GOI_DUYET_LECH_TIEN.md        nhóm nguyên nhân THỨ BA (lệch tiền/thuế,
+                                          8 case / 63 mẩu — vật liệu dày nhất trong
+                                          19 nhóm). Gói này KHÁC hai gói trên: 6/8
+                                          ticket CÓ ghi cách chẩn đoán, nên câu hỏi
+                                          đổi từ "chúng tôi đoán sai chỗ nào" sang
+                                          "xếp vậy có đúng thứ tự không, thiếu bước nào"
+```
+
+⚠ **`12` và `16` đã gửi đi rồi thì ĐỪNG sinh lại** cho tới khi có bản trả về — bản trong
+repo phải là đúng bản người duyệt đang cầm. Cả hai hiện sinh lại ra y nguyên từng bit;
+giữ như vậy.
+
+Điền xong thì kiểm bằng `python scripts/doc_quyet_dinh.py <file>` — nó bắt hai lỗi mà mắt
+hay bỏ qua: **tích hai ô** ở câu chọn một, và **dấu tích sai cú pháp** (trông như đã điền
+mà máy không đọc ra).
 
 **Lập trình viên mới:** `08` trả lời ba câu mà không file `.cs` nào trả lời được, vì
 câu trả lời nằm *giữa* các file — thứ tự pipeline lúc chạy, bốn cửa chặn lúc khởi
