@@ -244,6 +244,85 @@ def iso(ts: str | None) -> str | None:
         return ts  # dạng khác (đã có :, hoặc Z) — gửi nguyên, sai thì server nói rõ
 
 
+# ------------------------------------------------- AR-k: gán machineReadability
+
+# Dấu hiệu nội dung do MÁY sinh ra và máy đọc lại được: payload, log, stack trace.
+# Đây là những gì enum gọi là High — "kết quả query Kibana, response API" (§8.1-KQ).
+#
+# ⚠ ĐÃ ĐO TRÊN 873 MẨU THẬT (dry-run 345 + spread 528), 2026-09-15. Kết quả phải đọc kỹ:
+#     '{' 196 · '}' 195 · '</' 16 · '/>' 1 · 'Exception' 1
+#     11/16 dấu hiệu còn lại KHÔNG KHỚP MẨU NÀO — xml, Traceback, stack frame java/.NET,
+#     HTTP/1., statusCode, SQL, curl.
+#   Tức trên nguồn NÀY, nhãn High thực chất do MỘT cặp dấu quyết định: `{` và `}`.
+#
+# 🛑 GIỮ LẠI 11 dấu hiệu chưa khớp là CÓ CHỦ ĐÍCH, không phải quên dọn: `G12` nói đặc
+#   điểm dữ liệu của MỘT khách là THAM SỐ, không phải hằng số thiết kế — một helpdesk
+#   khác rất có thể dán stack trace. Nhưng ĐỪNG đọc danh sách này thành "đã phủ stack
+#   trace": trên nguồn hiện có, phần đó CHƯA TỪNG được kiểm chứng bởi một mẩu nào.
+_DAU_HIEU_CAU_TRUC = (
+    "{", "}", "<?xml", "</", "/>",           # JSON / XML
+    "Exception", "Traceback", "at java.", "at System.",
+    "HTTP/1.", "status code", "statusCode",
+    "SELECT ", "select ", "WHERE ", "curl ",
+)
+
+# Dấu hiệu nội dung máy KHÔNG đọc được: enum gọi là Low — "ảnh chưa OCR, ghi âm".
+# Đo trên cùng 873 mẩu: '.png' 374 · '!image' 240 · '!screenshot' 39 · '.jpg' 35 ·
+# '[^' 25 · '.mp4' 5 · '.jpeg' 3 · '.gif' 2. Chỉ '.mp3' và 'attachment' chưa khớp.
+_DAU_HIEU_KHONG_DOC_DUOC = (
+    "!image", "[^", ".png", ".jpg", ".jpeg", ".gif", ".mp4", ".mp3",
+    "!screenshot", "attachment",
+)
+
+# Dưới ngưỡng này thì mẩu không mang nổi một quan sát nào. Đo trên corpus thật: mẩu
+# 5 ký tự chỉ chứa "80771", mẩu 9 ký tự chỉ chứa chính mã case, mẩu 35 ký tự chỉ
+# chứa tên file — cả ba đều từng được khai `High`.
+_NGUONG_QUA_NGAN = 40
+
+
+def doan_machine_readability(content: str) -> str:
+    """BÊN GỬI khai máy đọc được mẩu này đến đâu — `AR-k`, chốt 2026-09-15.
+
+    ⚠ TRƯỚC 2026-09-15 HÀM NÀY KHÔNG TỒN TẠI: script khai cứng `"High"` cho MỌI mẩu,
+    và đo ra 128/128 đều `High` — kể cả mẩu 5 ký tự. Lập luận cũ ghi ngay tại chỗ là
+    *"script chỉ đẩy text thuần nên nó BIẾT là text, khai High là khai thật"*. Lập luận
+    đó sai ở chỗ đánh tráo hai câu hỏi: trường này KHÔNG hỏi "có phải text không", nó hỏi
+    "MÁY ĐỌC ĐƯỢC ĐẾN ĐÂU". Một câu `"80771"` là text, và máy không đọc được gì từ nó.
+
+    🛑 Một trường phủ 100% với MỘT giá trị duy nhất **tệ hơn trường rỗng**: trường rỗng
+    thì ai cũng thấy là thiếu, còn trường phủ-100%-một-giá-trị thì TRÔNG NHƯ đã có dữ
+    liệu — mọi phép kiểm "trường này có được điền không?" đều trả lời CÓ. Vì thế luật
+    dưới đây phải sinh ra NHIỀU GIÁ TRỊ PHÂN BIỆT, và đó là thứ phải ĐO chứ không phải
+    thứ để tin. Đo bằng: `python scripts/jira-export/check_corpus.py`.
+
+    ⚠ Đây là phép đoán theo HÌNH DẠNG, và nó sẽ sai ở một số mẩu. Điều đó chấp nhận được
+    và khác hẳn cái cũ: một nhãn sai lẻ tẻ thì lọc ra vẫn còn dữ liệu, còn một nhãn hằng
+    số thì lọc xong mất sạch.
+    """
+    van_ban = (content or "").strip()
+
+    if not van_ban:
+        return "Unknown"
+
+    # Xét hình dạng KHÔNG đọc được TRƯỚC: một mẩu chỉ có "!image-1.png!" vẫn dài hơn
+    # ngưỡng ngắn, nhưng máy không rút được gì từ nó.
+    thap = van_ban.lower()
+    if any(d in thap for d in _DAU_HIEU_KHONG_DOC_DUOC):
+        # Trừ khi quanh cái ảnh còn có văn bản thật đáng kể.
+        con_lai = len(van_ban)
+        if con_lai < 200:
+            return "Low"
+
+    if any(d in van_ban for d in _DAU_HIEU_CAU_TRUC):
+        return "High"
+
+    if len(van_ban) < _NGUONG_QUA_NGAN:
+        return "Low"
+
+    # Văn xuôi của người: đọc được, nhưng không phải dữ liệu có cấu trúc.
+    return "Medium"
+
+
 # ------------------------------------------------------------- dựng tín hiệu
 
 
@@ -297,9 +376,9 @@ def build_signals(cfg: Config, issues: list[dict]) -> tuple[list[dict], list[dic
                 # biết của schema evidence hôm nay, không phải của script.
                 "content": description,
                 "observedAt": iso(created),
-                # Bên gửi khai, hệ thống không suy (IM-19). Script này chỉ đẩy text
-                # thuần từ REST API — nó BIẾT là text, nên khai High là khai thật.
-                "machineReadability": "High",
+                # Bên gửi khai, hệ thống không suy (IM-19) — và từ 2026-09-15 thì khai
+                # THEO HÌNH DẠNG chứ không khai hằng số. Xem doan_machine_readability.
+                "machineReadability": doan_machine_readability(description),
             })
 
         for c in comments:
@@ -311,7 +390,7 @@ def build_signals(cfg: Config, issues: list[dict]) -> tuple[list[dict], list[dic
                 "sourceReference": f"jira:{key}#comment-{c['id']}",
                 "content": body,
                 "observedAt": iso(c.get("created")),
-                "machineReadability": "High",
+                "machineReadability": doan_machine_readability(body),
             })
 
         if i % 20 == 0 or i == len(issues):

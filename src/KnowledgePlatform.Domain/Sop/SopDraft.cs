@@ -87,17 +87,33 @@ public sealed record SopDraft
 /// ⚠ Hai cây dựng tay GIỮ NGUYÊN tên ô riêng của chúng — `nhom_sop.py --kiem-cay` nhận cả
 /// hai dạng (nó chỉ đòi phép cộng khớp). Đừng sửa hai file đó để "cho khớp": chúng là bản
 /// A của phép đo `M2`, sửa là làm hỏng mốc so.
+///
+/// ⚠ TÊN Ô CỐ ĐỊNH VẪN CHƯA ĐỦ — `AR-q`, đo 2026-09-10: cùng bộ ô, hai ngữ cảnh đọc xếp
+/// khác nhau BA ticket trên một nhóm 10 case, và ô `buoc-kiem-ngoai-ticket` — ô mang phát
+/// hiện nền của cả dự án — về 0 ở một bên. Định nghĩa + ca biên vì thế nằm trong
+/// `description` của `SopDraftSchema`, vì **model đọc chỗ đó chứ không đọc chỗ này**.
+/// Tóm tắt dưới đây là cho người đọc code; bản đầy đủ và bản có hiệu lực là schema.
+///
+/// ⚠ THỨ TỰ XÉT (gỡ chồng lấn — các ô CÓ chồng lấn thật, dừng ở ô khớp đầu tiên):
+/// 1 `khong-phai-chan-doan` · 2 `buoc-kiem-ngoai-ticket` · 3 `ghi-ro-buoc-kiem` ·
+/// 4 `suy-ra-duoc-nhung-khong-ghi` · 5 `chi-ghi-ket-luan`.
+/// Và năm ô trả lời câu "hồ sơ CÓ GHI bước kiểm không", KHÔNG phải câu "nguyên nhân có
+/// chắc không" — độ chắc đã có chỗ riêng ở `chungCu` của từng nhánh.
 /// </summary>
 public sealed record SopDistribution(
-    /// <summary>Ticket ghi RÕ bước kiểm: có câu hỏi, có chỗ xem, có giá trị quan sát được.</summary>
+    /// <summary>Ghi RÕ bước kiểm LẶP LẠI ĐƯỢC: mở chỗ nào, xem cái gì. Câu nêu kết luận và câu
+    /// hỏi lấy thông tin ĐỀU KHÔNG tính.</summary>
     [property: JsonPropertyName("ghi-ro-buoc-kiem")] SopDistributionBucket GhiRoBuocKiem,
-    /// <summary>Suy ra được từ mẩu (ví dụ nhìn ảnh khách gửi), nhưng bước kiểm không được viết ra.</summary>
+    /// <summary>Suy ra được từ mẩu (ví dụ nhìn ảnh khách gửi), nhưng bước kiểm không được viết ra.
+    /// Ảnh cho thấy ĐÁP ÁN, không cho thấy CÁCH HỎI.</summary>
     [property: JsonPropertyName("suy-ra-duoc-nhung-khong-ghi")] SopDistributionBucket SuyRaDuocNhungKhongGhi,
     /// <summary>Chỉ ghi KẾT LUẬN, không ghi cách biết. Ví dụ thật: một ticket đóng bằng tám chữ "Sai CCCD".</summary>
     [property: JsonPropertyName("chi-ghi-ket-luan")] SopDistributionBucket ChiGhiKetLuan,
-    /// <summary>Bước kiểm xảy ra NGOÀI ticket — qua remote desktop hoặc điện thoại.</summary>
+    /// <summary>Bước kiểm xảy ra NGOÀI ticket — remote desktop, cuộc gọi. Kết luận được gõ vào
+    /// ticket KHÔNG kéo ticket ra khỏi ô này: ô nói về nơi KIỂM, không phải nơi GHI.</summary>
     [property: JsonPropertyName("buoc-kiem-ngoai-ticket")] SopDistributionBucket BuocKiemNgoaiTicket,
-    /// <summary>Không phải một ca chẩn đoán (hỏi-đáp, yêu cầu nội bộ, v.v.).</summary>
+    /// <summary>Không có triệu chứng hỏng nào cần tìm nguyên nhân (hỏi-đáp, hướng dẫn, yêu cầu
+    /// cấu hình thuần tuý). Yêu cầu cấu hình mà CÓ thứ không chạy thì không thuộc ô này.</summary>
     [property: JsonPropertyName("khong-phai-chan-doan")] SopDistributionBucket KhongPhaiChanDoan);
 
 /// <summary>

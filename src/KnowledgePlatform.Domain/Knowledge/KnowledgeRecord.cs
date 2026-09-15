@@ -57,15 +57,21 @@ public sealed class KnowledgeRecord : ITenantScoped
     /// <summary>
     /// Nhãn visibility hiện tại của record.
     ///
-    /// ⚠ TẬP GIÁ TRỊ CHƯA ĐƯỢC KHÓA Ở BẤT KỲ QUYẾT ĐỊNH NÀO. Cố ý để dạng chuỗi
-    /// đục thay vì tự phát minh một enum ở tầng code — đó chính là cách §6.9
-    /// (vocabulary song song) tái phát. Khoá tập giá trị này là một quyết định
-    /// domain, không phải quyết định implementation. Xem AR-a ở 07.
+    /// ✅ TẬP GIÁ TRỊ ĐÃ KHOÁ 2026-09-15 (`AR-a`, phiếu `docs/14` §A2): ba mức, xem
+    /// <see cref="Knowledge.VisibilityScope"/>. Kiểu đã siết từ `string?` sang enum.
+    ///
+    /// ⚠ Đoạn dưới đây GIỮ NGUYÊN vì nó giải thích vì sao code từng để dạng chuỗi đục
+    /// trong ba tuần — và lý do đó vẫn ĐÚNG ở thời điểm ấy:
+    ///
+    /// > (cũ, 2026-08-24) TẬP GIÁ TRỊ CHƯA ĐƯỢC KHÓA Ở BẤT KỲ QUYẾT ĐỊNH NÀO. Cố ý để dạng
+    /// > chuỗi đục thay vì tự phát minh một enum ở tầng code — đó chính là cách §6.9
+    /// > (vocabulary song song) tái phát. Khoá tập giá trị này là một quyết định domain,
+    /// > không phải quyết định implementation.
     ///
     /// Quy tắc S7 áp lên nó: mặc định = HẸP NHẤT trong các nguồn; mở rộng phải là
     /// hành vi tường minh của người thấy được TẤT CẢ nguồn; hệ thống KHÔNG BAO GIỜ tự mở.
     /// </summary>
-    public string? VisibilityScope { get; private set; }
+    public VisibilityScope? VisibilityScope { get; private set; }
 
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
@@ -126,10 +132,19 @@ public sealed class KnowledgeRecord : ITenantScoped
     /// S7: người duyệt phải là người thấy được TẤT CẢ nguồn — điều đó được kiểm
     /// ở tầng ứng dụng trước khi gọi vào đây (không phải ở DB, vì Q-D còn mở).
     /// </summary>
-    public void Approve(string approvedByActor, string visibilityScope, string? reason = null)
+    public void Approve(string approvedByActor, VisibilityScope visibilityScope, string? reason = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(approvedByActor);
-        ArgumentException.ThrowIfNullOrWhiteSpace(visibilityScope);
+
+        // ⚠ Siết sang enum KHÔNG tự chặn giá trị lạ: `(VisibilityScope)99` ép kiểu được và
+        // không ném gì. Bỏ phép kiểm này thì việc siết kiểu chỉ đổi một lỗ hổng thành một
+        // lỗ hổng KHÓ THẤY HƠN — chuỗi lạ thì đọc log là thấy, còn số lạ thì không.
+        if (!Enum.IsDefined(visibilityScope))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(visibilityScope), visibilityScope,
+                $"Phạm vi xem không nằm trong tập đã chốt. Nhận: {VisibilityScopes.Allowed}.");
+        }
 
         LastApproval = new KnowledgeApproval
         {
@@ -152,6 +167,85 @@ public sealed class KnowledgeRecord : ITenantScoped
     /// một trục thì buộc gắn INVALIDATED cho một phát biểu vẫn đúng.
     /// </summary>
     public void Deprecate() => Lifecycle = StoredLifecycleState.Deprecated;
+
+    /// <summary>
+    /// Nguời duyệt SỬA một phát biểu: bản gốc KHÔNG bị ghi đè, nó thôi còn hiệu lực và
+    /// một bản mới mang origin CỦA NGƯỜI SỬA được thêm vào. Đây là vế B của `M2`.
+    ///
+    /// 🛑 VÌ SAO PHẢI LÀ MỘT HÀM chứ không phải "nơi gọi tự gán `ReplacedByAssertionId`":
+    /// phép sửa có BỐN bất biến phải giữ cùng lúc, và chúng ĐỘC LẬP với nhau nên quên một cái
+    /// không làm hỏng ba cái kia — tức quên là quên IM LẶNG. Trước hàm này, chỗ duy nhất
+    /// thực hiện phép sửa là bộ test, và nó gán tay.
+    ///
+    /// <list type="number">
+    ///   <item>Bản mới giữ NGUYÊN <see cref="AssertionKind"/> của bản cũ. Sửa một "cách nhận
+    ///   ra" mà ra một "cách xử lý" thì `diff(A,B)` không còn so được cái gì với cái gì.</item>
+    ///   <item>Origin bản mới KHÔNG được là <see cref="Origin.AiInference"/>. `M2` chỉ đọc được
+    ///   nếu hai vế khác origin — hai bản cùng origin thì diff vẫn tồn tại nhưng mất nghĩa:
+    ///   không phân biệt được "AI viết rồi người sửa" với "người viết cả hai lần".</item>
+    ///   <item>Chỉ sửa được bản CÒN HIỆU LỰC. Sửa một bản đã bị thay là rẽ nhánh lịch sử,
+    ///   và `diff(A,B)` lúc đó không biết B là bản nào.</item>
+    ///   <item>Assertion phải thuộc CHÍNH record này.</item>
+    /// </list>
+    ///
+    /// ⚠ HÀM NÀY KHÔNG ĐỘNG TỚI <see cref="CauseName"/>, cố ý. `T1` nói tên nguyên nhân là
+    /// IDENTITY của record — đổi nó là đổi record đang nói về cái gì, không phải sửa một phát
+    /// biểu. Nếu người duyệt nói bản thân nguyên nhân sai thì đó là một record KHÁC cộng với
+    /// <see cref="Deprecate"/> bản cũ, không phải một lần sửa. Chưa có đường cho việc đó và
+    /// đừng lẳng lặng thêm vào đây.
+    ///
+    /// ⚠ HỆ QUẢ ĐÃ BIẾT, và nó ĐÚNG chứ không phải tác dụng phụ: sửa sau khi đã duyệt sẽ làm
+    /// <see cref="NeedsReview"/> bật lên (V3 — assertion mới hơn lần duyệt gần nhất), nên
+    /// <see cref="DisplayState"/> thành <c>NEEDS_REVIEW</c>. Tri thức KHÔNG bị rút khỏi đường
+    /// trả lời — V3 nói gắn cờ chứ không rút — nhưng người đọc thấy ngay là nó đã đổi kể từ
+    /// lần duyệt cuối.
+    /// </summary>
+    /// <returns>Assertion MỚI. Bản cũ vẫn nằm trong <see cref="Assertions"/>.</returns>
+    public Assertion ReviseAssertion(
+        Guid assertionId,
+        string newContent,
+        Origin revisedOrigin,
+        VerificationLevel verification,
+        string? actorLabel = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newContent);
+
+        var cu = Assertions.SingleOrDefault(a => a.Id == assertionId)
+            ?? throw new ArgumentException(
+                $"Assertion {assertionId} không thuộc tri thức {Id}.", nameof(assertionId));
+
+        if (!cu.IsCurrent)
+        {
+            throw new InvalidOperationException(
+                $"Assertion {assertionId} đã bị thay bởi {cu.ReplacedByAssertionId}. " +
+                "Sửa bản CÒN HIỆU LỰC — sửa một bản đã bị thay là rẽ nhánh lịch sử, và " +
+                "diff(A,B) sẽ không biết B là bản nào.");
+        }
+
+        if (revisedOrigin == Origin.AiInference)
+        {
+            throw new ArgumentException(
+                "Bản sửa phải mang origin của NGƯỜI sửa, không phải AiInference. M2 chỉ đọc " +
+                "được khi hai vế khác origin; cùng origin thì diff còn tồn tại nhưng mất nghĩa.",
+                nameof(revisedOrigin));
+        }
+
+        var moi = new Assertion
+        {
+            TenantId = TenantId,
+            KnowledgeRecordId = Id,
+            Kind = cu.Kind,
+            Content = newContent,
+            Origin = revisedOrigin,
+            Verification = verification,
+            ActorLabel = actorLabel,
+        };
+
+        Assertions.Add(moi);
+        cu.ReplacedByAssertionId = moi.Id;
+
+        return moi;
+    }
 }
 
 /// <summary>
@@ -164,9 +258,9 @@ public sealed class KnowledgeApproval
     public required DateTimeOffset ApprovedAt { get; init; }
 
     /// <summary>NULL nếu đây là lần duyệt đầu (record còn ở Draft).</summary>
-    public string? VisibilityScopeBefore { get; init; }
+    public VisibilityScope? VisibilityScopeBefore { get; init; }
 
-    public required string VisibilityScopeAfter { get; init; }
+    public required VisibilityScope VisibilityScopeAfter { get; init; }
 
     public string? Reason { get; init; }
 }

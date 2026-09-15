@@ -432,6 +432,538 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-34` · Ba quyết định đầu tiên được HIỆN THỰC — và đường đọc evidence vừa ra đời đã phơi ra hai thứ
+
+**Ngày 2026-09-15, cùng ngày chốt.** Ba trong mười quyết định của `docs/14` đã code xong:
+`AR-a` (tập giá trị quyền xem) · `AR-k` (luật gán `machineReadability`) · `AR-g` (đường đọc
+evidence). Chọn ba cái này vì chúng **chặn nợ tích thêm**, không phải vì chúng dễ.
+
+---
+
+### `AR-a` — siết `visibilityScope` từ chuỗi tự do sang enum ba mức
+
+```text
+enum VisibilityScope { RiengTu = 1, NoiBo = 2, ToanCongTy = 3 }
+```
+
+🛑 **THỨ TỰ CÓ NGHĨA, và nó là lý do chọn BA mức chứ không phải hai.** `S7` nói mặc định là
+*"HẸP NHẤT trong các nguồn"* — mà "hẹp nhất" chỉ có nghĩa khi tập giá trị **có thứ tự**.
+Hai mức thì câu đó gần như vô nghĩa.
+
+🛑 **DẠNG LƯU LÀ KEBAB, KHÔNG PHẢI TÊN C#** — và đây là chỗ suýt hỏng dữ liệu:
+
+```text
+HasConversion<string>()  lưu "NoiBo"     -> 7 dòng `noi-bo` trong kp_dev thành không đọc được
+ValueConverter tường minh lưu "noi-bo"   -> 7 dòng cũ đọc nguyên vẹn      ← đã chọn
+```
+
+Các enum khác trong `AppDbContext` đều dùng `HasConversion<string>()`, nên làm theo cho
+"nhất quán" là phản xạ tự nhiên — và nó sẽ hỏng ở lúc **ĐỌC**, tức xa chỗ gây ra. Bảng ánh
+xạ vì thế **viết tường minh**, không sinh từ tên C#: sinh tự động thì một lần đổi tên enum
+âm thầm đổi dạng lưu, mà **không test nào đỏ** — vì test cũng sinh chuỗi bằng chính hàm đó.
+
+⚠ **Siết kiểu KHÔNG tự đóng lỗ:** `(VisibilityScope)99` vẫn ép kiểu được và enum không ném.
+Nếu chỉ đổi kiểu mà bỏ `Enum.IsDefined` thì việc siết chỉ đổi một lỗ hổng **dễ thấy** (chuỗi
+lạ, đọc log là thấy) thành một lỗ hổng **khó thấy hơn** (số lạ).
+
+✅ **Test cũ `Duyet_ma_khong_noi_pham_vi_xem_thi_nem` ĐÃ ĐỔI ĐỐI TƯỢNG, không bị nới lỏng.**
+Ba ca `null` / `""` / `"   "` giờ **không viết ra được** — trình biên dịch chặn, và chặn lúc
+biên dịch mạnh hơn test. Nó được thay bằng ca còn lại thật sự: giá trị ngoài tập.
+
+✅ **KHÔNG cần migration** — `has-pending-model-changes` trả *"No changes"*. Cột vẫn
+`varchar(128)`; chỉ kiểu CLR và converter đổi.
+
+---
+
+### `AR-k` — luật gán `machineReadability`, và nó phải ĐO chứ không phải TIN
+
+Lập luận cũ nằm ngay trong script export: *"script chỉ đẩy text thuần từ REST API — nó BIẾT
+là text, nên khai High là khai thật."* **Câu đó sai ở chỗ đánh tráo hai câu hỏi:** trường
+này không hỏi *"có phải text không"*, nó hỏi *"MÁY ĐỌC ĐƯỢC ĐẾN ĐÂU"*. Một mẩu `"80771"` là
+text, và máy không đọc được gì từ nó.
+
+**Đo trên 873 mẩu THẬT** (dry-run 345 + spread 528), hai corpus độc lập:
+
+```text
+                   TRƯỚC          SAU
+giá trị phân biệt  1              3
+High               100,0%         29,3% / 19,5%
+Medium             —              45,5% / 52,8%
+Low                —              25,2% / 27,7%
+```
+
+Hai corpus cho phân bố **tương tự nhau** — đó là tín hiệu, không phải nhiễu.
+
+🎯 **Và đường đọc `AR-g` vừa build xong phơi ra ngay hiệu ứng, trên một case thật:**
+`ES-346425` có 13 mẩu, tất cả đang mang `High`. Luật mới đổi **11/13**:
+
+```text
+!image-2026-09-01-12-02-20-470.png|width=1223   High -> Low      ảnh, máy không đọc được
+!image-2026-09-01-12-03-31-901.png!             High -> Low
+Gửi [~tuannt] Anh báo khách vào xóa phiếu xuất  High -> Medium   văn xuôi của người
+Gửi [~anhnd2] Là NL-{-}00003 với 2 dấu "{-}"    High -> High     có cấu trúc thật
+```
+
+⚠ **11/16 dấu hiệu "có cấu trúc" KHÔNG KHỚP MẨU NÀO** trên 873 mẩu — xml, Traceback, stack
+frame java/.NET, `HTTP/1.`, `statusCode`, SQL, `curl`. Trên nguồn này, nhãn `High` thực chất
+do **một cặp dấu** quyết định: `{` và `}`.
+→ **GIỮ LẠI 11 dấu hiệu chưa khớp là có chủ đích**, không phải quên dọn: `G12` nói đặc điểm
+  dữ liệu của MỘT khách là **tham số**, không phải hằng số thiết kế. Nhưng **đừng đọc danh
+  sách đó thành "đã phủ stack trace"** — phần ấy chưa từng được một mẩu nào kiểm chứng.
+
+⚠ **Một ca biên, ghi ra thay vì tinh chỉnh cho đẹp số:** mẩu *"Anh liên hệ lại khách…
+Mrs Thanh - 09xxx … `!screenshot-1.png|thumbnail!`"* (108 ký tự) bị gán `Low` vì có ảnh và
+dưới ngưỡng 200. Có phần chữ đọc được thật, nên `Medium` cũng bảo vệ được. Luật đoán theo
+HÌNH DẠNG thì sẽ sai lẻ tẻ — và điều đó **khác hẳn cái cũ**: một nhãn sai lẻ tẻ thì lọc ra
+vẫn còn dữ liệu, còn một nhãn hằng số thì lọc xong **mất sạch**.
+
+⚠ **Corpus hiện có VẪN mang nhãn cũ.** Luật nằm ở script export, nên `dry-run-*.json` và
+`spread-*.json` chỉ đổi khi export lại — và `check_corpus.py` vẫn đang (đúng) báo
+*"1 giá trị phân biệt, 100% High ← HẰNG SỐ"* trên chúng.
+
+---
+
+### `AR-g` — đường đọc evidence, và một GIỚI HẠN ĐO ĐƯỢC mà lúc chốt chưa ai biết
+
+`GET /cases/{khoaNguon}/evidence` — tra theo **khoá nguồn**, thứ bên gửi đã biết về case của
+chính họ (cùng lý do `AR-f` chọn khoá nguồn làm mỏ neo).
+
+🛑 **NHƯNG: khoá nguồn chứa dấu `/` KHÔNG đọc ra được, kể cả khi mã hoá đúng.**
+
+```text
+GET /cases/crm:deal%2F4471/evidence   ->  404
+GET /cases/crm:deal/4471/evidence     ->  404
+```
+
+ASP.NET **giải mã `%2F` thành `/` TRƯỚC khi định tuyến**, nên `{khoaNguon}` (một đoạn đường
+dẫn) không bao giờ khớp. Mà `G1` nói khoá nguồn là **chuỗi tự do**, và README nêu thẳng ví dụ
+`crm:deal/4471`.
+
+→ Đã ghim bằng test `Khoa_nguon_co_dau_gach_cheo_HIEN_CHUA_doc_ra_duoc`, và test đó **chứng
+  minh luôn case CÓ THẬT trong kho** (gửi lại tín hiệu → `created: 0`). Không có vế thứ hai
+  thì cái 404 đọc ra thành *"chắc case chưa được tạo"*, và người sửa sẽ đi tìm sai chỗ.
+→ **Chưa tự ý sửa hình dạng endpoint.** `C4-1` chọn dạng đường dẫn có lý do; đổi nó (thêm
+  dạng query, hoặc route catch-all ở cuối) là một quyết định mới, không phải một chi tiết
+  triển khai. Khoá dạng `jira:ES-123` — áp đảo về số lượng — không dính giới hạn này.
+
+✅ Và endpoint này trả ra **nhãn `MachineReadability` đã lưu**, cố ý: đó chính là trường mà
+`AR-k` đo được là hằng số. Không có đường đọc thì một lỗi kiểu đó chỉ lộ ra khi có người mở
+database lên xem — và thực tế nó đã nằm đó **11 ngày**.
+
+---
+
+### Trạng thái verify
+
+```text
+✅ 245/245 xanh (148 domain + 19 hạ tầng + 78 API) · trước đó 216 · 0 warning
+✅ KHÔNG cần migration
+✅ CHẠY THẬT trên kp_dev:
+      7 record `noi-bo` CŨ đọc lại nguyên vẹn qua converter mới
+      `phamViXem: "team:ops"` -> 400 kèm ĐỦ danh sách: rieng-tu · noi-bo · toan-cong-ty
+      GET /cases/jira:ES-346425/evidence -> 13 mẩu, xếp theo thời điểm QUAN SÁT
+✅ bộ test biết ĐỎ — 3 phép đột biến:
+      bỏ `Enum.IsDefined` khỏi Approve          -> 5 test đỏ
+      đổi dạng lưu `noi-bo` thành `NoiBo`       -> 6 test đỏ
+      bỏ `OrderBy` khỏi đường đọc evidence      -> 1 test đỏ
+```
+
+⚠ **Còn lại của ba câu này:** corpus chưa export lại (nhãn mới chưa vào `kp_dev`) · hình dạng
+URL cho khoá có dấu `/` chưa quyết · và **bảy quyết định còn lại của `docs/14` vẫn chưa code**
+— trong đó `AR-l` và `AR-e` là hai cái mà mọi rủi ro ở README đang chờ.
+
+---
+
+## `IM-33` · Hình dạng thứ BA phá khoá cứng của `bangTraMaLoi` — và `diff(A,B)` giờ là một phép ĐẾM, không phải một lần đọc
+
+**Ngày 2026-09-15**, làm trong lúc chờ support duyệt `docs/16`. Ba việc, và mỗi việc để lại
+một thứ dùng lại được. Chi tiết đầy đủ ở `docs/11` §11 và §12; đây chỉ ghi phần chạm vào code.
+
+### Cây thứ ba: `SopDraftSchema` KHÔNG chứa nổi nó
+
+Nhóm *Lệch cấu hình tiền/thuế* (8 case, **63 mẩu** — dày nhất trong 19 nhóm) ra một topology
+thứ ba: **bảng đối chiếu ba nơi**, khoá `(cột tiền bị lệch, nơi khai sai)`. Schema có
+`bangTraMaLoi` với khoá **cứng** `(ncc, maLoi)` nên không có chỗ để vào.
+
+```text
+nhóm 1   cây phân nhánh lồng nhau          5 bước kiểm · 13 nhánh · 0 bảng
+nhóm 2   bảng tra, khoá (NCC, mã lỗi)      3 bước kiểm ·  6 dòng bảng
+nhóm 3   bảng đối chiếu, khoá (cột, nơi)   6 bước kiểm ·  8 dòng bảng
+```
+
+🛒 **Chỗ phải sửa khi đụng lại `SopDraftSchema`:** trường bảng để bản nháp **KHAI RA khoá của
+nó**, đừng đặt khoá sẵn trong schema. Hai phép kiểm đã đi trước theo hướng đó và chạy được:
+`nhom_sop.py --kiem-cay` và `goi_duyet.py` đều đọc khoá theo khai báo, và đều bắt trùng khoá
+trên chính khoá được khai. Schema thì **chưa sửa** — sửa nó là đổi prompt thật, nên chờ cùng
+lượt với quyết định `A3`/`AR-p`.
+
+⚠ Và khác biệt thật không nằm ở số chiều của khoá mà ở chỗ **khoá đến từ đâu**: mã lỗi thì
+hệ thống trả về, còn `(cột, nơi khai sai)` **không có trên màn hình nào** — phải dựng ra bằng
+cách mở cùng một hoá đơn ở ba nơi rồi so từng cột. Nên nhóm này có một bước kiểm **số 0** mà
+hai nhóm kia không cần, và nó sinh từ hai lần vấp thật chứ không phải phòng xa.
+
+### Năm ô của `AR-q` lệch nhãn giữa bản A và bản B — không phép kiểm nào bắt được
+
+Năm ô chốt **2026-09-11**; hai cây bản A viết **09-07/08** nên đặt tên ô theo ý người viết lúc
+đó. `--kiem-cay` cộng mọi ô **bất kể tên**, nên phép cộng vẫn khớp, không cảnh báo nào — trong
+khi `M2` so A với B **theo ô**, tức mọi ô đều "khác tên". Một phép so im lặng vô nghĩa.
+
+```text
+đã sửa   nhãn migrate về tập đóng, GIỮ NGUYÊN từng con số và từng mã case
+         (xếp lại theo định nghĩa mới = viết lại kết luận cũ bằng tiêu chí người viết
+          lúc đó không có; chỗ đó ghi vào `_nhanDaDoi` của chính hai file)
+đã sửa   --kiem-cay nay CHẶN một ô lạ thay vì cộng nó vào
+```
+
+⚠ Nó lộ ra theo một đường đáng ghi: phép kiểm cũ bỏ qua khoá bắt đầu bằng `_`, còn cây nhóm 3
+đặt chú thích tên `🎯_moiTuongQuan…` — **tiền tố emoji rồi mới tới `_`**, đúng lối đặt tên repo
+này dùng ở `duyet` và `hinhDang`. Nó chết bằng `TypeError: string indices must be integers`,
+một thông báo không chỉ về phía cây. Phép kiểm nay xét **hình dạng giá trị**, không xét tên.
+
+### `diff_ab.py` — `M2` có phép đếm chạy lại được
+
+`scripts/jira-export/diff_ab.py`, chạy `--tat-ca` để bắt cặp A/B theo tên nhóm bên trong file.
+
+```text
+                                   nhóm 1          nhóm 2
+(a) bất đồng PHÂN BỐ theo ticket   3/10  30,0%     3/10  30,0%
+(b) chênh lệch MÔ TẢ (chuẩn theo A)      31,0%           52,8%
+(c) chênh TỈ LỆ NHÁNH CÓ NGUỒN      3,8 điểm %      30,8 điểm %
+                                   A 54% · B 50%   A 94% · B 63%
+```
+
+🎯 `(a)` **bằng nhau đúng 3/10 ở hai nhóm dựng độc lập** — con số `M2` đầu tiên đến từ một phép
+đếm, không từ một lần đọc. Nhưng **chiều lệch ngược nhau**, và đó mới là chỗ đáng đọc: nhóm 1
+máy xếp **cao hơn** người (nặng nhất là `ES-343733` — máy đưa một ca chẩn đoán-qua-remote vào ô
+`ghi-ro-buoc-kiem`, đúng ca biên mà schema viết hẳn một đoạn để cảnh báo), nhóm 2 máy xếp
+**thấp hơn** người ở cả 3 ca — chỗ này đọc có điều kiện vì bản A nhóm 2 viết trước khi năm ô có
+định nghĩa.
+
+🛑 `(c)` nhóm 2 là con số khó chịu nhất: máy dựng **24 nhánh** so với 11 của người, mà phần mở
+rộng đó phần lớn **không có ca thật đứng sau** (94% → 63%). Nhiều hơn không phải tốt hơn, và
+`(b)` — vốn chỉ đếm độ chi tiết — sẽ chấm ngược nếu đọc một mình. Vì vậy script in **ba cách
+tính cạnh nhau, không có điểm tổng**: cách tính `diff(A,B)` vẫn là câu CHƯA QUYẾT (`docs/11`
+§8 mục 3), và một script tự chọn một cách rồi in ra "32%" sẽ biến câu chưa quyết thành một con
+số trông như đã quyết.
+
+**Một thứ trước đây phải tìm bằng tay nay là một dòng bảng:** mục *ĐỘ PHỦ NGUỒN* của nhóm 1 in
+ra `chỉ A dẫn: ES-343036` — đúng case mà bản A mượn từ nhóm khác để dựng bước loại trừ, và là
+chỗ bản B không với tới được. Câu `A3`/`AR-p` của `docs/14` vì thế có thêm một phép đo đứng sau.
+
+### Một câu SAI suýt gửi ra ngoài, và ngưỡng phải đặt ở hai phần ba
+
+`goi_duyet.py` mở đầu bằng một câu **hằng số**: *"ticket ghi được kết luận, nhưng hầu như không
+ghi cách anh/chị biết"*. Câu đó sai với nhóm 3 (**6/8 ticket CÓ ghi**). Đã đổi thành câu được
+**tính** từ chính các cây trong gói — nhưng bản đầu đặt ngưỡng ở **một nửa** và hỏng ngay lần
+chạy đầu: bản máy sinh nhóm 1 khai 5/10, đúng ranh giới, nên gói **đang chờ duyệt** (`docs/16`)
+đổi lời sang *"phần lớn chữ trong đó là chữ của chính anh/chị"*. Ở mức một nửa thì đó là nói
+quá, và nói quá với đúng người biết rõ sự thật thì mất nhiều hơn được.
+
+→ Ngưỡng đặt ở **hai phần ba**. Hệ quả kiểm được: `docs/12` và `docs/16` sinh lại ra **y nguyên
+từng bit** bản đã gửi, chỉ `docs/17` dùng câu mới.
+
+---
+
+## `IM-32` · Đường nạp BẢN B đã có — `M2` giờ đo được; và một bẫy EF nằm chờ sẵn cho MỌI đường tương lai
+
+**Ngày 2026-09-13 (lượt hai).** `M2` = *số nháp được duyệt + mức sửa `diff(A, B)`*. Sáng nay
+A (máy sinh) đã vào kho được, nhưng **B chưa có đường nào** — nên `M2` vẫn không đo được gì,
+dù cả hai nửa đã thiết kế xong từ lâu. Hai endpoint mới đóng nốt vòng đó:
+
+```text
+POST /knowledge/{id}/sua    nạp bản người sửa, KHÔNG đè bản A
+GET  /knowledge/{id}        đọc lại CẢ lịch sử assertion — chỗ diff(A,B) đọc được
+```
+
+⚠ **Đường RIÊNG, cố ý không gộp vào `/approve`.** `S7` nói duyệt là *mở quyền xem*, còn đây
+là *đổi nội dung*. Gộp thì không phân biệt được "người duyệt đồng ý nguyên văn" với "người
+duyệt sửa rồi mới đồng ý" — mà đúng **khoảng cách giữa hai ca đó** là con số `M2` muốn đo.
+
+⚠ **`GET /knowledge/{id}` không phải tiện ích.** `/hoi` cố ý chỉ trả bản CÒN HIỆU LỰC (người
+đang xử lý ticket không cần lịch sử). Thiếu đường đọc này thì bản A vẫn nằm trong database
+mà **không có cách nào lấy ra** — `M2` vẫn không đo được dù dữ liệu đã đủ. Một cách hỏng rất
+im lặng: **dữ liệu đúng, đường đọc thiếu.**
+
+### `KnowledgeRecord.ReviseAssertion` — bốn bất biến, và vì sao phải là một HÀM
+
+Cơ chế (`ReplacedByAssertionId` / `IsCurrent`) có từ 2026-08-24, nhưng tới hôm nay **chỗ duy
+nhất trong cả repo thực hiện phép sửa là bộ test, và nó gán tay**. Một cơ chế mà chỉ test
+biết dùng đúng thì mã sản phẩm sẽ dùng sai — nhất là khi bốn bất biến ĐỘC LẬP với nhau, nên
+quên một cái không làm hỏng ba cái kia, tức quên là quên IM LẶNG.
+
+```text
+1  bản mới giữ NGUYÊN Kind      sửa "cách nhận ra" mà ra "cách xử lý" thì diff không so
+                                 được cái gì với cái gì
+2  origin KHÔNG được AiInference M2 chỉ đọc được khi hai vế khác origin; cùng origin thì
+                                 diff còn tồn tại nhưng mất nghĩa
+3  chỉ sửa bản CÒN HIỆU LỰC      sửa bản đã bị thay là rẽ nhánh — diff(A,B) không biết B là ai
+4  assertion phải thuộc record   này
+```
+
+✅ Và mặc định là `HumanAssessment`, **không** phải `UserConfirmed`: người support sửa một
+bản nháp là *nhận định có chuyên môn*, còn `UserConfirmed` nghĩa là *"người dùng đã nói vậy"*
+— một sự thật về LỜI NÓI chứ không về nội dung (v0.2 §7.5).
+
+⚠ Hàm này **KHÔNG động tới `CauseName`**, cố ý. `T1`: tên nguyên nhân là IDENTITY. Đổi nó là
+đổi record đang nói về cái gì, không phải sửa một phát biểu. Nếu người duyệt nói bản thân
+nguyên nhân sai thì đó là một record KHÁC cộng `Deprecate` bản cũ. **Chưa có đường cho việc
+đó** — và đừng lẳng lặng thêm vào hàm sửa.
+
+✅ **Hệ quả ĐÚNG, không phải tác dụng phụ:** sửa sau khi duyệt làm `NeedsReview` bật (`V3`),
+nên `DisplayState` = `NEEDS_REVIEW`. Tri thức **KHÔNG bị rút** khỏi đường trả lời (V3: gắn cờ
+chứ không rút) — người đang xử lý ticket vẫn dùng được, và vẫn thấy ngay nó đã đổi kể từ lần
+duyệt cuối. Duyệt lại thì sạch cờ, và **chính lần duyệt lại đó là vế "số nháp được duyệt"**.
+
+### 🛑 PHÁT HIỆN NẶNG NHẤT — KHOÁ CHÍNH DO CODE SINH, MÀ EF KHÔNG ĐƯỢC NÓI
+
+Bộ test API đỏ với `DbUpdateConcurrencyException: expected to affect 1 row(s), but actually
+affected 0`. Thông điệp nói về **concurrency** và trỏ hoàn toàn sai chỗ. In trạng thái
+`ChangeTracker` ra mới thấy:
+
+```text
+Assertion=Modified | Assertion=Modified | KnowledgeRecord=Unchanged | Assertion=Unchanged ...
+                                            ^ KHÔNG có cái nào Added
+```
+
+**Nguyên nhân:** mọi entity đặt `Id` ngay trong bộ khởi tạo (`Guid.CreateVersion7()`), nhưng
+theo QUY ƯỚC của EF, khoá chính kiểu Guid là `ValueGenerated.OnAdd` — và với khoá OnAdd *đã
+có giá trị khác mặc định*, EF suy ra entity đó **đã tồn tại**. Thêm một `Assertion` vào một
+`KnowledgeRecord` ĐANG ĐƯỢC THEO DÕI thì nó bị gắn `Modified`, rồi EF sinh một `UPDATE` vào
+một dòng không tồn tại.
+
+🛑 **Vì sao nó không lộ ra sớm hơn, và vì sao đó mới là phần đáng sợ:** đường nạp bản nháp
+`Add()` **nguyên cả đồ thị** một lần, và khi đó cả cụm được gắn `Added` nên không ai thấy gì.
+Lỗi chỉ hiện ra ở chỗ ĐẦU TIÊN thêm con vào một cha đã nạp. Tức nó **nằm chờ sẵn cho mọi
+đường tương lai**, không riêng đường sửa — và mỗi đường đó sẽ tự phát hiện lại nó bằng một
+thông điệp lỗi nói về chuyện khác.
+
+→ **Sửa ở GỐC, và suy TỪ MODEL chứ không phải danh sách viết tay** (cùng lý do `IM-7`: thêm
+  entity mới mà quên thêm vào danh sách thì cái bẫy lặng lẽ quay lại):
+
+```csharp
+foreach (var khoa in b.Model.GetEntityTypes()
+             .Select(t => t.FindPrimaryKey()).Where(k => k is not null)
+             .SelectMany(k => k!.Properties).Where(p => p.ClrType == typeof(Guid)))
+{
+    khoa.ValueGenerated = ValueGenerated.Never;
+}
+```
+
+✅ **KHÔNG cần migration** — `dotnet ef migrations has-pending-model-changes` trả *"No changes
+have been made to the model"*. Thay đổi chỉ ở cách EF **phân loại trạng thái**, không đụng DDL.
+
+### Một lỗi nhỏ trong `goi_duyet.py`, sửa vì nó gửi RA NGOÀI dự án
+
+`dau_trang()` nhận tham số `so_cay` rồi **không dùng**, và viết cứng "hai" ở ba chỗ. Sinh gói
+duyệt cho MỘT nhóm thì ngay dòng đầu đã nói sai với chính người được nhờ đọc. Đã sửa theo số
+cây thật; `docs/12` sinh lại **giống hệt từng byte** nên tài liệu cũ không lệch.
+
+### Trạng thái verify
+
+```text
+✅ 216/216 xanh (125 domain + 19 hạ tầng + 72 API) · trước đó 194 · 0 warning
+✅ CHẠY THẬT trên kp_dev, trên chính record đã duyệt sáng nay:
+      trước     6 assertion, tất cả AiInference, ACTIVE
+      sửa       bản A [AiInference/Supported] và bản B [HumanAssessment/Verified]
+                cùng nằm trong response · record tự thành NEEDS_REVIEW
+      đọc lại   7 assertion · bản A conHieuLuc=false, có biThayBoi · bản B hiệu lực
+      /hoi      trả bản B, trangThai NEEDS_REVIEW   ← V3 gắn cờ chứ không rút
+      duyệt lại ACTIVE, canDuyetLai=false
+✅ bộ test biết ĐỎ — 2 phép đột biến:
+      bỏ luật ValueGeneratedNever       -> 4 test API đỏ
+      bỏ luật từ chối AiInference       -> 1 test domain đỏ
+```
+
+⚠ **Một cơ chế KHÔNG đỏ được khi thử phá, ghi rõ kẻo nói quá:** gỡ luật `AiInference` khỏi
+Domain thì test API vẫn XANH, vì tầng API kiểm riêng trước khi gọi xuống. Đó là hai lớp bảo
+vệ làm đúng việc của chúng — nhưng nói "mọi test đều biết đỏ" là nói quá. Cùng dạng với ghi
+chú về tính idempotent ở §2.
+
+⚠ **Còn thiếu, biết rõ:** chưa có đường nào cho ca *"chính NGUYÊN NHÂN sai"* (phải là record
+mới + `Deprecate`), và chưa có chỗ nào TỔNG HỢP `diff(A,B)` thành con số — hiện đọc được
+từng record một, nhưng `M2` cuối cùng cần một phép đếm trên cả nhóm.
+
+---
+
+## `IM-31` · VÒNG TRI THỨC ĐÃ ĐÓNG — nạp → duyệt → hỏi chạy hết trên dữ liệu thật, và cổng `AR-l` giờ là CODE chứ không phải lời dặn
+
+**Ngày 2026-09-13.** Bốn mảnh (a)(b)(c)(d) của phạm vi demo đã build xong và **đã chạy
+thật**, không chỉ xanh trong test. Ba endpoint mới:
+
+```text
+POST /knowledge/sop-draft        (a)  nháp JSON -> knowledge_record + assertion, ở Draft
+POST /knowledge/{id}/approve     (b)  đường ĐẦU TIÊN với tới KnowledgeRecord.Approve()
+POST /hoi                        (c)(d)  cửa đầu tiên cho một CÂU HỎI + cổng KHÔNG BIẾT
+```
+
+Trước hôm nay, `Approve()` có ở Domain từ 2026-08-24 mà **không nơi nào gọi**, và host chỉ
+có hai cửa NẠP. Kho rỗng theo nghĩa cấu trúc: không phải chưa ai nạp, mà **không có đường
+nào để nạp**.
+
+### Chạy thật, không phải chỉ test — dữ liệu thật, app thật, `kp_dev` thật
+
+```text
+kho trước    knowledge = 0
+nạp nháp     may-sinh-phan-quyen-ky-hieu.json -> 8 record, tất cả Draft
+             buocSuaMoCoi = ["S8"]        ← bắt được lỗi thật qua đường HTTP thật
+HỎI trước    ES-346039 -> bietTraLoi=FALSE · lyDo="nhom-chua-co-sop-duoc-duyet"
+   khi duyệt    (định tuyến ĐÚNG nhóm, nhưng chưa ai duyệt)   ← CỬA 2 làm việc
+duyệt        7 record CÓ đường nhận ra. Record mồ côi S8 CỐ Ý KHÔNG duyệt —
+             một nguyên nhân không có cách nhận ra thì không nên phát cho ai.
+HỎI lại      ES-346039 -> bietTraLoi=TRUE · 7 hướng dẫn · tất cả ACTIVE / noi-bo
+kho sau      Active 7 · Draft 1        ← đúng bằng số đã duyệt, mồ côi vẫn nằm ngoài
+```
+
+Ba ca KHÔNG BIẾT cũng đo thật, mỗi ca một lý do khác nhau:
+
+```text
+ES-345990   phép đo nói KHONG-BIET  -> "Trộn hai việc: mất mục cấu hình VNPT và đòi tự phát hành"
+chỉ tiêu đề + mô tả                 -> "Bản đang chạy là bản TRA SẴN, chỉ trả lời được cho ticket đã đo"
+ES-999999   không có trong bảng     -> "không nằm trong 150 ticket đã đo"
+```
+
+### 🛑 Cổng `AR-l` giờ CHẠY ĐƯỢC
+
+Phạm vi demo tránh `AR-l` bằng cách khoá một tenant, không xuất bản ra ngoài — nhưng **một
+phạm vi chỉ nằm trong tài liệu thì không chặn được gì**. Nên nó nằm trong
+`KnowledgeApprovalHandler`: **chế độ shared TỪ CHỐI DUYỆT**, trả 409 kèm lý do. Duyệt LÀ
+xuất bản, và rò của `AR-l` xảy ra ở khâu xuất bản chứ không ở khâu truy vấn hàng.
+→ Muốn duyệt ở chế độ shared thì phải giải `AR-l`, không phải sửa dòng đó.
+
+### 🛑 Cổng "KHÔNG BIẾT" có HAI CỬA, và cửa thứ hai là cửa dễ quên
+
+```text
+CỬA 1  định tuyến không biết       docs/13 §3.2: trên 62 case hồ sơ KHÔNG BAO GIỜ ghi
+                                    nguyên nhân, bộ định tuyến vẫn dám gán 40,3%
+CỬA 2  biết nhóm, nhưng nhóm CHƯA  docs/13: "định tuyến đúng nhóm chỉ có nghĩa NẾU nhóm
+       CÓ SOP ĐƯỢC DUYỆT            đó có một SOP đã duyệt để trả về". Thiếu cửa này thì
+                                    hệ thống trả RỖNG, và rỗng đọc ra thành "không sao cả".
+```
+
+### Hai lỗi thật tìm được khi build — cả hai đều do TEST bắt, không do đọc code
+
+🛑 **1. GỘP ÂM THẦM HAI NGUYÊN NHÂN CỦA HAI NHÓM KHÁC NHAU.** Bản đầu của
+`SopDraftIngestHandler` khử trùng theo `CauseName` trên **toàn tenant** — nghe hợp lý, vì
+`T1` nói identity của record LÀ nguyên nhân. Nhưng `CauseName` lấy từ `quanSat`, mà `quanSat`
+là **lời model viết**: "Danh sách rỗng", "Ô trống nhưng chọn được" trùng nhau giữa các nhóm
+là chuyện thường. Hậu quả: nạp bản nháp của nhóm thứ hai thì **nạp 3, tạo 1, trả 200, không
+ai biết**.
+→ Sửa: khử trùng theo CẶP `(nhóm, CauseName)`. Gộp im lặng tệ hơn trùng lặp — trùng thì đếm
+  ra là thấy, gộp thì record biến mất mà response vẫn xanh. Cùng họ với `AR-k`/`AR-l`.
+
+⚠ **2. TEST XANH KHI CHẠY MỘT MÌNH, ĐỎ KHI CHẠY CẢ BỘ — và lý do đáng mang đi.**
+Helper dựng bối cảnh test dùng `Guid.CreateVersion7().ToString("N")[..12]` làm hậu tố duy
+nhất. Nhưng **GUID v7 xếp theo THỜI GIAN**: 12 ký tự đầu là timestamp, nên hai lần gọi trong
+cùng một mili giây ra **cùng một chuỗi**. Hai bối cảnh lẽ ra độc lập hoá ra dùng chung một
+tên nhóm.
+→ **Cắt phần ĐẦU của một id thời-gian-tăng-dần là cắt đúng phần KHÔNG phân biệt được.**
+⚠ Và chiều nguy hiểm không phải chiều đã xảy ra: một test đỏ vì test khác thì còn thấy;
+  cùng cơ chế đó có thể làm một test **XANH vì lý do sai**.
+
+### Ba quyết định hình dạng, ghi vì chúng khó đọc ra từ code
+
+```text
+· "LÁ của cây" hiện thực là BƯỚC SỬA, không phải đường-từ-gốc-tới-lá. Cây thật CÓ CHU
+  TRÌNH (K2 <-> K3) nên liệt kê đường đi sẽ lặp vô hạn — xem IM-30.
+· Nhóm gắn vào record bằng assertion `Applicability`, KHÔNG bằng một cột. `AP1` nói
+  applicability là assertion; và docs/13 §3.3 đo được 4/5 lỗi định tuyến nằm ở SEAM giữa
+  hai nhóm kề nhau, `AR-p` đang mở đúng câu vẽ lại nhóm. Đóng một taxonomy CHƯA ỔN ĐỊNH
+  thành cột là cam kết vào thứ vừa đo được là đang lung lay.
+· `IDinhTuyenNhom` mỏng như `ISopDrafter` (`AR3`). Bản đang cắm TRA SẴN, không gọi API.
+  Đổi sang bản gọi model thật = đổi MỘT dòng DI, nơi gọi không đổi.
+```
+
+### Trạng thái verify
+
+```text
+✅ 194/194 xanh (114 domain + 19 hạ tầng + 61 API) · trước đó 157 · 0 warning
+✅ chạy THẬT trên kp_dev: nạp -> hỏi(không biết) -> duyệt -> hỏi(7 hướng dẫn)
+✅ bộ test biết ĐỎ — 2 phép đột biến trên hai cổng an toàn:
+      bỏ lọc `Lifecycle == Active` khỏi HoiHandler  -> 2 test đỏ
+      bỏ cổng shared khỏi KnowledgeApprovalHandler  -> 1 test đỏ
+✅ quét credential: sạch (53 giá trị mạnh đối chiếu, mã thoát 0)
+✅ RLS vẫn sống: psql bằng kp_app mà quên đặt app.current_tenant -> 0 dòng (IM-6)
+```
+
+### ⚠ Demo này KHÔNG chứng minh gì — đọc trước khi báo cáo ra ngoài
+
+```text
+❌ KHÔNG  độ chính xác định tuyến. Bản đang cắm TRA BẢNG có sẵn đáp án. Con số 84,1%
+          đã đo ở docs/13 và VẪN nằm ở đó, không phải ở đây.
+❌ KHÔNG  chất lượng SOP. Vẫn là bản B do máy sinh, chưa người làm support nào sửa.
+          Mọi assertion vẫn mang Origin=AiInference SAU KHI DUYỆT — cố ý, `M2` cần
+          đọc lại được bản gốc. "Duyệt" mở quyền xem, nó KHÔNG biến lời máy thành lời người.
+❌ KHÔNG  `AR-l`. Cổng shared là TRÁNH, không phải GIẢI.
+❌ KHÔNG  ngưỡng của cổng KHÔNG BIẾT. Hiện cổng là nhị phân (có/không có SOP duyệt),
+          chưa có ngưỡng độ tin cậy nào được ĐO. docs/10 §6.5 mục 3 vẫn mở.
+```
+
+⚠ **Còn thiếu, biết rõ:** chưa có unique index trên `(tenant_id, cause_name, nhóm)`, nên hai
+request nạp CÙNG LÚC vẫn sinh được record trùng — khác đường tín hiệu (có index làm chốt
+cuối). Với một người gọi tay thì chưa chặn việc gì, nhưng đừng đọc thành đã kín.
+
+---
+
+## `IM-30` · Một bản nháp SOP sinh ra NHIỀU record — và cây thật có CHU TRÌNH nên không liệt kê đường đi được
+
+**Ngày 2026-09-13.** Bắt đầu mảnh (a) của phạm vi demo thì chạm ngay một chỗ không được
+tự quyết: `SopDraft` là bản nháp của MỘT NHÓM, còn `T1` nói identity của `KnowledgeRecord`
+là MỘT NGUYÊN NHÂN. Mà `docs/11` đã đo: nhóm dày nhất có **bốn** nguyên nhân với triệu
+chứng khách kể trùng nhau. Nên phép map **không phải 1-1**, và hạt của record là một
+quyết định domain chứ không phải chi tiết triển khai.
+
+✅ **Chủ dự án chốt qua form: mỗi LÁ của cây = 1 record.** Đúng `T1`. Hai phương án bị bỏ:
+gộp cả nhóm thành một record (nhanh hơn nhưng lệch đúng quyết định nền của domain model —
+`D5` gọi đó là giàn giáo tạm), và phương án lai thêm một bảng artifact riêng (đúng `T1` và
+dễ cho bước (c) nhất, nhưng nhiều việc nhất).
+
+🛑 **PHÁT HIỆN KHI HIỆN THỰC — "đường từ gốc tới lá" KHÔNG LIỆT KÊ ĐƯỢC.** Cây thật do máy
+sinh cho nhóm 1 **có chu trình**:
+
+```text
+K2 --("Đã có quyền, xem tiếp role")--> K3
+K3 --("Ticket chỉ ghi 'chưa phân quyền'")--> K2
+```
+
+Một mapper liệt kê đường đi sẽ **lặp vô hạn trên dữ liệu thật**. Nên "lá" được hiện thực
+là **bước sửa** (`SopFixStep`): mỗi bước sửa là một nguyên nhân phân biệt, và các NHÁNH trỏ
+tới nó là các cách nhận ra nó. Giữ đúng điều chủ dự án chốt, và chạy được trên cây có chu trình.
+→ Test `Cay_co_chu_trinh_van_map_xong` **tự khẳng định cây thử có chu trình trước khi đo** —
+  nếu ai sửa dữ liệu thử làm mất chu trình, test tự tố cáo là nó đã mất nghĩa.
+
+⚠ **Và `S8` trong nháp thật KHÔNG NHÁNH NÀO TRỎ TỚI.** Một bước sửa không tới được là một
+bước sửa không bao giờ được dùng. Không nuốt im lặng: nó vào `SopMappingResult.BuocSuaMoCoi`,
+và chính record đó mang tên `"[nhóm · S8] KHÔNG CÓ ĐƯỜNG NHẬN RA — …"` để ai đọc kho tri thức
+cũng thấy, thay vì mang một cái tên nghe bình thường rồi nằm im.
+
+**Bốn ràng buộc đã đóng vào mapper, mỗi cái có test riêng:**
+
+```text
+AP4  một nhánh = MỘT assertion Recognition, KHÔNG gộp — nhánh LÀ một cách nhận ra
+D4   MỌI assertion mang Origin.AiInference, kể cả nhánh tự khai `evidence-noi-ro`.
+     Nhãn đó nói bản nháp CÓ ticket chống lưng; nó không biến nháp thành lời của người.
+     Record ra đời ở Draft, VisibilityScope null, LastApproval null.
+V1   TRẦN là Supported, KHÔNG BAO GIỜ Verified. Một phát biểu do máy sinh, TỰ KHAI là có
+     nguồn, mà được gắn Verified thì cả cái thang mất nghĩa.
+T1   CauseName lấy từ QUAN SÁT dẫn tới bước sửa, KHÔNG lấy từ `viec` — `viec` mô tả cách
+     CHỮA chứ không mô tả BỆNH. Đặt identity vào cách chữa là đặt vào thứ dễ mục (D5).
+```
+
+**Trạng thái verify:**
+
+```text
+✅ 173/173 xanh (112 domain + 19 hạ tầng + 42 API) · trước đó 157 · 0 warning
+✅ 16 test mới, KHÔNG cần PostgreSQL                              ← IM-18
+✅ CHẠY TRÊN BẢN NHÁP THẬT do máy sinh, không chỉ dữ liệu thử:
+      8 bước sửa -> 8 record  ·  S8 đúng là mồ côi  ·  0 nhánh bịa đích
+✅ bộ test biết ĐỎ: gỡ guard "nhánh trỏ sang bước kiểm khác" -> 1 test đỏ
+```
+
+⚠ **Chưa làm, đừng đọc nhầm là xong:** mapper mới dựng record trong bộ nhớ. **Chưa ghi
+DB**, chưa endpoint nào gọi, và `Approve()` vẫn chưa nơi nào gọi. Đó là phần còn lại của
+mảnh (a) và toàn bộ mảnh (b).
+
+---
+
 ## `IM-29` · Bản B ĐẦU TIÊN — sinh không cần credit, và nó phơi ra một trần cấu trúc của cách gom theo nhóm
 
 Ngày 2026-09-10. Tài khoản API chờ tổ chức duyệt, `count_tokens` cũng bị cổng credit chặn
@@ -962,6 +1494,32 @@ nhưng nó là dấu hiệu: nếu sau này cần kiểm luật thời gian ph�
 
 # 4. Chưa build — phần còn lại của slice Path A
 
+> 🎯 **VÒNG TRI THỨC ĐÃ ĐÓNG — 2026-09-13. Danh sách `text` ngay dưới là bản CŨ.**
+> Ba dòng của nó đã xong và không còn đúng nữa: **`ISoạnNhápSOP`** (xong 2026-09-08/10),
+> **luồng duyệt** (`POST /knowledge/{id}/approve`), và **một cửa cho câu hỏi**
+> (`POST /hoi`). Giữ nguyên danh sách cũ vì lập luận thứ tự trong đó vẫn giải thích được
+> *vì sao* từng bước đến trước bước nào — nhưng đừng làm theo nó. Chi tiết: §3 `IM-31`.
+>
+> ```text
+> ✅ (a) nháp JSON -> knowledge_record + assertion     POST /knowledge/sop-draft
+> ✅ (b) luồng duyệt, S7 một hành động                 POST /knowledge/{id}/approve
+> ✅ (c) đường vào cho câu hỏi + định tuyến             POST /hoi
+> ✅ (d) cổng "KHÔNG BIẾT", HAI cửa độc lập            (trong /hoi)
+> ```
+> ✅ **VÀ VẾ B ĐÃ CÓ ĐƯỜNG VÀO — cùng ngày, xem §3 `IM-32`.**
+> `POST /knowledge/{id}/sua` (người sửa, không đè bản A) và `GET /knowledge/{id}` (đọc cả
+> lịch sử — chỗ `diff(A,B)` đọc được). Dòng `Tính diff(A,B) cho M2` ở danh sách dưới vì thế
+> **đã có đủ DỮ LIỆU**; cái còn thiếu chỉ là phép ĐẾM trên cả nhóm, không phải đường ghi.
+>
+> ⚠ **CÒN LẠI, và không cái nào là việc của code:** kho chỉ có tri thức của MỘT nhóm và
+> nó là bản B do máy sinh (chưa người làm support nào sửa) · định tuyến đang là bản TRA
+> SẴN, chưa gọi model · `AR-l` mới TRÁNH chứ chưa GIẢI · ngưỡng của cổng KHÔNG BIẾT chưa
+> được ĐO (hiện là nhị phân: có hay không có SOP đã duyệt).
+> ⚠ `Tính diff(A,B) cho M2`: **đường GHI và đường ĐỌC đã xong** (`IM-32`), còn thiếu phép
+> ĐẾM trên cả nhóm — và quan trọng hơn là còn thiếu **bản B thật của một người làm
+> support**, thứ không code ra được.
+
+
 ```text
 · Hai loại tín hiệu còn lại của 06 §1      hiện chỉ có "có việc mới ở nguồn".
                                            Còn: người dùng đổi trạng thái ·
@@ -1027,6 +1585,17 @@ tiếp giờ là **việc của người dùng**: xuất case OTA thật KÈM CO
 
 ```text
 AR-a   Tập giá trị của visibility scope là gì?
+       ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §A2 = A2-1).
+       ✅ ĐÃ CODE 2026-09-15 cùng ngày chốt — enum ba mức + converter kebab; 7 dòng cũ đọc
+         nguyên vẹn, KHÔNG cần migration. §3 `IM-34`.
+       → BA GIÁ TRỊ: `rieng-tu` · `noi-bo` · `toan-cong-ty`. Siết thành enum ở code.
+         Lý do chọn: đủ cho `S7`, và quy tắc "mặc định HẸP NHẤT" chỉ có nghĩa khi tập giá
+         trị có thứ tự — ba mức cho thứ tự đó. Không chọn theo PHÒNG BAN vì nó kéo theo
+         câu "ai thuộc phòng nào", mà `AR-e` (xác thực người gọi) lúc chốt vẫn chưa code.
+       ⚠ Việc phải làm, và nó gấp dần: đường duyệt build ngày 13 nhận `phamViXem` là CHUỖI
+         TỰ DO, nên `kp_dev` đã có 7 record mang `noi-bo` mà không quyết định nào đứng sau.
+         `noi-bo` nằm trong tập vừa chốt nên KHÔNG phải migrate — nhưng mỗi ngày chưa siết
+         là thêm một cơ hội sinh ra giá trị thứ tư.
        S7 khoá QUY TẮC nhưng không khoá TẬP GIÁ TRỊ. Code để dạng chuỗi đục
        thay vì phát minh enum (IM-3). Đây là câu hỏi DOMAIN, cần quyết ở tầng
        domain rồi mới siết ở code. Gắn với Q-D (còn OPEN, hoãn v2).
@@ -1099,6 +1668,11 @@ AR-c   ĐÓNG 2026-08-24. RLS đã kiểm trên PostgreSQL 18.6 thật, bằng c
        test biết ĐỎ (gỡ FORCE → 5 đỏ; gỡ nullif → 3 đỏ). Sinh ra IM-9 và IM-10.
 
 AR-i   Chuỗi kết nối và mật khẩu DB lấy từ đâu ở deploy thật?
+       ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §C2 = C2-1).
+       → BIẾN MÔI TRƯỜNG `ConnectionStrings__Default`.
+         Lý do chọn: đủ cho khách hàng đầu tiên và không thêm một hạ tầng nào phải vận hành.
+         Và vì host đọc qua `IConfiguration`, đổi sang secret store về sau là đổi CẤU HÌNH
+         chứ không đổi CODE — nên quyết định này rẻ để đảo, khác hẳn hai câu ở nhóm B.
        (số hiệu cũ: `AR-d` thứ hai — đánh lại 2026-09-03 vì trùng, xem ghi chú trên)
        ĐÃ CÓ HÌNH DẠNG, chưa chốt nguồn. Host đọc ConnectionStrings:Default từ
        IConfiguration, nên biến môi trường ConnectionStrings__Default hoặc bất kỳ
@@ -1106,6 +1680,14 @@ AR-i   Chuỗi kết nối và mật khẩu DB lấy từ đâu ở deploy thậ
        KHÔNG START ĐƯỢC. Còn phải quyết: dùng secret store nào ở deploy thật.
 
 AR-e   Chế độ shared multi-tenant xác thực người gọi bằng cách gì?          ← MỚI
+       ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §C1 = C1-1).
+       → API KEY THEO TỪNG KHÁCH HÀNG, thu hồi được riêng từng khách.
+         Lý do chọn: nó giải đúng ba thiếu sót mà khoá dùng chung hiện tại có — phân biệt
+         được khách A với khách B, thu hồi được theo từng khách, và không bắt bên tích hợp
+         viết thêm code. mTLS và chữ ký payload đều nặng hơn cho bên tích hợp mà ở mức này
+         chưa giải thêm được gì; chống replay chưa phải vấn đề của đường GHI idempotent.
+       ⚠ Chưa code. Cho tới lúc code xong, chế độ shared vẫn TỪ CHỐI KHỞI ĐỘNG trừ khi có
+         cờ thừa nhận tường minh — giữ nguyên `IM-13`.
        Hiện tenant đến từ header X-Tenant-Key và KHÔNG có gì kiểm người gọi có
        quyền dùng khoá đó. Biết khoá là đọc được dữ liệu của khách hàng đó.
        Chế độ shared vì thế TỪ CHỐI KHỞI ĐỘNG trừ khi được thừa nhận tường minh
@@ -1203,6 +1785,16 @@ AR-h   Full-text search: bốn ràng buộc ĐÃ ĐO, phải tuân theo khi buil
               tìm "khóa từ" ra 5 tiêu đề, "khoá từ" ra 1, hai tập KHÔNG giao nhau.
 
 AR-g   Đọc evidence ra bằng đường nào?                                    ← MỚI
+       ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §C4 = C4-1).
+       ✅ ĐÃ CODE 2026-09-15 — `GET /cases/{khoaNguon}/evidence`.
+       🛑 GIỚI HẠN ĐO ĐƯỢC mà lúc chốt chưa ai biết: khoá nguồn có dấu `/` KHÔNG đọc ra
+         được, KỂ CẢ khi mã hoá `%2F` — ASP.NET giải mã TRƯỚC khi định tuyến. Cần một quyết
+         định MỚI về hình dạng URL. §3 `IM-34`.
+       → `GET /cases/{sourceReference}/evidence`.
+         Lý do chọn: khớp với thứ bên gửi ĐÃ biết về case (khoá nguồn của chính họ), nên
+         không bắt ai nhớ thêm một id nào — cùng lý do `AR-f` chọn khoá nguồn làm mỏ neo.
+       ⚠ Đừng nhầm với `GET /knowledge/{id}` thêm ngày 13 (`IM-32`): cái đó đọc TRI THỨC
+         kèm lịch sử assertion. Evidence vẫn CHƯA có đường ra tính tới lúc chốt.
        Ghi 2026-08-30. CHƯA CHỌN HƯỚNG, chưa code.
        Hiện có đường GHI mà không có đường ĐỌC: không endpoint nào trả về evidence
        của một case. Bộ test phải mở thẳng AppDbContext để kiểm (ApiDatabaseFixture
@@ -1286,6 +1878,17 @@ AR-j   Dữ liệu vận hành thật mang theo BÍ MẬT SỐNG. Che bằng lu�
            capability chưa ai chốt, và nó rất gần cột phải của G11 — cẩn thận.
 
 AR-l   Ranh giới KHÁCH SẠN A ↔ KHÁCH SẠN B có phải ranh giới bảo mật không? ← MỚI
+       ✅ MỞ LẠI THEO HƯỚNG NÀO — CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §C3 = C3-1).
+       → THÊM MỘT TRƯỜNG BẮT BUỘC Ở ĐƯỜNG NẠP: bên gửi phải khai mã khách sạn.
+         Lý do chọn: đây là nguồn DUY NHẤT chắc chắn cho ≥2 giá trị phân biệt — điều kiện
+         mà chính mục này đặt ra để được mở lại. Suy từ tài khoản/email đã ĐO là không đáng
+         tin (8/32 case có mã trong tiêu đề, và tên tiêu đề lệch với thân bài). Sửa quy
+         trình Jira thì đúng gốc hơn nhưng phụ thuộc người khác, nên không chặn được gì.
+       ⚠ Câu "có phải ranh giới bảo mật không" ĐÃ chốt từ 2026-09-04 (PHẢI). Quyết định
+         hôm nay chỉ trả lời "mở lại bằng NGUỒN nào" — nhánh lùi 2026-09-07 vẫn đúng cho
+         tới khi trường đó tồn tại VÀ có dữ liệu thật.
+       ⚠ Cổng chạy được hiện tại GIỮ NGUYÊN: chế độ shared TỪ CHỐI DUYỆT (409) —
+         xem `IM-31`. Đó là TRÁNH, không phải GIẢI, và nó chỉ được gỡ khi mục này đóng.
        🛑 **ĐỌC CUỐI MỤC NÀY TRƯỚC KHI LÀM THEO BA DÒNG NGAY DƯỚI.** Nửa *"thêm
           sub-tenant NGAY BÂY GIỜ"* đã **LÙI 2026-09-07** — không phải vì đổi ý về ranh
           giới, mà vì đo xong thì KHÔNG CÓ NGUỒN NÀO để điền trường đó. Quyết định hiện
@@ -1408,7 +2011,87 @@ AR-o   Che bí mật ở khâu **GỬI RA**, không chỉ ở khâu NẠP.      
          giá trị giữ hình dạng**? Bỏ cả mẩu là mất bước kiểm (vì chính mẩu xin
          Ultraviewer là **biên lai** của một lần chẩn đoán qua remote).
 
+       🛑 **CỔNG CHE ĐÃ TRƯỢT MỘT CẶP ĐĂNG NHẬP THẬT — tìm ra 2026-09-11, không phải
+          bằng phép thử mà bằng cách NHÌN payload sắp gửi.** Payload nhóm 1 in ra
+          `Đã che: 0 chỗ`, trong khi nó đang mang ID + mật khẩu Ultraviewer của một
+          khách sạn trong `ES-343733`. Tức `daChe = 0` KHÔNG có nghĩa "không có gì",
+          và dòng chữ đó đang được đọc như thể có.
+          Hai nguyên nhân ĐỘC LẬP, mỗi cái đủ để gây trượt — đã dựng lại được:
+```text
+· hình dạng 3 (dãy số TRẦN) chỉ nhìn xuôi 6 DÒNG từ một dòng có neo. Ở ES-343733
+  neo "ultra view" ở dòng 255, hai dãy số ở dòng 285 và 288 — cách 30 và 33 dòng,
+  vì khối tự-trả-lời của Zalo chen vào giữa.
+· neo GẦN nhất là "ulatrview" — biến thể gõ sai THỨ SÁU, không khớp regex `CongCu`
+  (`ultra ?view|utlatra|teamview|anydesk`). Chính file đó đã tiên đoán: "Hình dạng
+  thứ sáu sẽ tới, và nó sẽ không may như vậy."
+```
+       ⚠ Và `make_fixture.py` KHÔNG đỡ được: `redact-list.json` là danh sách 19 GIÁ TRỊ
+          nguyên văn, sinh từ mẫu 32 case của 2026-09-04. Nó có 5 cặp Ultraviewer —
+          nhưng không có cặp của `ES-343733`, vì ticket đó đến từ mẫu 150 case về sau.
+          → Mọi credential trong ticket NGOÀI mẫu 2026-09-04 đi thẳng qua fixture,
+            rồi qua cổng che, rồi ra API. Danh sách theo GIÁ TRỊ không mở rộng được
+            theo corpus; chỉ luật theo HÌNH DẠNG mới mở rộng được.
+       → ĐÃ ĐO 2026-09-11 trên toàn fixture (345 mẩu · 252 387 ký tự), và **phép đo bác
+         CẢ HAI hướng từng đề xuất.** Bảng dưới đếm trên cùng một tập, mọi chỗ bắt được
+         đều đã đọc bằng mắt để đếm che nhầm:
+```text
+luật                                                bắt   sót   che nhầm
+R0  hiện tại (cửa sổ 6 dòng, neo = tên công cụ)      12    17      0
+R1  nới cửa sổ lên 40 dòng, giữ neo cũ               18    11      0
+R2  đảo mặc định: cả mẩu CÓ nhắc công cụ remote      20     9      0
+R3  dòng chỉ-có-số  +  số kề trong 3 dòng trước      29     0      0   ← ĐỀ XUẤT
+```
+       🛑 **Vì sao R2 — hướng "fail closed" nghe chắc nhất — vẫn sót 9:** neo nằm ở
+         **mẩu KHÁC** của cùng case (`ES-342142`: cặp ID+mật khẩu ở mẩu biểu mẫu, chữ
+         "ultra" ở mẩu khác), hoặc **không có neo nào** (`ES-345857` cặp đi sau
+         "@Cs Ezcloud"; `ES-341377` hai dãy số đứng trần không một chữ nào quanh).
+         Mọi luật dựa vào TỪ KHOÁ CÔNG CỤ đều thua ở đây, và thua vì cùng một lý do.
+       🎯 **Thứ nhận ra chúng không phải từ khoá mà là HÌNH DẠNG TRÌNH BÀY:** trong
+         corpus này, **một dòng mà toàn bộ nội dung chỉ là một dãy số thì luôn là
+         credential** — 25/25. Số của nghiệp vụ (số hoá đơn, MST, mã phòng) luôn đi
+         kèm chữ trong câu; chỉ ID và mật khẩu mới được dán đứng một mình.
+         Bốn chỗ "số kề trong dòng" mà R3 bắt thêm cũng đều là ID thật, không cái nào
+         che nhầm: `@Cs Ezcloud 10000007`, `ultra : 100000008` (×3).
+       ✅ **R3 KHÔNG CÓ danh sách từ khoá nào để phải vá**, nên nó thoát được đúng cái
+         bẫy mà `AR-q` vừa đo: không có biến thể gõ sai thứ bảy nào phá được nó.
+       ⚠ Ba chỗ R3 KHÔNG giải, nói ra kẻo tưởng đã đủ:
+         · ngưỡng `\d{4,9}` loại số 10 chữ số → số điện thoại KHÔNG bị che (đó là `AR-n`,
+           câu khác), nhưng một ID 10 chữ số cũng sẽ lọt.
+         · credential nằm trong câu văn xuôi vẫn phải nhờ hình dạng 1 và 4 — R3 là phần
+           THÊM, không phải phần THAY cho cả bộ luật; nó chỉ thay hình dạng 3.
+         · "0 che nhầm" đo trên chính corpus dùng để soi ra luật. Khác `AR-q` ở chỗ luật
+           này thuần cấu trúc, không chỉnh theo giá trị hay từ khoá nào — nhưng rủi ro
+           còn đó: khách dán một mã đặt phòng đứng một mình sẽ bị che. Giá của một lần
+           che nhầm là mất một con số và còn lại dấu `[ĐÃ CHE]`; giá của một lần sót là
+           credential rời khỏi máy.
+       ✅ **CHỐT 2026-09-11 bởi chủ dự án: ÁP R3, THAY hình dạng 3.** Ba hình dạng còn
+          lại giữ nguyên. Đã sửa `SecretShapeScanner`, thêm 6 test canh đúng ba kiểu sót
+          đã đo — gồm cả một test ghim **giá phải trả** (số nghiệp vụ đứng sát trước dòng
+          chỉ-có-số thì cũng bị che) để chuyện đó không bị phát hiện như một bất ngờ.
+       ✅ **Kiểm ĐẦU-CUỐI trên đúng payload đã rò, không phải chỉ trên test:**
+```text
+trước:  Đã che 0 chỗ   ·  payload còn nguyên cặp ID + mật khẩu của ES-343733
+sau :   Đã che 2 chỗ   ·  cả hai giá trị KHÔNG còn trong payload
+```
+       ⚠ Câu chưa quyết vẫn còn nguyên một câu, và nó độc lập với R3: bắt được bí mật thì
+         **bỏ cả mẩu** hay **thay giá trị giữ hình dạng**? Hiện đang là thay-giá-trị
+         (`[ĐÃ CHE]`), và phép đo nhóm 2 cho thấy cách đó ĐÚNG: hai ngữ cảnh sạch đều dùng
+         chính dấu `[ĐÃ CHE]` làm bằng chứng rằng một phiên remote đã xảy ra, tức mẩu vẫn
+         là **biên lai** của một lần chẩn đoán. Bỏ cả mẩu sẽ xoá luôn bằng chứng đó.
+       ⚠ Chừng nào chưa sửa: điều kiện mà chủ dự án gắn vào `AR-o` ("luật che chạy
+         trên payload trước mỗi lần gọi") ĐANG ĐƯỢC THOẢ VỀ HÌNH THỨC mà không thoả
+         về thực chất. Lượt gọi thật đầu tiên nên xem payload bằng mắt trước.
+
 AR-m   Nội dung ĐÃ BỊ NGƯỜI GỬI RÚT LẠI — chưa có chỗ nào đánh dấu.      ← MỚI
+       ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §B1 = B1-1).
+       → THÊM CỘT `RetractedAt` + `RetractedReason` ở TẦNG MẨU, và CHỈ NGƯỜI điền tay.
+         Máy KHÔNG được suy dấu hiệu rút lại từ câu chữ.
+         Lý do chọn: suy từ câu chữ là ĐOÁN, trái `G6`/`AP3`. Chọn ít tín hiệu mà mỗi cái
+         đều đúng, hơn là nhiều tín hiệu mà không biết cái nào tin được.
+       ⚠ HỆ QUẢ MỞ ĐƯỜNG, và phải đúng thứ tự: có cột này rồi thì MỚI được chốt cách cắt
+         transcript. Trước đó thì không — `AR-h` đo được mẩu dài đè bẹp xếp hạng 29:1 nên
+         áp lực cắt là có thật, nhưng cắt trước khi có chỗ đánh dấu là tạo ra đúng ca
+         `ES-346661` mà mục này sinh ra để chặn.
        Ghi 2026-09-05. CHƯA CHỌN HƯỚNG. ⚠ Phải quyết TRƯỚC khi chốt cách cắt transcript.
 
        Ca thật, đã đọc nguyên văn: `ES-346661#description` chứa một đoạn giải thích
@@ -1432,6 +2115,17 @@ AR-m   Nội dung ĐÃ BỊ NGƯỜI GỬI RÚT LẠI — chưa có chỗ nào �
          không suy thì không có tín hiệu nào cả. Đây là câu hỏi domain, không phải code.
 
 AR-n   Dữ liệu của BÊN THỨ BA và dữ liệu THƯƠNG MẠI trong evidence.        ← MỚI
+       ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §B2 = B2a-1 + B2b-1).
+       → BÊN THỨ BA: che khối `<NMua>` và tương đương NGAY Ở KHÂU NẠP.
+         Lý do chọn: loại này CÓ hình dạng rõ nên bắt được bằng luật, giống `AR-j`. Và che
+         ở khâu nạp giữ lại được phần kỹ thuật của payload — chỗ chứa mã lỗi để tra, tức
+         đúng phần có giá trị nhất của mẩu đó.
+       → THƯƠNG MẠI: cần NGƯỜI DUYỆT xác nhận trước khi mẩu đó vào kho.
+         Lý do chọn: loại này KHÔNG có hình dạng nào để bắt bằng regex — chính mục này đã
+         ghi điều đó. Không có hình dạng thì không có luật, và không có luật thì phải có người.
+       ⚠ HAI NHÁNH KHÁC NHAU LÀ CỐ Ý, không phải thiếu nhất quán: hai loại khác nhau về
+         BẢN CHẤT (một cái có hình dạng, một cái không), nên một cơ chế chung sẽ hoặc bỏ
+         sót loại thứ hai, hoặc bắt người duyệt xem cả những mẩu mà luật thừa sức xử lý.
        Ghi 2026-09-05. CHƯA CHỌN HƯỚNG. Hai loại, cùng một gốc: ranh giới hai cấp
        (ezCloud → khách sạn) không mô tả hết những gì thật sự nằm trong ticket.
 
@@ -1449,6 +2143,16 @@ AR-n   Dữ liệu của BÊN THỨ BA và dữ liệu THƯƠNG MẠI trong evid
            nó, và cũng không có hình dạng nào để bắt bằng regex. Cần một cơ chế khác.
 
 AR-k   `machineReadability` đang là HẰNG SỐ. Trường vô nghĩa đang gác cổng. ← MỚI
+       ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §B3 = B3-1).
+       ✅ ĐÃ CODE 2026-09-15 — luật theo HÌNH DẠNG trong script export. Đo trên 873 mẩu thật:
+         1 giá trị phân biệt -> 3. ⚠ Corpus hiện có VẪN mang nhãn cũ, phải export lại. §3 `IM-34`.
+       → BÊN GỬI KHAI, hệ thống KHÔNG suy. Việc phải làm là SỬA SCRIPT EXPORT.
+         Lý do chọn: endpoint ĐÃ đúng từ đầu (`IM-19`: gõ sai giá trị là 400, bỏ trống là
+         `Unknown`). Tức chỗ hỏng chưa bao giờ nằm ở sản phẩm — nó nằm ở script export
+         luôn khai `High`. Sửa đúng chỗ hỏng, đừng thêm cơ chế ở chỗ không hỏng.
+       ⚠ Không chọn "hệ thống tự suy" vì đó là thêm MỘT PHÉP ĐOÁN NỮA, và phép đoán nào
+         cũng phải đo recall của chính nó — đúng bài học của luật che (`AR-j`): luật theo
+         dòng bắt 11%, tưởng là đủ cho tới khi có người đo.
        Ghi 2026-09-04. ⚠ ĐÂY LÀ BUG THẬT, KHÔNG PHẢI CÂU HỎI THIẾT KẾ.
        Đo: 128/128 mẩu đều mang nhãn `High`, KỂ CẢ mẩu 5 ký tự chỉ chứa "80771",
        mẩu 9 ký tự chỉ chứa chính mã case của nó, và mẩu 35 ký tự chỉ chứa tên file
@@ -1722,6 +2426,20 @@ R-K4   ✅ ĐÃ ĐẾM 2026-09-04. Kết quả đầy đủ: `docs/09_RK4_DEM_NG
        n=32 quá nhỏ. Ghi "chưa đếm được", đừng ghi một con số nghe hay.
 
 AR-p   Máy có được trích case NGOÀI nhóm để dựng BƯỚC LOẠI TRỪ không?     ← MỚI
+       ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §A3 = A3-1).
+       → CHO MƯỢN, kèm ĐỦ BA điều kiện, thiếu một là không được mượn:
+           1  cấp corpus rộng hơn một nhóm cho `ISoạnNhápSOP`
+           2  phép kiểm chống bịa nguồn đổi từ "trong NHÓM" sang "trong CORPUS"
+           3  BẮT KHAI chỗ mượn — đúng như `_haiCaseLech` của bản người dựng
+         Lý do chọn: điều kiện 2 và 3 mới là phần nặng. Không có chúng thì việc cho mượn
+         là gỡ bỏ chính cái chốt `G6`/`AP3` sinh ra để chặn bịa nguồn.
+       🛑 Và lý do KHÔNG giữ nguyên trạng: phép kiểm hiện tại đang QUA MỘT CÁCH TẦM THƯỜNG
+         — bản B đặt `_haiCaseLech: null` rồi trích 9 mã đều trong nhóm, nên nó "qua" KHÔNG
+         phải vì trung thực mà vì **không với tới được vùng bị cấm**. Một phép kiểm qua kiểu
+         đó chưa kiểm gì cả, và giữ nguyên là giữ một con số xanh vô nghĩa.
+       ⚠ KHÔNG chọn nhánh "vẽ lại taxonomy" nghĩa là CÂU TAXONOMY VẪN MỞ. Ba quan sát độc
+         lập (docs/11 §9 · AR-p · docs/13 §3.3) vẫn đang nói ranh giới nhóm không phải ranh
+         giới hợp lệ của một SOP. Cho mượn là VÁ chỗ đó, không phải giải nó.
        Sinh 2026-09-10 từ bản B đầu tiên (`IM-29`). ĐO ĐƯỢC, không phải suy đoán.
 
        Bản B thiếu hẳn `K5` của bản A — "trình duyệt đang đăng nhập nhiều tài khoản
@@ -1757,6 +2475,15 @@ AR-p   Máy có được trích case NGOÀI nhóm để dựng BƯỚC LOẠI TR
          trước khi chốt. Nhóm 10 case hiện ~$0,16.
 
 AR-q   Bộ 5 ô phân bố cần ĐỊNH NGHĨA, không chỉ cần TÊN CỐ ĐỊNH.          ← MỚI
+       ✅ CHỐT 2026-09-15 bởi chủ dự án (form hỏi đáp; phiếu ở `docs/14` §A1 = A1-1).
+       → DÙNG NGUYÊN TRẠNG bộ định nghĩa + ca biên đang nằm trong `SopDraftSchema`.
+         Lý do chọn: con số chống lưng là 10/10 của NHÓM 2 — nhóm chưa hề được dùng để
+         viết một chữ nào trong định nghĩa. 8/10 của nhóm 1 KHÔNG dùng được cho câu hỏi
+         tổng quát hoá, vì nhóm 1 đã thành tập "đã-chỉnh-theo". Và nhóm 2 là phép thử
+         KHÓ hơn chứ không dễ hơn: bản A của nó xếp 8/10 vào "ghi rõ bước kiểm".
+       ⚠ Bản vá "xác nhận sau khi sửa ≠ bước kiểm" VẪN CHƯA ĐƯỢC ĐO. Con số mang đi tiếp
+         là 10/10 (nhóm 2), và ĐỪNG đo lại nhóm 1 bằng bản vá đó — bản vá sinh TỪ chỗ
+         lệch của nhóm 1, đo lại là đo chính mình.
        Sinh 2026-09-10 từ `IM-29`. Đây là phần chưa xong của `IM-27`.
 
        `IM-27` đặt bộ 5 ô cố định vì "phân bố mà mỗi nhóm tự đặt tên là phân bố không
@@ -1784,6 +2511,138 @@ AR-q   Bộ 5 ô phân bố cần ĐỊNH NGHĨA, không chỉ cần TÊN CỐ �
        ⚠ Nhưng ĐỪNG sửa hai file cây dựng tay cho "khớp": chúng là bản A của `M2`
          (`IM-27`), sửa là hỏng mốc so.
 ```
+
+## `AR-q` · ĐÃ VIẾT ĐỊNH NGHĨA, ĐÃ ĐO — và ✅ **CHỐT 2026-09-15** (đo 2026-09-11)
+
+> ✅ **Chủ dự án chốt 2026-09-15: DÙNG NGUYÊN TRẠNG.** Phiếu ở `docs/14` §A1 (= A1-1).
+> Con số chống lưng là **10/10 của NHÓM 2** ở cuối mục này, không phải 8/10 của nhóm 1.
+> Tiêu đề cũ ghi `PROPOSED, chờ chủ dự án chốt` — giữ lại trong dòng này để thấy mục đã
+> đứng chờ **bốn ngày**, đúng loại độ trễ mà `docs/14` sinh ra để cắt.
+> ⚠ Bản vá *"xác nhận sau khi sửa ≠ bước kiểm"* vẫn **chưa được đo**, xem cảnh báo cuối mục.
+
+Định nghĩa + ca biên đã nằm trong `description` của năm ô ở `SopDraftSchema`, kèm **luật
+thứ tự xét** (các ô chồng lấn thật; xét 1 `khong-phai-chan-doan` → 2 `buoc-kiem-ngoai-ticket`
+→ 3 `ghi-ro-buoc-kiem` → 4 `suy-ra-duoc-nhung-khong-ghi` → 5 `chi-ghi-ket-luan`, dừng ở ô
+khớp đầu tiên) và một câu tách trục: **năm ô trả lời "hồ sơ CÓ GHI bước kiểm không", không
+trả lời "nguyên nhân có chắc không"** — độ chắc đã có chỗ riêng ở `chungCu` của từng nhánh.
+
+**Ba chỗ lệch của `IM-29` hoá ra là BA nhầm lẫn khác nhau, không phải một:**
+
+```text
+ES-341317   câu KẾT LUẬN bị đọc thành bước kiểm
+ES-343733   nơi GHI kết luận bị đọc thành nơi KIỂM   (ô này vì thế về 0)
+ES-346559   độ chắc của NGUYÊN NHÂN (`toi-suy-ra`) rò sang một ô nói về việc GHI
+```
+
+**Phép đo, bốn lượt, mỗi lượt một ngữ cảnh sạch chỉ đọc file payload:**
+
+```text
+mốc cũ (IM-29)   bản A vs bản B, ô chỉ có TÊN                     7/10 khớp
+vòng 1           định nghĩa CÓ TRÍCH NGUYÊN VĂN ticket nhóm 1    10/10 khớp  ← SỐ BỊ THỔI
+vòng 2           định nghĩa viết theo HÌNH DẠNG, không trích       8/10 khớp  ← số dùng được
+```
+
+🛑 **Vòng 1 không được đọc là thành công, và bằng chứng là trực tiếp chứ không phải suy
+đoán:** một trong hai ngữ cảnh khai rõ nó xử ca khó bằng lý do *"ví dụ đích danh thắng ca
+biên tổng quát"* — tức nó **nhận ra ví dụ**, không **áp dụng luật**. Bỏ hết câu trích
+nguyên văn thì mức khớp tụt từ 10/10 xuống 8/10. Đây đúng cái bẫy `SecretShapeScanner` đã
+ghi: luật sửa theo chính dữ liệu dùng để đo nó thì con số đo được là **cận trên**.
+→ Luật mới, đã ghi vào chính file schema: **ca biên phải là HÌNH DẠNG, không được là câu
+  nguyên văn của một ticket.**
+
+**Hai ticket còn lệch ở vòng 2 — và cả hai ngữ cảnh đều TỰ NÊU ĐÚNG hai ticket đó là ca
+khó của mình, trước khi biết kết quả của nhau:**
+
+```text
+ES-346039   ghi-ro-buoc-kiem  ↔  suy-ra-duoc   "em kiểm tra thấy X" — có động từ kiểm
+            nhưng phần còn lại là kết luận, và đối tượng thì do HỎI khách mà có
+ES-343662   ghi-ro-buoc-kiem  ↔  chi-ghi-ket-luan  ↔  suy-ra-duoc  (ba ô khác nhau!)
+```
+
+🎯 **Tín hiệu phụ, có giá trị riêng: phần "ca khó" mà bản nháp tự khai DỰ ĐOÁN ĐÚNG chỗ nó
+sẽ lệch.** Hai ngữ cảnh độc lập gọi tên đúng hai ticket rồi lệch đúng ở đó. Nếu giữ được
+qua nhóm khác thì đây là một cổng "KHÔNG CHẮC" rẻ hơn nhiều so với đo lại bằng hai lượt —
+và nó chạm thẳng vào cổng "KHÔNG BIẾT" mà `docs/13` đòi.
+
+⚠ **`ES-343662` bị VỠ RA BA Ô ở vòng 2 trong khi nó ổn định ở vòng 1 và ở cả A lẫn B.**
+Nguyên nhân đã tìm ra: câu "ai làm bước kiểm cũng được" (thêm để gỡ chỗ khách tự thao tác)
+nuốt luôn **bước XÁC NHẬN sau khi sửa** — "làm theo hướng dẫn rồi thấy chạy được" không
+phải bước chẩn đoán. Đã vá bằng một câu, và `buocXacNhan` vốn đã là chỗ riêng cho nó.
+🛑 **Bản vá đó CHƯA ĐƯỢC ĐO.** Con số phải mang đi tiếp là **8/10**, không phải số đo lại
+trên cùng 10 ticket sau khi đã chỉnh theo chúng — đo lại ở đây là đo chính mình.
+
+### `AR-q` · PHÉP ĐO TỔNG QUÁT HOÁ — NHÓM 2, 2026-09-11
+
+Nhóm 1 từ vòng 2 đã thành tập **đã-chỉnh-theo**, nên con số ở đó không nói được gì về khả
+năng tổng quát hoá. Đo lại trên nhóm **"NCC từ chối payload"** (10 case, 21 mẩu) — nhóm
+chưa hề được dùng để viết một chữ nào trong định nghĩa.
+
+```text
+nhóm 2, hai ngữ cảnh sạch, cùng payload          10/10 KHỚP TUYỆT ĐỐI
+   ghi-ro 6 · suy-ra 2 · ngoai-ticket 2 · chi-ghi-ket-luan 0 · khong-phai-chan-doan 0
+   (trùng nhau từng mã case, kể cả hai ô rỗng)
+```
+
+🎯 **Đây là con số có nghĩa của `AR-q`, không phải 8/10 của nhóm 1.** Nhóm 2 còn là phép
+thử KHÓ chứ không dễ: bản A của nó xếp 8/10 vào "ghi rõ bước kiểm" (nhóm 1 chỉ 4/10), tức
+đây đúng chỗ một luật quá chặt sẽ phơi ra to nhất.
+
+⚠ **Một chỗ không so thẳng được, nói ra kẻo đọc nhầm:** nhóm 2 chạy trên schema **mới hơn
+một bản vá** so với lúc đo nhóm 1 (bản vá "xác nhận sau khi sửa ≠ bước kiểm"). Hai con số
+8/10 và 10/10 vì thế không cùng một dụng cụ. KHÔNG đo lại nhóm 1 bằng bản vá đó: bản vá
+sinh ra TỪ chỗ lệch của nhóm 1, đo lại là đo chính mình.
+
+**Chênh với mốc người dựng tay — và nó KHÔNG phải nhiễu, nó là MỘT luật:**
+
+```text
+bản A nhóm 2 (quy về bộ 5 ô)   ghi-ro 8 · ngoai-ticket 2 · còn lại 0
+hai ngữ cảnh, luật mới         ghi-ro 6 · ngoai-ticket 2 · suy-ra 2
+   → ô `buoc-kiem-ngoai-ticket` KHỚP CHÍNH XÁC (2 = 2, cùng hai mã case)
+   → lệch đúng 2 ticket, cả hai đi từ `ghi-ro` sang `suy-ra`: ES-345257, ES-345813
+```
+
+Cộng với `ES-346039` của nhóm 1, **ba ticket lệch đều lệch cùng một chiều và vì cùng một
+lý do**: ticket có **đáp án được dán vào** (mã lỗi NCC nguyên văn, response, câu kết luận
+gọi đúng tên trường, ảnh) nhưng **không ai nói đã mở đâu để lấy nó**. Người dựng tay tính
+đó là "ghi rõ bước kiểm"; luật hiện tại tính là "suy ra được nhưng không ghi".
+
+✅ **CHỐT 2026-09-11 bởi chủ dự án — `CONFIRMED`. `AR-q` HẾT CÂU MỞ.**
+```text
+Dán nguyên văn ĐÁP ÁN (mã lỗi / response / kết luận gọi đúng trường) mà không nói
+chỗ đã tra — có tính là "ghi rõ bước kiểm" không?
+  ✅ KHÔNG TÍNH. Giữ nguyên định nghĩa hiện tại.
+     → ô `ghi-ro-buoc-kiem` từ nay chỉ chứa bước kiểm mà người CHƯA BIẾT đáp án lặp
+       lại được. Chấp nhận lệch 3/20 so với mốc người dựng tay, có chủ ý.
+     → nhánh bị bác: "tính" sẽ về đúng mốc bản A (nhóm 2 thành 8/2/0) nhưng làm ô
+       `ghi-ro` gộp cả BIẾT CÁCH HỎI lẫn CHỈ CÓ ĐÁP ÁN — mà tách đúng hai thứ đó là
+       việc mà cả phân bố được sinh ra để làm. Mốc khớp người không đáng giá bằng.
+     → nhánh bị bác: tách thành ô thứ sáu — phá bộ 5 ô cố định của `IM-27`.
+⚠ Hệ quả phải nhớ: ba ticket ES-346039 · ES-345257 · ES-345813 nay thuộc `suy-ra`,
+  KHÁC với cả bản A lẫn bản B. Hai file cây dựng tay KHÔNG sửa theo (`IM-27`) — chúng
+  là mốc `M2`, và chỗ lệch này giờ là lệch ĐÃ BIẾT LÝ DO, không phải lệch chưa giải.
+```
+
+**Hai thứ khác phép đo này cho, ngoài con số:**
+
+```text
+· Ô `buoc-kiem-ngoai-ticket` ĐÃ SỐNG LẠI và sống đúng chỗ: 2/10 ở nhóm 2, đúng hai
+  case bản A cũng chọn. Ô từng về 0 ở `IM-29` giờ ổn định qua hai nhóm, hai ngữ cảnh.
+  Chống lưng thêm: tên ô người dựng tay tự đặt cho nhóm 2 là
+  `buoc-kiem-xay-ra-qua-remote-chi-con-ket-luan` — chính họ đã mã hoá đúng luật "kết
+  luận nằm trong ticket không kéo nó ra khỏi ô này". Luật đó không phải do tôi bịa ra.
+· Tín hiệu "tự khai ca khó" KHÔNG phải thước dự đoán. Ở nhóm 1 nó trỏ đúng hai chỗ sẽ
+  lệch; ở nhóm 2 cả hai ngữ cảnh đều nêu ES-343712 là ca khó nhất rồi VẪN xếp giống
+  nhau. Nó là cờ CẢNH BÁO, không phải phép đoán chỗ sẽ sai. Đừng dựng cổng trên nó.
+```
+
+⚠ Lỗ định nghĩa còn lại mà chính phép đo nêu ra: điều kiện "suy ra được NÓ LÀ GÌ" **không
+nói cần cụ thể tới mức nào** — biết LOẠI phép tra là đủ, hay phải biết cả MÀN HÌNH? Ở nhóm
+2 nó quyết định ranh giới giữa `suy-ra` và `chi-ghi-ket-luan`, và ô `chi-ghi-ket-luan` về 0
+chính vì đọc theo nghĩa lỏng. Chưa vá, vì vá là lại chỉnh theo nhóm 2.
+
+⚠ Và một thứ `AR-q` KHÔNG chứng minh: bốn lượt này đều là ngữ cảnh đọc file, **tuân thủ
+schema tự nguyện**. Qua API thì `output_config.format` RÀNG BUỘC. Mức khớp 8/10 nói về
+chất lượng ĐỊNH NGHĨA, không nói gì về việc lượt gọi thật có trả đúng hình dạng hay không.
 
 ---
 

@@ -149,3 +149,75 @@ public enum EvidenceRelation
     Refute = 2,
     ContextFor = 3,
 }
+
+/// <summary>
+/// Ai được XEM một tri thức đã duyệt.
+///
+/// `S7` khoá QUY TẮC (mặc định hẹp nhất · mở rộng phải là hành vi tường minh · hệ thống
+/// KHÔNG BAO GIỜ tự mở) nhưng không khoá TẬP GIÁ TRỊ. Tập giá trị chốt **2026-09-15** bởi
+/// chủ dự án — `AR-a`, phiếu ở `docs/14` §A2.
+///
+/// 🛑 **THỨ TỰ CÓ NGHĨA, và đó là lý do chọn BA mức chứ không phải hai:** `S7` nói mặc định
+/// là *"HẸP NHẤT trong các nguồn"*, mà "hẹp nhất" chỉ có nghĩa khi tập giá trị **có thứ tự**.
+/// Số tăng dần = phạm vi RỘNG dần, nên so bằng `&lt;` là so độ hẹp.
+///
+/// ⚠ **TÊN C# KHÁC DẠNG LƯU.** Dạng lưu và dạng truyền là kebab (`noi-bo`) — đúng như quyết
+/// định viết ra, và đúng như 7 dòng đã có trong `kp_dev` từ đợt build 2026-09-13. Nên
+/// **KHÔNG** dùng `HasConversion&lt;string&gt;()`: nó lưu tên C# (`NoiBo`) và sẽ làm 7 dòng cũ
+/// không đọc lại được mà không ai báo. Xem <see cref="VisibilityScopes"/>.
+/// </summary>
+public enum VisibilityScope
+{
+    /// <summary>HẸP NHẤT — mặc định của `S7` khi chưa ai mở rộng.</summary>
+    RiengTu = 1,
+
+    NoiBo = 2,
+
+    /// <summary>RỘNG NHẤT.</summary>
+    ToanCongTy = 3,
+}
+
+/// <summary>
+/// Chuyển đổi giữa <see cref="VisibilityScope"/> và DẠNG LƯU / DẠNG TRUYỀN của nó.
+///
+/// ⚠ **Bảng ánh xạ TƯỜNG MINH, không sinh từ tên C#.** Sinh tự động (kiểu hạ chữ rồi chèn
+/// gạch) thì một lần đổi tên enum sẽ âm thầm đổi dạng lưu, và dữ liệu cũ thành không đọc
+/// được — mà không test nào đỏ, vì test cũng sinh chuỗi bằng chính hàm đó.
+/// </summary>
+public static class VisibilityScopes
+{
+    private static readonly (VisibilityScope Value, string Wire)[] Bang =
+    [
+        (VisibilityScope.RiengTu, "rieng-tu"),
+        (VisibilityScope.NoiBo, "noi-bo"),
+        (VisibilityScope.ToanCongTy, "toan-cong-ty"),
+    ];
+
+    /// <summary>Danh sách giá trị nhận được, để thông báo lỗi nói thẳng thay vì bắt đoán.</summary>
+    public static string Allowed => string.Join(" · ", Bang.Select(x => x.Wire));
+
+    public static string ToWire(this VisibilityScope value) =>
+        Bang.First(x => x.Value == value).Wire;
+
+    /// <summary>
+    /// Khớp theo DẠNG LƯU. Hoa thường không quan trọng, nhưng dấu gạch thì có.
+    ///
+    /// KHÔNG dùng <c>Enum.TryParse</c> — cùng lý do đã ghi ở <c>EvidenceReadability</c>:
+    /// nó nhận cả chuỗi số (<c>"1"</c>) lẫn giá trị ngoài enum (<c>"7"</c>) mà không ném.
+    /// </summary>
+    public static bool TryParse(string? raw, out VisibilityScope value)
+    {
+        var can = raw?.Trim();
+        foreach (var (v, wire) in Bang)
+        {
+            if (string.Equals(wire, can, StringComparison.OrdinalIgnoreCase))
+            {
+                value = v;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
+    }
+}

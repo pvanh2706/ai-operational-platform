@@ -50,10 +50,10 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        record.Approve(approvedByActor: "an.pham", visibilityScope: "team:ops");
+        record.Approve(approvedByActor: "an.pham", visibilityScope: VisibilityScope.NoiBo);
 
         Assert.Equal(StoredLifecycleState.Active, record.Lifecycle);
-        Assert.Equal("team:ops", record.VisibilityScope);
+        Assert.Equal(VisibilityScope.NoiBo, record.VisibilityScope);
         Assert.Equal("ACTIVE", record.DisplayState);
     }
 
@@ -68,12 +68,12 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        record.Approve("an.pham", "team:ops", reason: "Đã đối chiếu với source code.");
+        record.Approve("an.pham", VisibilityScope.NoiBo, reason: "Đã đối chiếu với source code.");
 
         var approval = Assert.IsType<KnowledgeApproval>(record.LastApproval);
         Assert.Equal("an.pham", approval.ApprovedByActor);
         Assert.Null(approval.VisibilityScopeBefore);
-        Assert.Equal("team:ops", approval.VisibilityScopeAfter);
+        Assert.Equal(VisibilityScope.NoiBo, approval.VisibilityScopeAfter);
         Assert.Equal("Đã đối chiếu với source code.", approval.Reason);
     }
 
@@ -87,14 +87,14 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        record.Approve("an.pham", "team:ops");
-        record.Approve("linh.tran", "company", reason: "Không còn chi tiết nội bộ.");
+        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("linh.tran", VisibilityScope.ToanCongTy, reason: "Không còn chi tiết nội bộ.");
 
         var approval = Assert.IsType<KnowledgeApproval>(record.LastApproval);
         Assert.Equal("linh.tran", approval.ApprovedByActor);
-        Assert.Equal("team:ops", approval.VisibilityScopeBefore);
-        Assert.Equal("company", approval.VisibilityScopeAfter);
-        Assert.Equal("company", record.VisibilityScope);
+        Assert.Equal(VisibilityScope.NoiBo, approval.VisibilityScopeBefore);
+        Assert.Equal(VisibilityScope.ToanCongTy, approval.VisibilityScopeAfter);
+        Assert.Equal(VisibilityScope.ToanCongTy, record.VisibilityScope);
     }
 
     /// <summary>
@@ -110,22 +110,49 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        Assert.ThrowsAny<ArgumentException>(() => record.Approve(actor!, "team:ops"));
+        Assert.ThrowsAny<ArgumentException>(() => record.Approve(actor!, VisibilityScope.NoiBo));
     }
 
     /// <summary>
-    /// `S7`: mặc định là HẸP NHẤT, và hệ thống không bao giờ tự chọn hộ. Duyệt mà
-    /// không nói phạm vi xem là bỏ trống đúng nửa quyết định mà `S7` bắt phải nói ra.
+    /// `S7`: mặc định là HẸP NHẤT, và hệ thống không bao giờ tự chọn hộ.
+    ///
+    /// ⚠ **Test này ĐÃ ĐỔI ĐỐI TƯỢNG 2026-09-15, không phải bị nới lỏng.** Bản cũ nhận
+    /// `string?` và kiểm ba ca `null` / `""` / `"   "`. Sau khi `AR-a` khoá tập giá trị và
+    /// tham số siết sang <see cref="VisibilityScope"/>, **cả ba ca đó không còn viết ra
+    /// được** — trình biên dịch chặn trước khi chạy, và chặn lúc biên dịch mạnh hơn test.
+    ///
+    /// Nhưng việc siết kiểu KHÔNG đóng hết lỗ: `(VisibilityScope)99` vẫn ép kiểu được và
+    /// enum không tự chặn. Đó là lỗ CÒN LẠI, và là thứ test này kiểm bây giờ — nếu không
+    /// thì việc siết kiểu chỉ đổi một lỗ hổng dễ thấy thành một lỗ hổng khó thấy hơn.
     /// </summary>
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Duyet_ma_khong_noi_pham_vi_xem_thi_nem(string? scope)
+    [InlineData(0)]
+    [InlineData(4)]
+    [InlineData(99)]
+    [InlineData(-1)]
+    public void Duyet_voi_pham_vi_xem_ngoai_tap_da_chot_thi_nem(int giaTriLa)
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        Assert.ThrowsAny<ArgumentException>(() => record.Approve("an.pham", scope!));
+        Assert.ThrowsAny<ArgumentException>(
+            () => record.Approve("an.pham", (VisibilityScope)giaTriLa));
+    }
+
+    /// <summary>
+    /// Ba giá trị đã chốt thì PHẢI đi qua được — kẻo phép kiểm ở trên siết quá tay mà
+    /// không ai biết, và cả ba test còn lại vẫn xanh vì chúng chỉ dùng một giá trị.
+    /// </summary>
+    [Theory]
+    [InlineData(VisibilityScope.RiengTu)]
+    [InlineData(VisibilityScope.NoiBo)]
+    [InlineData(VisibilityScope.ToanCongTy)]
+    public void Ba_gia_tri_da_chot_deu_duyet_duoc(VisibilityScope scope)
+    {
+        var record = KnowledgeBuilder.NewRecord();
+
+        record.Approve("an.pham", scope);
+
+        Assert.Equal(scope, record.VisibilityScope);
     }
 
     /// <summary>
@@ -136,11 +163,12 @@ public sealed class KnowledgeRecordLifecycleTests
     public void Duyet_that_bai_thi_khong_doi_gi_ca()
     {
         var record = KnowledgeBuilder.NewRecord();
-        record.Approve("an.pham", "team:ops");
+        record.Approve("an.pham", VisibilityScope.NoiBo);
 
-        Assert.ThrowsAny<ArgumentException>(() => record.Approve("linh.tran", "  "));
+        // Giá trị ngoài tập đã chốt — ca duy nhất còn làm `Approve` ném sau khi siết kiểu.
+        Assert.ThrowsAny<ArgumentException>(() => record.Approve("linh.tran", (VisibilityScope)99));
 
-        Assert.Equal("team:ops", record.VisibilityScope);
+        Assert.Equal(VisibilityScope.NoiBo, record.VisibilityScope);
         Assert.Equal("an.pham", record.LastApproval!.ApprovedByActor);
     }
 
@@ -161,7 +189,7 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
         var assertion = record.NewAssertion(verification: VerificationLevel.Verified);
-        record.Approve("an.pham", "team:ops");
+        record.Approve("an.pham", VisibilityScope.NoiBo);
 
         record.Deprecate();
 
@@ -180,11 +208,11 @@ public sealed class KnowledgeRecordLifecycleTests
     public void Rut_tri_thuc_khong_tu_dong_thu_hoi_quyen_xem()
     {
         var record = KnowledgeBuilder.NewRecord();
-        record.Approve("an.pham", "team:ops");
+        record.Approve("an.pham", VisibilityScope.NoiBo);
 
         record.Deprecate();
 
-        Assert.Equal("team:ops", record.VisibilityScope);
+        Assert.Equal(VisibilityScope.NoiBo, record.VisibilityScope);
     }
 
     // =========================================================================

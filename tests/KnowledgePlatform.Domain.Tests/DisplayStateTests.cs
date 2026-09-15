@@ -22,7 +22,7 @@ public sealed class DisplayStateTests
         var record = KnowledgeBuilder.NewRecord();
         Assert.Equal("DRAFT", record.DisplayState);
 
-        record.Approve("an.pham", "team:ops");
+        record.Approve("an.pham", VisibilityScope.NoiBo);
         Assert.Equal("ACTIVE", record.DisplayState);
 
         record.Deprecate();
@@ -38,11 +38,11 @@ public sealed class DisplayStateTests
     {
         var record = KnowledgeBuilder.NewRecord();
         record.NewAssertion(verification: VerificationLevel.Conflicting);
-        record.Approve("an.pham", "team:ops");
+        record.Approve("an.pham", VisibilityScope.NoiBo);
 
         Assert.Equal("NEEDS_REVIEW", record.DisplayState);
         Assert.Equal(StoredLifecycleState.Active, record.Lifecycle);
-        Assert.Equal("team:ops", record.VisibilityScope);
+        Assert.Equal(VisibilityScope.NoiBo, record.VisibilityScope);
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public sealed class DisplayStateTests
     {
         var record = KnowledgeBuilder.NewRecord();
         record.NewAssertion(verification: VerificationLevel.Invalidated);
-        record.Approve("an.pham", "team:ops");
+        record.Approve("an.pham", VisibilityScope.NoiBo);
 
         Assert.False(record.IsSuperseded,
             "IsSuperseded đã trả true — nghĩa là L4 (KnowledgeRelation) đã có mặt. " +

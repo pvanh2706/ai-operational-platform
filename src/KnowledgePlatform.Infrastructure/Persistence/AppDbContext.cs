@@ -3,6 +3,8 @@ using KnowledgePlatform.Domain.Evidence;
 using KnowledgePlatform.Domain.Knowledge;
 using KnowledgePlatform.Domain.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace KnowledgePlatform.Infrastructure.Persistence;
 
@@ -97,6 +99,28 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         base.ConfigureConventions(b);
     }
 
+    /// <summary>
+    /// `VisibilityScope` lưu ở DB dưới DẠNG KEBAB (`noi-bo`), KHÔNG phải tên C# (`NoiBo`).
+    ///
+    /// 🛑 Vì sao không dùng `HasConversion&lt;string&gt;()` như các enum khác: nó lưu TÊN C#.
+    /// Cột `visibility_scope` đã có **7 dòng mang `noi-bo`** từ đợt build 2026-09-13, và
+    /// tập giá trị chốt ở `AR-a` cũng viết dạng kebab. Dùng converter mặc định là làm 7
+    /// dòng đó không đọc lại được — và nó sẽ hỏng ở lúc ĐỌC, tức xa chỗ gây ra.
+    /// </summary>
+    private static readonly ValueConverter<VisibilityScope, string> PhamViXemConverter =
+        new(v => v.ToWire(), s => DocPhamViXem(s));
+
+    /// <summary>
+    /// ⚠ NÉM khi gặp giá trị lạ, KHÔNG âm thầm về một mặc định nào. Một nhãn quyền xem đọc
+    /// sai là một tri thức hiện ra cho nhầm người — fail loud là lựa chọn duy nhất đúng ở đây.
+    /// </summary>
+    private static VisibilityScope DocPhamViXem(string raw) =>
+        VisibilityScopes.TryParse(raw, out var v)
+            ? v
+            : throw new InvalidOperationException(
+                $"Cột phạm vi xem chứa giá trị không nằm trong tập đã chốt: \"{raw}\". " +
+                $"Nhận: {VisibilityScopes.Allowed}. Dữ liệu này có trước khi AR-a khoá tập giá trị?");
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.HasDefaultSchema("kp");
@@ -154,7 +178,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.Property(x => x.CauseName).HasMaxLength(512).IsRequired();
             e.Property(x => x.Type).HasConversion<string>().HasMaxLength(32).IsRequired();
             e.Property(x => x.Lifecycle).HasConversion<string>().HasMaxLength(16).IsRequired();
-            e.Property(x => x.VisibilityScope).HasMaxLength(128);
+            e.Property(x => x.VisibilityScope).HasConversion(PhamViXemConverter).HasMaxLength(128);
 
             e.HasMany(x => x.Assertions)
                 .WithOne()
@@ -166,8 +190,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             {
                 a.Property(p => p.ApprovedByActor).HasColumnName("approved_by_actor").HasMaxLength(256);
                 a.Property(p => p.ApprovedAt).HasColumnName("approved_at");
-                a.Property(p => p.VisibilityScopeBefore).HasColumnName("visibility_before").HasMaxLength(128);
-                a.Property(p => p.VisibilityScopeAfter).HasColumnName("visibility_after").HasMaxLength(128);
+                a.Property(p => p.VisibilityScopeBefore).HasConversion(PhamViXemConverter).HasColumnName("visibility_before").HasMaxLength(128);
+                a.Property(p => p.VisibilityScopeAfter).HasConversion(PhamViXemConverter).HasColumnName("visibility_after").HasMaxLength(128);
                 a.Property(p => p.Reason).HasColumnName("approval_reason").HasMaxLength(1024);
             });
 
@@ -219,6 +243,37 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         b.Entity<KnowledgeRecord>().HasQueryFilter(x => x.TenantId == tenantContext.TenantId);
         b.Entity<Assertion>().HasQueryFilter(x => x.TenantId == tenantContext.TenantId);
         b.Entity<AssertionEvidence>().HasQueryFilter(x => x.TenantId == tenantContext.TenantId);
+
+        // =====================================================================
+        //  KHOÁ CHÍNH DO CODE SINH, KHÔNG PHẢI DATABASE — và EF phải được NÓI điều đó.
+        //
+        //  🛑 Mọi entity ở đây đặt `Id` ngay trong bộ khởi tạo (`Guid.CreateVersion7()`).
+        //  Nhưng theo QUY ƯỚC của EF, khoá chính kiểu Guid là `ValueGenerated.OnAdd` — và
+        //  với khoá OnAdd đã có giá trị khác mặc định, EF suy ra entity đó ĐÃ TỒN TẠI.
+        //
+        //  Hệ quả đã đo (2026-09-13, bộ test API bắt): thêm một Assertion vào một
+        //  KnowledgeRecord ĐANG ĐƯỢC THEO DÕI thì EF gắn nó là `Modified` chứ không phải
+        //  `Added`, rồi sinh một câu UPDATE vào một dòng KHÔNG TỒN TẠI →
+        //  `DbUpdateConcurrencyException: expected to affect 1 row(s), but actually affected 0`.
+        //
+        //  ⚠ Vì sao nó không lộ ra sớm hơn: đường nạp bản nháp `Add()` NGUYÊN CẢ ĐỒ THỊ một
+        //  lần, và khi đó cả cụm được gắn `Added` nên không ai thấy gì. Lỗi chỉ hiện ra ở
+        //  chỗ ĐẦU TIÊN thêm con vào một cha đã nạp — tức nó nằm chờ sẵn cho mọi đường
+        //  tương lai, không riêng đường sửa. Thông điệp lỗi lại nói về "concurrency",
+        //  trỏ hoàn toàn sai chỗ.
+        //
+        //  ⚠ Luật SUY TỪ MODEL, không phải danh sách viết tay — cùng lý do `RlsGuard` suy
+        //  danh sách bảng từ model (`IM-7`): thêm entity mới mà quên thêm vào danh sách thì
+        //  cái bẫy này lặng lẽ quay lại.
+        // =====================================================================
+        foreach (var khoa in b.Model.GetEntityTypes()
+                     .Select(t => t.FindPrimaryKey())
+                     .Where(k => k is not null)
+                     .SelectMany(k => k!.Properties)
+                     .Where(p => p.ClrType == typeof(Guid)))
+        {
+            khoa.ValueGenerated = ValueGenerated.Never;
+        }
 
         base.OnModelCreating(b);
     }

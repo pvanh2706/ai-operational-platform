@@ -75,6 +75,90 @@ public sealed class EgressRedactionTests
     }
 
     /// <summary>
+    /// 🛑 BA KIỂU SÓT ĐÃ XẢY RA THẬT, đo 2026-09-11 trên 345 mẩu: bản cũ bắt 12/29. Cả ba
+    /// đánh vào cùng một điểm yếu — luật phải ĐỌC ĐƯỢC CHỮ mới bắt được số. Mỗi `InlineData`
+    /// dưới đây là một ca thật đã rút gọn, giữ nguyên hình dạng.
+    ///
+    /// ⚠ Ca đầu là ca đã ĐI RA payload thật với `daChe = 0` (`ES-343733`): dòng chữ
+    /// "đã che 0 chỗ" được đọc như "không có gì", trong khi payload đang mang một cặp
+    /// đăng nhập còn sống. Đó là lý do bộ test này tồn tại.
+    /// </summary>
+    [Theory]
+    // (1) neo đúng chính tả nhưng ở XA — khối tự-trả-lời của Zalo chen vào giữa
+    [InlineData("cho em xin ultraview nhé|Xin chào Quý khách,|Kênh Zalo đang thử nghiệm|"
+                + "Hotline: 1900 9013|Email: hotro@example.vn|Xin cảm ơn Quý khách!|"
+                + "chị vào chưa ạ|22 333 444|55123")]
+    // (2) neo là BIẾN THỂ GÕ SAI chưa có trong danh sách nào
+    [InlineData("Chị cho em xin ulatrview để em kiểm tra nhé ạ|22 333 444|55123")]
+    // (3) KHÔNG CÓ neo nào — hai dãy số đứng trần, không một chữ nào quanh
+    [InlineData("22 333 444|55123")]
+    public void Hinh_dang_3_bat_duoc_ma_KHONG_can_doc_duoc_chu(string cacDong)
+    {
+        var doan = string.Join('\n', cacDong.Split('|'));
+
+        var ra = EgressRedactor.Redact(doan);
+
+        Assert.DoesNotContain("22 333 444", ra.Text);
+        Assert.DoesNotContain("55123", ra.Text);
+    }
+
+    /// <summary>
+    /// Nửa kia của cặp đăng nhập hay nằm TRONG một câu ngay trước dòng số trần, không đứng
+    /// riêng: `@Cs Ezcloud 10000007` rồi mật khẩu ở dòng sau (`ES-345857`). Che mỗi mật khẩu
+    /// mà để ID lại thì vẫn là rò — một cặp thiếu nửa nào cũng vẫn là nửa bị rò.
+    /// </summary>
+    [Fact]
+    public void Nua_kia_cua_cap_nam_trong_cau_ngay_truoc_cung_bi_che()
+    {
+        var doan = string.Join('\n', "@Cs Ezcloud 10000007", "10007");
+
+        var ra = EgressRedactor.Redact(doan);
+
+        Assert.DoesNotContain("10000007", ra.Text);
+        Assert.DoesNotContain("10007", ra.Text);
+    }
+
+    /// <summary>
+    /// Ngân sách "3 dòng trước" đếm theo dòng CÓ NỘI DUNG. Bản xuất Jira chèn một dòng tiêu
+    /// đề `*Tên_&lt;Vai trò&gt;_thời gian:*` trước mỗi tin nhắn, nên nếu đếm cả tiêu đề thì
+    /// một khối tiêu đề ăn hết ngân sách và luật không bao giờ với tới dòng mang ID.
+    /// </summary>
+    [Fact]
+    public void Dong_tieu_de_tin_nhan_KHONG_an_het_ngan_sach_ba_dong()
+    {
+        var doan = string.Join('\n',
+            "*Khách_<Khách hàng>_12/08/2026 15:28:*",
+            "ultra : 100000008",
+            "",
+            "*Khách_<Khách hàng>_12/08/2026 15:29:*",
+            "10008");
+
+        var ra = EgressRedactor.Redact(doan);
+
+        Assert.DoesNotContain("100000008", ra.Text);
+        Assert.DoesNotContain("10008", ra.Text);
+    }
+
+    /// <summary>
+    /// ⚠ GIÁ PHẢI TRẢ CỦA HÌNH DẠNG 3 MỚI, ghim lại để nó không bị phát hiện như một bất
+    /// ngờ: một số nghiệp vụ đứng ngay trước dòng chỉ-có-số thì CŨNG bị che. Trên 345 mẩu
+    /// đã đo thì điều này chưa xảy ra lần nào (che nhầm 0), nhưng nó xảy ra được.
+    ///
+    /// Đánh đổi đã chốt: một lần che nhầm mất một con số và vẫn để lại dấu `[ĐÃ CHE]` cho
+    /// người duyệt thấy; một lần sót là credential rời khỏi máy. Hai cái giá không ngang nhau.
+    /// Nếu ca này bắt đầu xảy ra thật thì sửa ở đây, và sửa có chủ ý.
+    /// </summary>
+    [Fact]
+    public void Gia_phai_tra_so_nghiep_vu_sat_truoc_dong_so_tran_cung_bi_che()
+    {
+        var doan = string.Join('\n', "xuất hoá đơn cho đặt phòng 80771 không được", "55123");
+
+        var ra = EgressRedactor.Redact(doan);
+
+        Assert.DoesNotContain("80771", ra.Text);
+    }
+
+    /// <summary>
     /// Hình dạng 4: key JSON — và key KHÔNG phải password. Bản đầu chỉ bắt password nên
     /// để lọt cả hai nửa của một cặp đăng nhập. Nửa nào bị rò cũng là rò.
     /// </summary>

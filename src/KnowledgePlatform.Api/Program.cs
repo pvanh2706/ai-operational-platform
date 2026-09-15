@@ -1,8 +1,12 @@
+using KnowledgePlatform.Api.Knowledge;
 using KnowledgePlatform.Api.Signals;
 using KnowledgePlatform.Api.Startup;
 using KnowledgePlatform.Api.Tenancy;
+using KnowledgePlatform.Domain.Knowledge;
+using KnowledgePlatform.Domain.Sop;
 using KnowledgePlatform.Domain.Tenancy;
 using KnowledgePlatform.Infrastructure.Persistence;
+using KnowledgePlatform.Infrastructure.Sop;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -25,6 +29,8 @@ builder.Services.Configure<TenancyOptions>(
     builder.Configuration.GetSection(TenancyOptions.SectionName));
 builder.Services.Configure<IngestOptions>(
     builder.Configuration.GetSection(IngestOptions.SectionName));
+builder.Services.Configure<DinhTuyenOptions>(
+    builder.Configuration.GetSection(DinhTuyenOptions.SectionName));
 
 // Danh bạ tenant nằm NGOÀI ranh giới tenant — xem TenantDirectory.
 builder.Services.AddSingleton(sp => new TenantDirectory(
@@ -41,6 +47,21 @@ builder.Services.AddScoped<TenantEndpointFilter>();
 builder.Services.AddScoped<SignalKeyEndpointFilter>();
 builder.Services.AddScoped<CaseSignalHandler>();
 builder.Services.AddScoped<CaseEvidenceHandler>();
+builder.Services.AddScoped<CaseEvidenceReadHandler>();
+builder.Services.AddScoped<SopDraftIngestHandler>();
+builder.Services.AddScoped<KnowledgeApprovalHandler>();
+builder.Services.AddScoped<KnowledgeRevisionHandler>();
+builder.Services.AddScoped<HoiHandler>();
+
+// AR3 — interface mỏng, một dòng để đổi bản hiện thực. Bản đang cắm KHÔNG gọi API và
+// KHÔNG định tuyến: nó tra bảng kết quả đã đo (`docs/13`). Xem DinhTuyenTraSan.
+// Singleton vì nó chỉ đọc một file một lần rồi giữ trong bộ nhớ; không có trạng thái
+// theo request, và KHÔNG chạm tenant — nên nó không phải chỗ rò ranh giới.
+builder.Services.AddSingleton<IDinhTuyenNhom>(sp =>
+{
+    var cfg = sp.GetRequiredService<IOptions<DinhTuyenOptions>>().Value;
+    return new DinhTuyenTraSan(cfg.DuongDanBangTraSan ?? DinhTuyenOptions.DuongDanMacDinh());
+});
 
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
@@ -276,6 +297,246 @@ app.MapPost("/signals/case-evidence", async (
     })
     .AddEndpointFilter<SignalKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
+
+// =============================================================================
+//  VÒNG TRI THỨC — mảnh (a)(b)(c)(d) của phạm vi demo chốt 2026-09-13.
+//
+//  Trước ba endpoint dưới đây, host chỉ có đường NẠP: tín hiệu đi vào được, nhưng
+//  không có cửa nào cho một CÂU HỎI, và `KnowledgeRecord.Approve()` — có ở Domain
+//  từ 2026-08-24 — KHÔNG NƠI NÀO gọi tới. Kho tri thức vì thế rỗng theo đúng nghĩa
+//  cấu trúc: không phải chưa ai nạp, mà là không có đường nào để nạp.
+//
+//  ⚠ ĐỌC `docs/00` §"Việc tiếp theo" (2026-09-13) trước khi đọc một demo xanh thành
+//    "tính năng đã dùng được". Bộ định tuyến đang cắm là bản TRA SẴN: nó chứng minh
+//    ĐƯỜNG ỐNG chạy, KHÔNG chứng minh độ chính xác.
+// =============================================================================
+
+// --- (a) Nạp một bản nháp SOP vào kho, ở trạng thái Draft ---
+//
+// Endpoint GHI, nên cùng cặp filter với đường tín hiệu. Nó KHÔNG duyệt gì: `D4` nói
+// người công nhận chứ không phải AI, và "nạp" không phải "công nhận".
+app.MapPost("/knowledge/sop-draft", async (
+        SopDraft draft,
+        SopDraftIngestHandler handler,
+        CancellationToken ct) =>
+    {
+        if (string.IsNullOrWhiteSpace(draft.Nhom))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Bản nháp thiếu tên nhóm",
+                detail: "`nhom` là thứ nối bản nháp với bộ định tuyến. Thiếu nó thì record nạp vào " +
+                        "kho sẽ không bao giờ được tra ra.");
+        }
+
+        if (draft.BuocSua.Count == 0)
+        {
+            // Không bước sửa nào = không nguyên nhân nào = nạp xong kho vẫn rỗng.
+            // Nói ra thay vì trả 200 với created 0, thứ đọc ra thành "đã nạp rồi".
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Bản nháp không có bước sửa nào",
+                detail: "Mỗi bước sửa là một nguyên nhân (T1). Không có bước sửa nào thì không có " +
+                        "gì để nạp — trả 200 ở đây sẽ đọc ra thành \"đã nạp xong\".");
+        }
+
+        return Results.Ok(await handler.HandleAsync(draft, ct));
+    })
+    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+// --- (b) Duyệt: nội dung + quyền xem trong MỘT hành động (S7) ---
+//
+// 🛑 Đây là chỗ `AR-l` chạm vào, và cổng nằm trong handler chứ không phải trong tài
+//   liệu: chế độ shared thì TỪ CHỐI. Duyệt LÀ xuất bản, và rò của `AR-l` xảy ra ở
+//   khâu xuất bản chứ không ở khâu truy vấn hàng — RLS không cứu được.
+app.MapPost("/knowledge/{id:guid}/approve", async (
+        Guid id,
+        YeuCauDuyet yeuCau,
+        KnowledgeApprovalHandler handler,
+        CancellationToken ct) =>
+    {
+        if (string.IsNullOrWhiteSpace(yeuCau.NguoiDuyet))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Thiếu người duyệt",
+                detail: "`nguoiDuyet` bắt buộc. D4: người công nhận, không phải AI — một lần duyệt " +
+                        "không có chủ thể thì không tra lại được về sau.");
+        }
+
+        if (string.IsNullOrWhiteSpace(yeuCau.PhamViXem))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Thiếu phạm vi xem",
+                detail: "`phamViXem` bắt buộc. S7: duyệt nội dung và mở quyền xem là MỘT hành động — " +
+                        "hệ thống KHÔNG BAO GIỜ tự chọn phạm vi hộ.");
+        }
+
+        // TẬP GIÁ TRỊ ĐÃ KHOÁ 2026-09-15 (`AR-a`). Trước đó đây nhận chuỗi tự do, và chính vì
+        // thế `kp_dev` có 7 record mang một nhãn không quyết định nào đứng sau.
+        // ⚠ Báo ra CẢ DANH SÁCH nhận được, đừng chỉ nói "không hợp lệ": bên tích hợp không đọc
+        //   được code của mình, nên một lỗi không nói tập giá trị là bắt họ đoán.
+        if (!VisibilityScopes.TryParse(yeuCau.PhamViXem, out var phamViXem))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Phạm vi xem không nằm trong tập đã chốt",
+                detail: $"Không nhận ra \"{yeuCau.PhamViXem}\". Nhận: {VisibilityScopes.Allowed}.");
+        }
+
+        var kq = await handler.DuyetAsync(id, yeuCau.NguoiDuyet, phamViXem, yeuCau.LyDo, ct);
+
+        if (kq.LyDoChan is not null)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Chưa được phép duyệt trên bản deploy này",
+                detail: kq.LyDoChan);
+        }
+
+        return kq.ThayBanGhi
+            ? Results.Ok(kq.BanGhi)
+            : Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Không thấy tri thức này",
+                detail: $"Không có bản ghi {id} trong phạm vi của khách hàng này.");
+    })
+    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+// --- (c)+(d) Hỏi: một ticket vừa đến thì làm gì — và cổng "KHÔNG BIẾT" ---
+//
+// ⚠ Dùng chung cái chốt của đường tín hiệu, dù đây là endpoint ĐỌC. Lý do: nó trả ra
+//   NỘI DUNG tri thức của khách, khác hẳn `/internal/tenant-boundary` (chỉ trả con
+//   số đếm). `AR-e` vẫn là câu trả lời thật; đây chỉ là cái chốt duy nhất đang có.
+//
+// ⚠ Trả 200 cho cả hai kết cục, gồm "KHÔNG BIẾT". Cố ý: không biết là một CÂU TRẢ LỜI
+//   hợp lệ của sản phẩm này, không phải một lỗi. Trả 404 ở đây sẽ đẩy người tích hợp
+//   vào chỗ coi nó là sự cố rồi thử lại — trong khi thử lại không đổi được gì.
+app.MapPost("/hoi", async (
+        CauHoi cauHoi,
+        HoiHandler handler,
+        CancellationToken ct) =>
+    {
+        if (string.IsNullOrWhiteSpace(cauHoi.MaTicket)
+            && string.IsNullOrWhiteSpace(cauHoi.TieuDe)
+            && string.IsNullOrWhiteSpace(cauHoi.MoTa))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Câu hỏi rỗng",
+                detail: "Cần ít nhất một trong `maTicket`, `tieuDe`, `moTa`.");
+        }
+
+        return Results.Ok(await handler.HoiAsync(cauHoi, ct));
+    })
+    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+
+
+// --- BẢN B: người làm support SỬA lại, mà không đè bản A ---
+//
+// 🛑 Vế còn thiếu của `M2`. A (máy sinh) đã vào kho được từ /knowledge/sop-draft, nhưng
+//   tới 2026-09-13 B chưa có đường nào để vào — nên `M2` không đo được gì dù cả hai nửa
+//   đều đã thiết kế xong từ lâu.
+//
+// Đường RIÊNG, cố ý không gộp vào /approve: `S7` nói duyệt là MỞ QUYỀN XEM, còn đây là
+// ĐỔI NỘI DUNG. Gộp lại thì không phân biệt được "đồng ý nguyên văn" với "sửa rồi mới
+// đồng ý" — mà đúng khoảng cách giữa hai ca đó LÀ con số M2 muốn đo.
+app.MapPost("/knowledge/{id:guid}/sua", async (
+        Guid id,
+        YeuCauSua yeuCau,
+        KnowledgeRevisionHandler handler,
+        CancellationToken ct) =>
+    {
+        if (string.IsNullOrWhiteSpace(yeuCau.NguoiSua))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Thiếu người sửa",
+                detail: "`nguoiSua` bắt buộc — một bản sửa không có chủ thể thì M2 không tra ngược được.");
+        }
+
+        if (yeuCau.Sua.Count == 0)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Không có mục sửa nào",
+                detail: "Gửi lô rỗng rồi nhận 200 sẽ đọc ra thành \"đã ghi nhận\" trong khi không có gì được ghi.");
+        }
+
+        var kq = await handler.SuaAsync(id, yeuCau, ct);
+
+        if (kq.Loi is not null)
+        {
+            // Cả lô bị từ chối, KHÔNG sửa một nửa — cùng luật với IM-16.
+            return Results.ValidationProblem(kq.Loi, title: "Lô sửa không hợp lệ, KHÔNG mục nào được ghi");
+        }
+
+        return kq.ThayBanGhi
+            ? Results.Ok(kq.BanGhi)
+            : Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Không thấy tri thức này",
+                detail: $"Không có bản ghi {id} trong phạm vi của khách hàng này.");
+    })
+    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+// --- Đọc MỘT tri thức kèm TOÀN BỘ lịch sử assertion — chỗ diff(A,B) đọc được ---
+//
+// ⚠ /hoi cố ý chỉ trả bản CÒN HIỆU LỰC: người đang xử lý ticket không cần lịch sử. Nên
+//   nếu thiếu đường này thì bản A vẫn nằm trong database mà KHÔNG CÓ CÁCH NÀO lấy ra —
+//   `M2` vẫn không đo được dù dữ liệu đã đủ. Đó là một cách hỏng rất im lặng: dữ liệu
+//   đúng, đường đọc thiếu.
+app.MapGet("/knowledge/{id:guid}", async (
+        Guid id,
+        KnowledgeRevisionHandler handler,
+        CancellationToken ct) =>
+    {
+        var kq = await handler.DocAsync(id, ct);
+
+        return kq is not null
+            ? Results.Ok(kq)
+            : Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Không thấy tri thức này",
+                detail: $"Không có bản ghi {id} trong phạm vi của khách hàng này.");
+    })
+    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+
+
+// --- ĐỌC evidence của một case (AR-g, chốt 2026-09-15) ---
+//
+// Tra theo KHOÁ NGUỒN — thứ bên gửi đã biết về case của chính họ. Xem CaseEvidenceReadHandler.
+//
+// ⚠ `{ref}` là MỘT đoạn đường dẫn, nên khoá nguồn chứa dấu `/` (ví dụ `crm:deal/4471`) phải
+//   được mã hoá thành `%2F`. Hợp đồng khoá nguồn cố ý là CHUỖI TỰ DO (`G1`), nên ràng buộc
+//   này là của HTTP chứ không phải của sản phẩm — và nó được ghim bằng một test riêng thay
+//   vì để bên tích hợp tự phát hiện bằng một cái 404 khó hiểu.
+app.MapGet("/cases/{khoaNguon}/evidence", async (
+        string khoaNguon,
+        CaseEvidenceReadHandler handler,
+        CancellationToken ct) =>
+    {
+        var kq = await handler.DocAsync(khoaNguon, ct);
+
+        return kq is not null
+            ? Results.Ok(kq)
+            : Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Không thấy case nào mang khoá nguồn này",
+                detail: $"Không có Case nào mang khoá \"{khoaNguon}\" trong phạm vi của khách hàng này. " +
+                        "Khoá nguồn có dấu `/` thì phải mã hoá thành %2F.");
+    })
+    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
 
 app.Run();
 

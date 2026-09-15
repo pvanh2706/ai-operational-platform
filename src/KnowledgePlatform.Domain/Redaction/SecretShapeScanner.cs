@@ -29,15 +29,18 @@ public sealed record SecretHit(string Shape, string Value, int Index, int Length
 /// <list type="number">
 ///   <item>`ID của bạn: &lt;9 chữ số&gt;` / `Mật khẩu: &lt;5 số&gt;` — nhãn và giá trị CÙNG DÒNG</item>
 ///   <item>`Ultraview: &lt;nn nnn nnn&gt; // &lt;5 số&gt;` — NHIỀU giá trị trên cùng dòng</item>
-///   <item>`&lt;nnn nnn nnn&gt;` rồi `&lt;5 số&gt;` ở hai tin nhắn liền nhau — dãy số TRẦN</item>
+///   <item>một dòng mà TOÀN BỘ nội dung là một dãy số — kèm số đứng sát ngay trước nó</item>
 ///   <item>`"Account": "&lt;tên tài khoản&gt;"` — key JSON, và key KHÔNG phải password</item>
 /// </list>
 ///
-/// ⚠ RECALL LÀ CẬN TRÊN, KHÔNG PHẢI ƯỚC LƯỢNG ĐÚNG. Bản Python đo được 13/13 trên corpus
-/// thật, nhưng luật được sửa THEO chính corpus dùng để đo nó — overfit theo định nghĩa.
-/// Corpus 12 tháng đã lộ ra hình dạng thứ NĂM (JWT sau chữ "Token:") mà luật bắt được nhờ
-/// `token` tình cờ có trong danh sách key JSON, không nhờ thiết kế. Hình dạng thứ sáu sẽ
-/// tới, và nó sẽ không may như vậy.
+/// ⚠ RECALL LÀ CẬN TRÊN, KHÔNG PHẢI ƯỚC LƯỢNG ĐÚNG — luật vẫn được soi ra TỪ chính corpus
+/// dùng để đo nó. Nhưng chỗ đứng đã khác trước: hình dạng 3 nay thuần CẤU TRÚC, không đọc
+/// chữ, nên không có danh sách từ khoá nào để phải vá.
+/// Lịch sử con số, giữ lại vì nó giải thích vì sao đừng tin một phép đo recall duy nhất:
+/// bản Python đo 13/13 trên corpus 32 case (2026-09-04) → cùng bộ luật đó đo lại trên 345
+/// mẩu (2026-09-11) chỉ còn **12/29**. Không phải luật hỏng đi; là corpus lớn hơn lộ ra
+/// những hình dạng corpus nhỏ chưa có. Hình dạng thứ sáu ("ulatrview") đã tới đúng như dự
+/// báo cũ, và nó phá được bản cũ vì bản cũ phải đọc được chữ mới bắt được số.
 /// → Vì thế <see cref="EgressRedactor"/> KHÔNG được coi luật này là đủ. Nó chỉ là một lớp.
 /// </summary>
 public static class SecretShapeScanner
@@ -63,6 +66,12 @@ public static class SecretShapeScanner
         Opts);
 
     private static readonly Regex Url = new(@"https?://\S+", RegexOptions.CultureInvariant);
+
+    // Dòng tiêu đề tin nhắn của bản xuất Jira: `*Tên_<Vai trò>_dd/MM/yyyy HH:mm:*`. Nó là
+    // khung, không phải lời ai nói, nên khi đếm lùi tìm nửa kia của cặp đăng nhập thì nó
+    // KHÔNG được tính. Bỏ qua chỗ này là một khối tiêu đề ăn hết ngân sách 3 dòng và luật
+    // không bao giờ với tới dòng có ID.
+    private static readonly Regex TieuDeTinNhan = new(@"^\s*\*.*_<[^>]*>_.*\*\s*$", Opts);
 
     /// <summary>
     /// Quét, trả về mọi chỗ nghi là bí mật kèm vị trí trong văn bản GỐC.
@@ -107,32 +116,62 @@ public static class SecretShapeScanner
             }
         }
 
-        // Hình dạng 3 phải chạy trên TOÀN BỘ danh sách dòng, vì nó nhìn TỚI TRƯỚC vài dòng:
-        // khách gõ ID ở một tin nhắn rồi mật khẩu ở tin nhắn kế tiếp, không từ khoá nào ở
-        // dòng thứ hai. Đây là hình dạng làm luật "cùng dòng" chỉ bắt được 11%.
+        // Hình dạng 3 — VIẾT LẠI 2026-09-11 (`AR-o`), và nó KHÔNG còn dùng từ khoá nào.
+        //
+        // Bản cũ: từ một dòng có tên công cụ remote, nhìn xuôi 6 dòng tìm dãy số trần.
+        // Đo trên 345 mẩu / 252 387 ký tự thì bản cũ bắt 12/29 chỗ. Ba kiểu sót, và cả ba
+        // đều đánh vào cùng một điểm yếu — luật phải ĐỌC ĐƯỢC CHỮ mới bắt được số:
+        //   · neo đúng chính tả nhưng ở xa (30 dòng, vì khối tự-trả-lời của Zalo chen vào)
+        //   · neo là biến thể gõ sai chưa có trong danh sách ("ulatrview")
+        //   · neo nằm ở MẨU KHÁC của cùng case, hoặc KHÔNG CÓ neo nào
+        // Nới cửa sổ lên 40 dòng chỉ lên 18/29; đảo mặc định "che cả mẩu có nhắc công cụ"
+        // cũng chỉ lên 20/29. Mọi luật dựa vào từ khoá đều thua, vì cùng một lý do.
+        //
+        // Thứ nhận ra chúng là HÌNH DẠNG TRÌNH BÀY, không phải chữ: **một dòng mà toàn bộ
+        // nội dung chỉ là một dãy số thì luôn là credential** — 25/25 trên corpus đó. Số
+        // của nghiệp vụ (số hoá đơn, mã đặt phòng, MST) luôn đi kèm chữ trong câu; chỉ ID
+        // và mật khẩu mới được dán đứng một mình. Luật này bắt 29/29, che nhầm 0.
+        //
+        // ⚠ Và vì nó không có danh sách từ khoá nào, nó không có gì để phải vá khi biến thể
+        //   gõ sai thứ bảy xuất hiện. Đó là lý do chính chọn nó, không phải con số 29.
         var dongs = TachDong(sach).ToList();
         for (var i = 0; i < dongs.Count; i++)
         {
-            var (dong, _) = dongs[i];
-            if (!CongCu.IsMatch(dong) && !NhanVaSo.IsMatch(dong))
+            var (dong, batDau) = dongs[i];
+            if (!SoTran.IsMatch(dong))
             {
                 continue;
             }
 
-            for (var k = i + 1; k < Math.Min(i + 7, dongs.Count); k++)
+            var soMatch = LaySo.Match(dong);
+            if (soMatch.Success)
             {
-                var (sau, batDauSau) = dongs[k];
-                var mt = SoTran.Match(sau);
-                if (!mt.Success)
+                ra.Add(new SecretHit("số trần", soMatch.Value,
+                    batDau + soMatch.Index, soMatch.Length));
+            }
+
+            // Nửa kia của cặp đăng nhập hay đứng NGAY TRƯỚC và hay nằm TRONG một câu:
+            // "@Cs Ezcloud 10000007", "ultra : 100000008". Bắt được 4 ID thật, che nhầm 0.
+            // Đếm lùi theo dòng CÓ NỘI DUNG — dòng trống và dòng tiêu đề tin nhắn không
+            // tính, nếu không thì một khối tiêu đề là hết ngân sách 3 dòng.
+            var daXet = 0;
+            for (var k = i - 1; k >= 0 && daXet < 3; k--)
+            {
+                var (truoc, batDauTruoc) = dongs[k];
+                if (string.IsNullOrWhiteSpace(truoc) || TieuDeTinNhan.IsMatch(truoc))
                 {
                     continue;
                 }
 
-                var soMatch = LaySo.Match(sau);
-                if (soMatch.Success)
+                daXet++;
+                foreach (Match s in LaySo.Matches(truoc))
                 {
-                    ra.Add(new SecretHit("số trần", soMatch.Value,
-                        batDauSau + soMatch.Index, soMatch.Length));
+                    // Dòng chỉ-có-số đã được chính vòng ngoài bắt rồi; đừng bắt hai lần.
+                    if (!SoTran.IsMatch(truoc))
+                    {
+                        ra.Add(new SecretHit("số kề dòng số trần", s.Value,
+                            batDauTruoc + s.Index, s.Length));
+                    }
                 }
             }
         }
