@@ -215,6 +215,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
                 a.Property(p => p.VisibilityScopeBefore).HasConversion(PhamViXemConverter).HasColumnName("visibility_before").HasMaxLength(128);
                 a.Property(p => p.VisibilityScopeAfter).HasConversion(PhamViXemConverter).HasColumnName("visibility_after").HasMaxLength(128);
                 a.Property(p => p.Reason).HasColumnName("approval_reason").HasMaxLength(1024);
+
+                // AR-n (B2b-1). Cột NULL được: NULL = duyệt TRƯỚC khi có luật này, khác hẳn
+                // false. Backfill `true` cho 8 bản ghi cũ sẽ là bịa ra một lời khai mà không
+                // ai từng nói — đúng thứ AP3 cấm.
+                a.Property(p => p.CommercialDataConfirmed).HasColumnName("commercial_data_confirmed");
             });
 
             e.HasIndex(x => new { x.TenantId, x.Lifecycle });

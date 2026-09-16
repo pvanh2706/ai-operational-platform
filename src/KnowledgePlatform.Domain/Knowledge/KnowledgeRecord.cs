@@ -132,9 +132,26 @@ public sealed class KnowledgeRecord : ITenantScoped
     /// S7: người duyệt phải là người thấy được TẤT CẢ nguồn — điều đó được kiểm
     /// ở tầng ứng dụng trước khi gọi vào đây (không phải ở DB, vì Q-D còn mở).
     /// </summary>
-    public void Approve(string approvedByActor, VisibilityScope visibilityScope, string? reason = null)
+    public void Approve(
+        string approvedByActor,
+        VisibilityScope visibilityScope,
+        bool xacNhanDuLieuThuongMai,
+        string? reason = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(approvedByActor);
+
+        // 🛑 `AR-n` (B2b-1): duyệt LÀ xuất bản, và dữ liệu thương mại của một khách hàng
+        // không có hình dạng nào để bắt bằng luật — nên chốt duy nhất là người duyệt phải
+        // khai rằng mình đã soát. Tham số này CỐ Ý không có giá trị mặc định: mọi nơi gọi
+        // phải nói ra, và trình biên dịch bắt chỗ nào quên. Một cổng có `= false` mặc định
+        // là một cổng mà nơi gọi mới sẽ lặng lẽ đi vòng qua.
+        if (!xacNhanDuLieuThuongMai)
+        {
+            throw new InvalidOperationException(
+                "AR-n: không duyệt được khi người duyệt chưa xác nhận đã soát dữ liệu thương mại " +
+                "trong các mẩu nguồn (giá hợp đồng, hạn hợp đồng, ý định rời bỏ của khách). " +
+                "Loại dữ liệu này KHÔNG có hình dạng để bắt bằng luật, nên đây là chốt duy nhất.");
+        }
 
         // ⚠ Siết sang enum KHÔNG tự chặn giá trị lạ: `(VisibilityScope)99` ép kiểu được và
         // không ném gì. Bỏ phép kiểm này thì việc siết kiểu chỉ đổi một lỗ hổng thành một
@@ -153,6 +170,7 @@ public sealed class KnowledgeRecord : ITenantScoped
             VisibilityScopeBefore = VisibilityScope,
             VisibilityScopeAfter = visibilityScope,
             Reason = reason,
+            CommercialDataConfirmed = true,
         };
 
         VisibilityScope = visibilityScope;
@@ -263,4 +281,27 @@ public sealed class KnowledgeApproval
     public required VisibilityScope VisibilityScopeAfter { get; init; }
 
     public string? Reason { get; init; }
+
+    /// <summary>
+    /// `AR-n` (B2b-1), 2026-09-16: người duyệt XÁC NHẬN đã soát dữ liệu THƯƠNG MẠI trong
+    /// các mẩu nguồn trước khi bản ghi này được xuất bản.
+    ///
+    /// 🛑 **ĐÂY LÀ MỘT LỜI KHAI, KHÔNG PHẢI MỘT PHÉP KIỂM — và phải đọc đúng như vậy.**
+    /// Hệ thống KHÔNG kiểm chứng được nó: dữ liệu thương mại (giá hợp đồng theo năm, hạn
+    /// hợp đồng, ý định rời bỏ của một khách hàng — `ES-346608#comment-803265`) **không có
+    /// hình dạng nào** để bắt bằng luật; chính `AR-n` đã ghi điều đó, và đó là lý do nhánh
+    /// này chọn NGƯỜI thay vì REGEX. Không có hình dạng thì không có luật, và không có luật
+    /// thì phải có người — nhưng người thì chỉ khai được.
+    ///
+    /// ⚠ **Và hôm nay hệ thống còn không biết mẩu nguồn là những mẩu nào:** bảng
+    /// <c>assertion_evidence</c> có **0 dòng** (đo trên `kp_dev` 2026-09-16), vì đường nạp
+    /// bản nháp SOP chưa nối assertion với evidence. Nên chưa có cách nào đối chiếu lời khai
+    /// này với thực tế — kể cả muốn. Khi mắt xích đó có, chỗ này mới nâng được từ *khai* lên
+    /// *đối chiếu được*, và đó là lúc phải quay lại sửa.
+    ///
+    /// ⚠ <c>NULL</c> = duyệt TRƯỚC khi có luật này (2026-09-16). KHÁC <c>false</c>, và đừng
+    /// gộp: <c>false</c> nghĩa là có người được hỏi và nói chưa soát — thứ mà
+    /// <see cref="KnowledgeRecord.Approve"/> vốn đã không cho đi qua.
+    /// </summary>
+    public bool? CommercialDataConfirmed { get; init; }
 }

@@ -50,7 +50,7 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        record.Approve(approvedByActor: "an.pham", visibilityScope: VisibilityScope.NoiBo);
+        record.Approve(approvedByActor: "an.pham", visibilityScope: VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         Assert.Equal(StoredLifecycleState.Active, record.Lifecycle);
         Assert.Equal(VisibilityScope.NoiBo, record.VisibilityScope);
@@ -68,7 +68,7 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        record.Approve("an.pham", VisibilityScope.NoiBo, reason: "Đã đối chiếu với source code.");
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true, reason: "Đã đối chiếu với source code.");
 
         var approval = Assert.IsType<KnowledgeApproval>(record.LastApproval);
         Assert.Equal("an.pham", approval.ApprovedByActor);
@@ -87,8 +87,8 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        record.Approve("an.pham", VisibilityScope.NoiBo);
-        record.Approve("linh.tran", VisibilityScope.ToanCongTy, reason: "Không còn chi tiết nội bộ.");
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
+        record.Approve("linh.tran", VisibilityScope.ToanCongTy, xacNhanDuLieuThuongMai: true, reason: "Không còn chi tiết nội bộ.");
 
         var approval = Assert.IsType<KnowledgeApproval>(record.LastApproval);
         Assert.Equal("linh.tran", approval.ApprovedByActor);
@@ -110,7 +110,7 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        Assert.ThrowsAny<ArgumentException>(() => record.Approve(actor!, VisibilityScope.NoiBo));
+        Assert.ThrowsAny<ArgumentException>(() => record.Approve(actor!, VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true));
     }
 
     /// <summary>
@@ -135,7 +135,7 @@ public sealed class KnowledgeRecordLifecycleTests
         var record = KnowledgeBuilder.NewRecord();
 
         Assert.ThrowsAny<ArgumentException>(
-            () => record.Approve("an.pham", (VisibilityScope)giaTriLa));
+            () => record.Approve("an.pham", (VisibilityScope)giaTriLa, xacNhanDuLieuThuongMai: true));
     }
 
     /// <summary>
@@ -150,7 +150,7 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
 
-        record.Approve("an.pham", scope);
+        record.Approve("an.pham", scope, xacNhanDuLieuThuongMai: true);
 
         Assert.Equal(scope, record.VisibilityScope);
     }
@@ -163,10 +163,10 @@ public sealed class KnowledgeRecordLifecycleTests
     public void Duyet_that_bai_thi_khong_doi_gi_ca()
     {
         var record = KnowledgeBuilder.NewRecord();
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         // Giá trị ngoài tập đã chốt — ca duy nhất còn làm `Approve` ném sau khi siết kiểu.
-        Assert.ThrowsAny<ArgumentException>(() => record.Approve("linh.tran", (VisibilityScope)99));
+        Assert.ThrowsAny<ArgumentException>(() => record.Approve("linh.tran", (VisibilityScope)99, xacNhanDuLieuThuongMai: true));
 
         Assert.Equal(VisibilityScope.NoiBo, record.VisibilityScope);
         Assert.Equal("an.pham", record.LastApproval!.ApprovedByActor);
@@ -189,7 +189,7 @@ public sealed class KnowledgeRecordLifecycleTests
     {
         var record = KnowledgeBuilder.NewRecord();
         var assertion = record.NewAssertion(verification: VerificationLevel.Verified);
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         record.Deprecate();
 
@@ -208,7 +208,7 @@ public sealed class KnowledgeRecordLifecycleTests
     public void Rut_tri_thuc_khong_tu_dong_thu_hoi_quyen_xem()
     {
         var record = KnowledgeBuilder.NewRecord();
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         record.Deprecate();
 
@@ -243,5 +243,46 @@ public sealed class KnowledgeRecordLifecycleTests
             "MỘT hành động đi qua Approve(), và hệ thống không bao giờ tự mở quyền xem. " +
             "Một setter public làm câu đó thành không đúng nữa — và không test nào khác " +
             "trong dự án sẽ đỏ vì chuyện đó.");
+    }
+
+    // =====================================================================
+    //  AR-n (B2b-1) — cổng dữ liệu THƯƠNG MẠI ở khâu duyệt
+    // =====================================================================
+
+    /// <summary>
+    /// 🛑 Chưa xác nhận đã soát dữ liệu thương mại thì KHÔNG duyệt được, và record **không đổi
+    /// trạng thái gì cả** — không có nửa vời.
+    ///
+    /// Vì sao cổng nằm ở đây chứ không ở khâu nạp: dữ liệu thương mại (giá hợp đồng theo năm,
+    /// hạn hợp đồng, ý định ngừng dùng — ca thật `ES-346608#comment-803265`) **không có hình
+    /// dạng nào** để bắt bằng luật. Không có hình dạng thì không có luật, và không có luật thì
+    /// phải có người — mà chỗ duy nhất chắc chắn có người là lượt DUYỆT.
+    /// </summary>
+    [Fact]
+    public void Duyet_ma_chua_xac_nhan_du_lieu_thuong_mai_thi_nem()
+    {
+        var record = KnowledgeBuilder.NewRecord();
+
+        Assert.Throws<InvalidOperationException>(
+            () => { record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: false); });
+
+        Assert.Equal(StoredLifecycleState.Draft, record.Lifecycle);
+        Assert.Null(record.LastApproval);
+    }
+
+    /// <summary>
+    /// Xác nhận rồi thì lời khai được LƯU LẠI cùng lượt duyệt. Không lưu thì nó chỉ là một ô
+    /// tích rồi biến mất — và `M2` phần (c) đã dạy đúng điều đó: một lượt duyệt không để lại
+    /// bằng chứng thì không phân biệt được với một lượt chưa ai làm.
+    /// </summary>
+    [Fact]
+    public void Xac_nhan_roi_thi_loi_khai_duoc_LUU_cung_luot_duyet()
+    {
+        var record = KnowledgeBuilder.NewRecord();
+
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
+
+        Assert.True(record.LastApproval!.CommercialDataConfirmed);
+        Assert.Equal("an.pham", record.LastApproval.ApprovedByActor);
     }
 }

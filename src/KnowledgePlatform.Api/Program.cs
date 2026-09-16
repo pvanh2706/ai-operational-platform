@@ -388,7 +388,30 @@ app.MapPost("/knowledge/{id:guid}/approve", async (
                 detail: $"Không nhận ra \"{yeuCau.PhamViXem}\". Nhận: {VisibilityScopes.Allowed}.");
         }
 
-        var kq = await handler.DuyetAsync(id, yeuCau.NguoiDuyet, phamViXem, yeuCau.LyDo, ct);
+        // 🛑 AR-n (B2b-1) — CỔNG DỮ LIỆU THƯƠNG MẠI, và nó đứng ở đây chứ không ở khâu nạp.
+        //
+        // Lý do chọn khâu DUYỆT: "vào kho" trong AR-n là vào KHO TRI THỨC, không phải vào
+        // bảng evidence. Duyệt LÀ xuất bản — đó là lúc một mẩu thôi nằm trong dữ liệu thô và
+        // bắt đầu hiện ra cho người khác qua một bản SOP. Che ở khâu nạp thì không xong được
+        // (loại dữ liệu này không có hình dạng), còn gác ở tầng mẩu thì bắt người soát cả
+        // những mẩu không bao giờ được dùng tới.
+        //
+        // ⚠ Đây là LỜI KHAI, KHÔNG phải phép kiểm. Hệ thống không đối chiếu được, và hôm nay
+        //   còn không biết mẩu nguồn là những mẩu nào — `assertion_evidence` có 0 dòng. Ghi
+        //   thẳng ra đây để không ai đọc ô `true` thành "đã kiểm".
+        if (yeuCau.XacNhanDuLieuThuongMai != true)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Chưa xác nhận đã soát dữ liệu thương mại",
+                detail: "`xacNhanDuLieuThuongMai` phải là true. AR-n: duyệt là XUẤT BẢN, và dữ liệu " +
+                        "thương mại của khách (giá hợp đồng theo năm, hạn hợp đồng, ý định ngừng dùng) " +
+                        "KHÔNG có hình dạng nào để bắt bằng luật — ca thật: ES-346608#comment-803265. " +
+                        "Không có luật thì phải có người, nên chốt duy nhất là bạn khai đã soát.");
+        }
+
+        var kq = await handler.DuyetAsync(
+            id, yeuCau.NguoiDuyet, phamViXem, yeuCau.XacNhanDuLieuThuongMai.Value, yeuCau.LyDo, ct);
 
         if (kq.LyDoChan is not null)
         {

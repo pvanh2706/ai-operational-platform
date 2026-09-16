@@ -238,7 +238,7 @@ public sealed class BanBSuaTests(ApiDatabaseFixture db) : IClassFixture<ApiDatab
         var (id, ds) = await NapAsync(c, b.Nhom);
 
         await c.PostAsJsonAsync($"/knowledge/{id}/approve",
-            new { nguoiDuyet = "chị Lan", phamViXem = "noi-bo" });
+            new { nguoiDuyet = "chị Lan", phamViXem = "noi-bo", xacNhanDuLieuThuongMai = true });
 
         await c.PostAsJsonAsync($"/knowledge/{id}/sua", new
         {
@@ -267,14 +267,14 @@ public sealed class BanBSuaTests(ApiDatabaseFixture db) : IClassFixture<ApiDatab
         var c = app.CreateClient();
         var (id, ds) = await NapAsync(c, b.Nhom);
 
-        await c.PostAsJsonAsync($"/knowledge/{id}/approve", new { nguoiDuyet = "chị Lan", phamViXem = "noi-bo" });
+        await c.PostAsJsonAsync($"/knowledge/{id}/approve", new { nguoiDuyet = "chị Lan", phamViXem = "noi-bo", xacNhanDuLieuThuongMai = true });
         await c.PostAsJsonAsync($"/knowledge/{id}/sua", new
         {
             nguoiSua = "chị Lan",
             sua = new[] { new { assertionId = IdCua(ds, "Handling"), noiDungMoi = "đã sửa", mucKiemChung = "Verified" } },
         });
         await c.PostAsJsonAsync($"/knowledge/{id}/approve",
-            new { nguoiDuyet = "chị Lan", phamViXem = "noi-bo", lyDo = "duyệt lại sau khi sửa" });
+            new { nguoiDuyet = "chị Lan", phamViXem = "noi-bo", lyDo = "duyệt lại sau khi sửa", xacNhanDuLieuThuongMai = true });
 
         var doc = await c.GetFromJsonAsync<JsonElement>($"/knowledge/{id}");
         Assert.False(doc.GetProperty("canDuyetLai").GetBoolean());

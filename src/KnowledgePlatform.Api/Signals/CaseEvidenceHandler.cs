@@ -1,4 +1,5 @@
 using KnowledgePlatform.Domain.Evidence;
+using KnowledgePlatform.Domain.Redaction;
 using KnowledgePlatform.Domain.Tenancy;
 using KnowledgePlatform.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -94,6 +95,7 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
             Created: results.Count(r => r.Created),
             DistinctSubTenantCodes: maPhanBiet,
             SubTenantWarning: CanhBaoMaKhachSan(signals.Count, maPhanBiet, boQua),
+            ThirdPartyRedactedTotal: results.Sum(r => r.ThirdPartyRedacted),
             Results: results);
     }
 
@@ -148,16 +150,28 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
             // lượt đã nạp mã thành công — nên nói ra.
             return new CaseEvidenceResult(
                 signal.SourceReference, existing.Id, existing.ObservedInCaseId, Created: false,
-                SubTenantNotApplied: MaKhacVoiBanDaLuu(signal.SubTenantCode, existing.SubTenantCode));
+                SubTenantNotApplied: MaKhacVoiBanDaLuu(signal.SubTenantCode, existing.SubTenantCode),
+                ThirdPartyRedacted: 0);
         }
 
         EvidenceReadability.TryParse(signal.MachineReadability, out var readability);
         SubTenantCodes.TryChuanHoa(signal.SubTenantCode, out var maKhachSan);
 
+        // ─── AR-n: che BÊN THỨ BA trước khi nội dung chạm database ───
+        //
+        // Che ở ĐÂY, không ở tầng đọc: tầng đọc thì bản gốc vẫn nằm trong kho, và mọi đường
+        // đọc tương lai (dump, backup, một truy vấn ai đó viết vội) đều đi vòng qua được.
+        // `S6` cũng nói đúng chiều này — nạp là lúc duy nhất mọi nội dung BẮT BUỘC đi qua.
+        //
+        // ⚠ Đánh đổi đã biết và CỐ Ý nhận: bản gốc KHÔNG được giữ ở đâu cả. Không thể "che
+        // rồi hoàn tác" — muốn lấy lại giá trị thật thì phải quay về nguồn (Jira). Đó là cái
+        // giá của việc không nhân bản dữ liệu người ngoài vào kho của mình.
+        var che = ThirdPartyRedactor.Redact(signal.Content);
+
         var item = new EvidenceItem
         {
             TenantId = tenant.TenantId,
-            Content = signal.Content,
+            Content = che.Text,
             SourceReference = signal.SourceReference,
             ObservedInCaseId = caseId,
             MachineReadability = readability,
@@ -171,7 +185,8 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
         {
             await db.SaveChangesAsync(ct);
             return new CaseEvidenceResult(
-                signal.SourceReference, item.Id, caseId, Created: true, SubTenantNotApplied: false);
+                signal.SourceReference, item.Id, caseId, Created: true, SubTenantNotApplied: false,
+                ThirdPartyRedacted: che.RedactedCount);
         }
         catch (DbUpdateException ex) when (IsDuplicateSourceReference(ex))
         {
@@ -187,7 +202,8 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
 
             return new CaseEvidenceResult(
                 signal.SourceReference, row.Id, row.ObservedInCaseId, Created: false,
-                SubTenantNotApplied: MaKhacVoiBanDaLuu(signal.SubTenantCode, row.SubTenantCode));
+                SubTenantNotApplied: MaKhacVoiBanDaLuu(signal.SubTenantCode, row.SubTenantCode),
+                ThirdPartyRedacted: 0);
         }
     }
 

@@ -145,7 +145,7 @@ public sealed class ReviseAssertionTests
         var record = KnowledgeBuilder.NewRecord();
         var banA = record.NewAssertion(origin: Origin.AiInference);
 
-        record.Approve("chị Lan", VisibilityScope.NoiBo);
+        record.Approve("chị Lan", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
         Assert.Equal("ACTIVE", record.DisplayState);
 
         record.ReviseAssertion(banA.Id, "đã sửa", Origin.HumanAssessment, VerificationLevel.Verified);
@@ -163,10 +163,10 @@ public sealed class ReviseAssertionTests
     {
         var record = KnowledgeBuilder.NewRecord();
         var banA = record.NewAssertion(origin: Origin.AiInference);
-        record.Approve("chị Lan", VisibilityScope.NoiBo);
+        record.Approve("chị Lan", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
         record.ReviseAssertion(banA.Id, "đã sửa", Origin.HumanAssessment, VerificationLevel.Verified);
 
-        record.Approve("chị Lan", VisibilityScope.NoiBo, "duyệt lại sau khi sửa");
+        record.Approve("chị Lan", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true, "duyệt lại sau khi sửa");
 
         Assert.False(record.NeedsReview);
         Assert.Equal("ACTIVE", record.DisplayState);

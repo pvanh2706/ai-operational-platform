@@ -45,7 +45,7 @@ public sealed class NeedsReviewTests
     {
         var record = KnowledgeBuilder.NewRecord();
         record.NewAssertion(verification: VerificationLevel.Invalidated);
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
         Assert.True(record.NeedsReview);
 
         record.Deprecate();
@@ -67,7 +67,7 @@ public sealed class NeedsReviewTests
     {
         var record = KnowledgeBuilder.NewRecord();
         record.NewAssertion(verification: VerificationLevel.Invalidated);
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         Assert.True(record.NeedsReview);
     }
@@ -83,7 +83,7 @@ public sealed class NeedsReviewTests
     {
         var record = KnowledgeBuilder.NewRecord();
         record.NewAssertion(verification: VerificationLevel.Conflicting);
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         Assert.True(record.NeedsReview);
     }
@@ -102,7 +102,7 @@ public sealed class NeedsReviewTests
     {
         var record = KnowledgeBuilder.NewRecord();
         record.NewAssertion(verification: level);
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         Assert.False(record.NeedsReview);
         Assert.Equal("ACTIVE", record.DisplayState);
@@ -122,7 +122,7 @@ public sealed class NeedsReviewTests
     {
         var record = KnowledgeBuilder.NewRecord();
         record.NewAssertion();
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         record.NewAssertion(
             kind: AssertionKind.Handling,
@@ -140,7 +140,7 @@ public sealed class NeedsReviewTests
     {
         var record = KnowledgeBuilder.NewRecord();
         record.NewAssertion();
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         var mocDuyetDau = record.LastApproval!.ApprovedAt;
         record.NewAssertion(kind: AssertionKind.Handling, createdAt: mocDuyetDau.AddTicks(1));
@@ -152,7 +152,7 @@ public sealed class NeedsReviewTests
         // test thành ra kiểm nhầm chuyện khác.
         ChoDongHoNhichQua(mocDuyetDau.AddTicks(1));
 
-        record.Approve("linh.tran", VisibilityScope.NoiBo, reason: "Đã đọc phần cách xử lý mới.");
+        record.Approve("linh.tran", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true, reason: "Đã đọc phần cách xử lý mới.");
 
         Assert.False(record.NeedsReview);
     }
@@ -190,7 +190,7 @@ public sealed class NeedsReviewTests
             origin: Origin.UserConfirmed);
 
         banGoc.ReplacedByAssertionId = banSua.Id;
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         Assert.False(record.NeedsReview);
     }
@@ -203,7 +203,7 @@ public sealed class NeedsReviewTests
     public void Record_khong_co_assertion_thi_khong_gan_co()
     {
         var record = KnowledgeBuilder.NewRecord();
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         Assert.False(record.NeedsReview);
     }
@@ -221,7 +221,7 @@ public sealed class NeedsReviewTests
         record.NewAssertion(kind: AssertionKind.CauseExists, verification: VerificationLevel.Verified);
         record.NewAssertion(kind: AssertionKind.Recognition, verification: VerificationLevel.Verified);
         record.NewAssertion(kind: AssertionKind.Handling, verification: VerificationLevel.Invalidated);
-        record.Approve("an.pham", VisibilityScope.NoiBo);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
 
         Assert.True(record.NeedsReview);
     }

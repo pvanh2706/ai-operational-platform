@@ -299,6 +299,10 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                                 .HasColumnType("character varying(256)")
                                 .HasColumnName("approved_by_actor");
 
+                            b1.Property<bool?>("CommercialDataConfirmed")
+                                .HasColumnType("boolean")
+                                .HasColumnName("commercial_data_confirmed");
+
                             b1.Property<string>("Reason")
                                 .HasMaxLength(1024)
                                 .HasColumnType("character varying(1024)")

@@ -88,12 +88,18 @@ public sealed record CaseEvidenceSignal(
 /// lẽ là sửa lại quá khứ. Muốn mã khách sạn vào 128 mẩu cũ thì phải nạp lại vào kho sạch,
 /// không phải gửi chồng lên.
 /// </param>
+/// <param name="ThirdPartyRedacted">
+/// Số giá trị của BÊN THỨ BA đã bị che ở khâu nạp (`AR-n`). <c>0</c> nghĩa là luật KHÔNG
+/// THẤY GÌ — không phải "mẩu này sạch": trên 873 mẩu thật, khối <c>&lt;NMua&gt;</c> chỉ
+/// xuất hiện ở ĐÚNG MỘT mẩu, nên độ phủ của luật chưa đo được.
+/// </param>
 public sealed record CaseEvidenceResult(
     string SourceReference,
     Guid EvidenceId,
     Guid? CaseId,
     bool Created,
-    bool SubTenantNotApplied);
+    bool SubTenantNotApplied,
+    int ThirdPartyRedacted);
 
 /// <param name="Received">Tổng số nhận được — để bên gửi đối chiếu, không phải đoán.</param>
 /// <param name="DistinctSubTenantCodes">
@@ -109,11 +115,17 @@ public sealed record CaseEvidenceResult(
 /// <c>null</c> = không có gì để nói. Có giá trị = lô này KHÔNG đẩy `AR-l` tiến thêm, và nói
 /// thẳng ra thay vì để bên gửi tự suy từ một con số.
 /// </param>
+/// <param name="ThirdPartyRedactedTotal">
+/// Tổng số chỗ đã che của cả lô. `AR-o` đặt ra luật cho cổng che ở khâu GỬI RA: *"phải đếm
+/// và ghi lại số chỗ đã che mỗi lần gọi — không để nó chạy im lặng"*. Cổng ở khâu NẠP mượn
+/// đúng luật đó, vì cùng một lý do: luật che là một cận TRÊN đã đo, nên nó phải ra số.
+/// </param>
 public sealed record CaseEvidenceBatchResult(
     int Received,
     int Created,
     int DistinctSubTenantCodes,
     string? SubTenantWarning,
+    int ThirdPartyRedactedTotal,
     IReadOnlyList<CaseEvidenceResult> Results);
 
 /// <summary>

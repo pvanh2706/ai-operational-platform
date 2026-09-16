@@ -160,7 +160,8 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
         var keys = json.RootElement.EnumerateObject().Select(p => p.Name).OrderBy(n => n);
 
         Assert.Equal(
-            ["created", "distinctSubTenantCodes", "received", "results", "subTenantWarning"],
+            ["created", "distinctSubTenantCodes", "received", "results", "subTenantWarning",
+             "thirdPartyRedactedTotal"],
             keys);
     }
 

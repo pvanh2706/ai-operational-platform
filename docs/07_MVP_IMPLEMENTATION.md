@@ -432,6 +432,157 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-37` · `AR-n` — hai loại dữ liệu, HAI cơ chế khác nhau; và một lỗi chỉ CHẠY THẬT mới bắt được
+
+**Ngày 2026-09-16.** `AR-n` là quyết định duy nhất của `docs/14` có **hai nhánh cố ý khác
+nhau**, và lý do đã ghi sẵn trong chính nó: hai loại dữ liệu khác nhau về BẢN CHẤT — một cái
+**có hình dạng**, một cái **không**. Một cơ chế chung sẽ hoặc bỏ sót loại thứ hai, hoặc bắt
+người duyệt xem cả những mẩu mà luật thừa sức xử lý.
+
+```text
+B2a  BÊN THỨ BA   có hình dạng  -> LUẬT, che ở khâu NẠP        ThirdPartyRedactor
+B2b  THƯƠNG MẠI   không hình dạng -> NGƯỜI, cổng ở khâu DUYỆT  xacNhanDuLieuThuongMai
+```
+
+---
+
+### `B2a` — che theo CẤU TRÚC, không theo từ khoá
+
+`ES-346481#comment-802977` chứa payload hoá đơn với khối `<NMua>`: tên một **đơn vị sự nghiệp
+nhà nước**, mã số thuế, địa chỉ đầy đủ. Không phải dữ liệu ezCloud, không phải của khách sạn —
+là dữ liệu **khách CỦA khách sạn**, một pháp nhân chưa từng được hỏi. `AR-l` chốt ranh giới
+HAI cấp; đây là **cấp thứ ba** nó chưa mô tả.
+
+🛑 **KHÔNG bắt theo từ khoá, và đây là chỗ đã có số để cãi.** Chuỗi `MST` xuất hiện trần ở
+**10/345** mẩu fixture, phần lớn là **MST của chính khách sạn** — một định danh CÔNG KHAI mà
+`make_fixture.py` **cố ý giữ lại** (ghi rõ trong code: *"định danh công khai"*). Một luật bắt
+theo chữ "MST" sẽ che mất đúng dữ liệu cần giữ. Luật ở đây chỉ nhìn **vị trí trong cây XML**.
+→ Cùng bài học `AR-j`: luật theo từ khoá cùng dòng đo được chỉ bắt **11%**.
+
+🛑 **CHE ĐỊNH DANH, GIỮ SỐ TIỀN — quyết định có giá, không phải cẩu thả.** Các dòng hàng
+(`<DSHHDVu>`) và tổng tiền (`<TgTTTBSo>`) nằm NGOÀI `<NMua>` và **không bị đụng**. Lý do đo
+được: nhóm SOP dày nhất trong 19 nhóm là *"Lệch cấu hình tiền/thuế"* (8 case, 63 mẩu) và nó
+chẩn đoán bằng cách **mở cùng một hoá đơn ở ba nơi rồi so từng cột tiền**. Che số tiền cho
+"an toàn" là vứt đúng bằng chứng của nhóm dày nhất — sẽ là lần thứ **BA** một bộ lọc nghe rất
+hợp lý vứt đúng phần có giá trị, sau *"chỉ lấy case đã đóng"* và *"chỉ lấy phần khách đọc
+được"*.
+→ Bỏ định danh đi thì phần còn lại là một **hoá đơn vô danh**: vẫn tra được mã lỗi, vẫn so
+  được cột tiền, mà không còn pháp nhân nào bị nêu tên.
+
+⚠ **Thẻ RỖNG KHÔNG bị che.** Che một thẻ vốn trống là biến *"không có"* thành *"có nhưng bị
+giấu"* — và chính sự rỗng đó là thứ **nhóm 2** (*NCC từ chối payload*) cần để biết nhà cung
+cấp từ chối vì **trường nào THIẾU**.
+
+🛑 **ĐỘ PHỦ: n = 1.** Trên **873 mẩu thật** (345 fixture + 528 corpus 12 tháng), `<NMua>` xuất
+hiện ở **đúng MỘT mẩu**. Đủ để chứng minh loại dữ liệu này TỒN TẠI — `AR-n` được chốt trên
+chính nó — nhưng **không đủ để nói luật phủ được bao nhiêu**. Hình dạng thứ hai sẽ tới, và nó
+sẽ không mang thẻ `NMua`.
+→ Nên **đừng đọc `thirdPartyRedacted: 0` thành "mẩu này sạch"**. Nó chỉ nghĩa là luật không
+  thấy gì.
+
+---
+
+### 🛑 LỖI CHỈ CHẠY THẬT MỚI BẮT ĐƯỢC — và nó là bài học của cả repo, lặp lại lần nữa
+
+Bản đầu dùng `string.IsNullOrWhiteSpace` để nhận ra thẻ rỗng. **Mọi test đều xanh.** Nạp
+`kp_dev` xong mở database ra xem thì thấy:
+
+```text
+<SDThoai>[ĐÃ CHE: bên thứ ba]</SDThoai>     <- thẻ này VỐN TRỐNG
+<DCTDTu>[ĐÃ CHE: bên thứ ba]</DCTDTu>       <- cũng vốn trống
+<HVTNMHang>[ĐÃ CHE: bên thứ ba]</HVTNMHang> <- cũng vốn trống
+```
+
+**Nguyên nhân:** bản xuất Jira mang xuống dòng ở dạng **chuỗi thoát nguyên văn** — một thẻ
+rỗng trong corpus chứa BỐN ký tự (gạch chéo, chữ r, gạch chéo, chữ n), không phải hai ký tự
+xuống dòng thật. `IsNullOrWhiteSpace` thấy có gạch chéo và chữ nên nói *"không rỗng"*, rồi thẻ
+trống bị dán dấu che — **đúng sự nhầm lẫn mà guard đó sinh ra để chặn, chỉ khác là nó tự gây ra.**
+
+⚠ **Vì sao test không thấy:** test viết thẻ rỗng bằng **xuống dòng thật**, vì tay người viết
+test luôn gõ xuống dòng thật. Đây là **cùng một hình dạng lỗi với `IM-24`** (mốc `+07:00` làm
+endpoint trả 500, mà 103 test cũ không thấy vì tay người viết test luôn viết UTC), và là câu
+mà README đã ghi từ 2026-09-04: *"một bộ test tự cấp vật liệu cho mình chỉ kiểm được những
+hình dạng mà người viết nghĩ ra."*
+
+→ Đã sửa bằng `LaRong()` — gỡ chuỗi thoát rồi mới hỏi rỗng — và **đã chứng minh phép thử mới
+  bắt được lỗi cũ**: quay `LaRong` về `IsNullOrWhiteSpace` thì
+  `The_rong_kieu_CORPUS_THAT_khong_bi_che` **ĐỎ**.
+
+---
+
+### `B2b` — cổng ở khâu DUYỆT, và nó là một LỜI KHAI chứ không phải phép kiểm
+
+✅ **Chủ dự án chốt 2026-09-16: cổng đặt ở khâu DUYỆT SOP.** Lý do: *"vào kho"* trong `AR-n` là
+vào **kho TRI THỨC**, không phải vào bảng evidence. Duyệt **LÀ xuất bản** — đó là lúc một mẩu
+thôi nằm trong dữ liệu thô và bắt đầu hiện ra cho người khác. Gác ở tầng mẩu thì bắt người soát
+cả những mẩu không bao giờ được dùng tới.
+
+```text
+POST /knowledge/{id}/approve   thiếu xacNhanDuLieuThuongMai  -> 400
+                               khai false                    -> 400
+                               khai true                     -> 200, LƯU lời khai
+```
+
+🛑 **ĐÂY LÀ LỜI KHAI, KHÔNG PHẢI PHÉP KIỂM — ghi thẳng ra để không ai đọc ô `true` thành "đã
+kiểm".** Hệ thống không đối chiếu được: dữ liệu thương mại (giá hợp đồng theo năm, hạn hợp
+đồng, ý định ngừng dùng — `ES-346608#comment-803265`) **không có hình dạng nào** để bắt bằng
+regex; chính `AR-n` ghi điều đó, và đó là lý do nhánh này chọn NGƯỜI.
+
+⚠ **Và hôm nay hệ thống còn không biết mẩu nguồn là những mẩu nào:** `assertion_evidence` có
+**0 dòng** (đo trên `kp_dev`), vì đường nạp bản nháp SOP chưa nối assertion với evidence. Nên
+chưa có cách nào đối chiếu lời khai — **kể cả muốn**. Khi mắt xích đó có, chỗ này mới nâng
+được từ *khai* lên *đối chiếu được*.
+
+⚠ **Ba trạng thái, đừng gộp:** `NULL` = duyệt TRƯỚC luật này · `true` = có người khai ·
+`false` thì **không bao giờ nằm trong kho** (không đi qua được cổng). Đo trên `kp_dev` sau khi
+chạy thật: **1 `true` · 7 `NULL`**. Backfill `true` cho 7 bản ghi cũ sẽ là bịa ra một lời khai
+mà không ai từng nói — đúng thứ `AP3` cấm.
+
+---
+
+### ⚠ HỆ QUẢ CỦA `K-B3`: cổng chỉ áp cho lượt nạp MỚI
+
+Sau khi build xong, mẩu `<NMua>` **đã nằm sẵn** trong `kp_dev` từ lượt nạp trước vẫn **chưa bị
+che** — đã kiểm bằng SQL, `da_che = f`. `K-B3` cấm ghi đè quá khứ, nên gửi lại không sửa được
+gì. Phải **xoá evidence rồi nạp lại** mới có kho nhất quán. Đây là lần thứ HAI cùng một hệ quả
+trong hai ngày (lần đầu: mã khách sạn, `IM-36`).
+→ **Luật rút ra: mỗi lần siết một luật ở cửa vào thì phải nạp lại kho, không chỉ chạy test.**
+
+---
+
+### Trạng thái verify
+
+```text
+✅ 302/302 xanh (184 domain + 19 hạ tầng + 99 API) · trước 282 · 0 warning
+✅ migration: thêm 1 cột `commercial_data_confirmed` (nullable), đã apply lên kp_dev
+✅ CHẠY THẬT trên app + kp_dev:
+      khối <NMua>  -> Ten/MST/DChi bị che, ba thẻ rỗng để yên, <STKNHang /> không đụng
+      số tiền      -> <TgTTTBSo> CÒN NGUYÊN
+      duyệt        -> thiếu khai 400 · khai false 400 · khai true 200
+      kho          -> 1 true · 7 NULL (duyệt trước luật)
+✅ bộ test biết ĐỎ — 4 phép đột biến:
+      thẻ rỗng cũng bị che                 -> 2 test đỏ
+      che TẤT CẢ, không chỉ khối bên mua   -> 6 domain + 3 API đỏ
+      che chồng lên dấu che cũ             -> 1 test đỏ
+      bỏ cổng xác nhận ở domain            -> 1 test đỏ (API vẫn xanh: endpoint tự kiểm
+                                              trước — cùng khuôn hai tầng của AR-m)
+✅ quet_credential_repo.py sạch
+```
+
+⚠ **CHƯA LÀM, đừng đọc thành đã xong:**
+
+```text
+· Luật B2a chỉ biết MỘT hình dạng (<NMua>), đo trên n=1. Không có cơ sở nào để nói nó
+  phủ được loại dữ liệu bên thứ ba nói chung.
+· B2b là LỜI KHAI. Không chặn được người tích cứ tích — nó chỉ làm việc đó thành một
+  hành động có tên và có dấu vết.
+· Bộ Postman vẫn chưa có request cho subTenantCode / rut-lai / coverage / xác nhận
+  thương mại. Newman không có trên máy này.
+· AR-p và AR-e/AR-i vẫn chưa code (AR-q không cần code).
+```
+
+---
+
 ## `IM-36` · Cổng `AR-l` giết đường fixture — đường DUY NHẤT chạy được trên máy không có credential Jira
 
 **Ngày 2026-09-16, ngay sau `IM-35`.** Tìm ra bằng cách **chạy**, không bằng đọc code.
@@ -2423,6 +2574,20 @@ AR-m   Nội dung ĐÃ BỊ NGƯỜI GỬI RÚT LẠI — chưa có chỗ nào �
 
 AR-n   Dữ liệu của BÊN THỨ BA và dữ liệu THƯƠNG MẠI trong evidence.        ← MỚI
        ✅ CHỐT 2026-09-15 bởi chủ dự án (phiếu `docs/14` §B2 = B2a-1 + B2b-1).
+       ✅ **ĐÃ CODE 2026-09-16 — hai cơ chế, và mục này ĐÓNG MỘT NỬA.** Chi tiết: §3 `IM-37`.
+          · B2a: `ThirdPartyRedactor` che theo CẤU TRÚC (vị trí trong cây XML), chạy ở khâu
+            NẠP trước khi nội dung chạm database. Che định danh, GIỮ số tiền — nhóm 3 chẩn
+            đoán bằng cách so từng cột tiền, che số tiền là vứt bằng chứng của nhóm dày nhất.
+          · B2b: cổng ở khâu DUYỆT (chủ dự án chốt 2026-09-16), `xacNhanDuLieuThuongMai` —
+            thiếu hoặc false là 400, khai rồi thì lời khai được LƯU cùng lượt duyệt.
+       🛑 **B2a chỉ biết MỘT hình dạng, đo trên n=1:** trên 873 mẩu thật, `<NMua>` xuất hiện ở
+          ĐÚNG MỘT mẩu. Đủ để chứng minh loại dữ liệu này tồn tại, KHÔNG đủ để nói luật phủ
+          được bao nhiêu. `thirdPartyRedacted: 0` nghĩa là luật không thấy gì, KHÔNG nghĩa là
+          mẩu sạch.
+       🛑 **B2b là LỜI KHAI, không phải phép kiểm.** Hệ thống không đối chiếu được — loại dữ
+          liệu này không có hình dạng — và hôm nay còn không biết mẩu nguồn là những mẩu nào
+          (`assertion_evidence` = 0 dòng). Nâng được lên "đối chiếu được" chỉ khi có mắt xích
+          assertion → evidence.
        → BÊN THỨ BA: che khối `<NMua>` và tương đương NGAY Ở KHÂU NẠP.
          Lý do chọn: loại này CÓ hình dạng rõ nên bắt được bằng luật, giống `AR-j`. Và che
          ở khâu nạp giữ lại được phần kỹ thuật của payload — chỗ chứa mã lỗi để tra, tức

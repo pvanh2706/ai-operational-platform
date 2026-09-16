@@ -28,8 +28,8 @@ namespace KnowledgePlatform.Api.Knowledge;
 public sealed class KnowledgeApprovalHandler(AppDbContext db, IOptions<TenancyOptions> tenancy)
 {
     public async Task<KetQuaDuyet> DuyetAsync(
-        Guid id, string nguoiDuyet, VisibilityScope phamViXem, string? lyDo,
-        CancellationToken ct = default)
+        Guid id, string nguoiDuyet, VisibilityScope phamViXem, bool xacNhanDuLieuThuongMai,
+        string? lyDo, CancellationToken ct = default)
     {
 
         if (tenancy.Value.Mode == TenancyMode.SharedMultiTenant)
@@ -55,7 +55,7 @@ public sealed class KnowledgeApprovalHandler(AppDbContext db, IOptions<TenancyOp
 
         // D4: chuỗi này là NGƯỜI, và hệ thống không có cách nào tự chứng minh điều đó.
         // Nó chỉ làm được một việc: bắt phải khai ra, để lần duyệt có chủ thể tra được.
-        record.Approve(nguoiDuyet, phamViXem, lyDo);
+        record.Approve(nguoiDuyet, phamViXem, xacNhanDuLieuThuongMai, lyDo);
 
         await db.SaveChangesAsync(ct);
 
@@ -80,7 +80,17 @@ public sealed class KnowledgeApprovalHandler(AppDbContext db, IOptions<TenancyOp
 /// Nhãn quyền xem. ⚠ Tập giá trị CHƯA ĐƯỢC KHOÁ (`AR-a`) — cố ý để dạng chuỗi đục thay vì
 /// tự phát minh một enum ở tầng code.
 /// </param>
-public sealed record YeuCauDuyet(string NguoiDuyet, string PhamViXem, string? LyDo);
+/// <param name="XacNhanDuLieuThuongMai">
+/// `AR-n` (B2b-1): người duyệt khai đã soát dữ liệu THƯƠNG MẠI trong các mẩu nguồn —
+/// giá hợp đồng theo năm, hạn hợp đồng, ý định ngừng dùng của một khách hàng
+/// (`ES-346608#comment-803265`). Thiếu hoặc <c>false</c> thì **400**.
+///
+/// 🛑 Đây là LỜI KHAI, không phải phép kiểm — loại dữ liệu này không có hình dạng nào để bắt
+/// bằng regex (chính `AR-n` ghi thế, và đó là lý do nhánh này chọn NGƯỜI). Nó làm được đúng
+/// một việc: buộc phải có người nói ra, và lưu lại ai đã nói.
+/// </param>
+public sealed record YeuCauDuyet(
+    string NguoiDuyet, string PhamViXem, bool? XacNhanDuLieuThuongMai, string? LyDo);
 
 public sealed record BanGhiDaDuyet(
     Guid Id,

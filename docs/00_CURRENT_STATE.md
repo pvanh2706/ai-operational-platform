@@ -299,6 +299,48 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> ✅ **`AR-n` ĐÃ CODE — 2026-09-16, hai loại dữ liệu HAI cơ chế. Chi tiết: `07` §3 `IM-37`.**
+>
+> ```text
+> B2a  BÊN THỨ BA    có hình dạng    -> LUẬT, che ở khâu NẠP     ThirdPartyRedactor
+> B2b  THƯƠNG MẠI    không hình dạng -> NGƯỜI, cổng ở khâu DUYỆT xacNhanDuLieuThuongMai
+> ✅ 302/302 test xanh (184 + 19 + 99), trước 282 · 0 warning · 4 phép đột biến ra đỏ
+> ✅ chạy THẬT: <NMua> bị che, số tiền CÒN NGUYÊN, duyệt thiếu khai -> 400
+> ```
+>
+> 🛑 **LỖI CHỈ CHẠY THẬT MỚI BẮT ĐƯỢC, và nó lặp lại đúng bài học của `IM-24`.** Bản đầu dùng
+> `IsNullOrWhiteSpace` để nhận ra thẻ rỗng; **mọi test xanh**. Nạp `kp_dev` rồi mở database ra
+> xem thì ba thẻ VỐN TRỐNG (`SDThoai`, `DCTDTu`, `HVTNMHang`) đều bị dán dấu che — vì bản xuất
+> Jira mang xuống dòng ở dạng **chuỗi thoát nguyên văn** (bốn ký tự, không phải hai). Test
+> không thấy vì **tay người viết test luôn gõ xuống dòng thật** — y hệt ca `+07:00` nơi 103
+> test cũ không thấy bug vì tay người viết luôn viết UTC.
+> → Đã sửa, và đã chứng minh phép thử mới BẮT được lỗi cũ (quay về bản cũ thì nó đỏ).
+>
+> 🎯 **Hai quyết định thiết kế có số đo chống lưng, ghi ra vì chúng dễ bị "sửa cho an toàn":**
+> ```text
+> che ĐỊNH DANH, giữ SỐ TIỀN   nhóm 3 (dày nhất: 8 case, 63 mẩu) chẩn đoán bằng cách so
+>                              từng cột tiền -> che tiền là lần thứ BA một bộ lọc hợp lý
+>                              vứt đúng phần có giá trị
+> thẻ RỖNG không bị che        nhóm 2 hỏng vì trường nào THIẾU -> biến "không có" thành
+>                              "có nhưng bị giấu" là xoá đúng tín hiệu chẩn đoán
+> ```
+>
+> 🛑 **HAI CHỖ ĐỪNG ĐỌC THÀNH ĐÃ XONG:**
+> ```text
+> · B2a biết ĐÚNG MỘT hình dạng (<NMua>), đo trên n=1 của 873 mẩu. `thirdPartyRedacted: 0`
+>   nghĩa là luật KHÔNG THẤY GÌ, không nghĩa là mẩu sạch.
+> · B2b là LỜI KHAI, không phải phép kiểm. Hệ thống không đối chiếu được, và hôm nay còn
+>   không biết mẩu nguồn là những mẩu nào — assertion_evidence có 0 dòng.
+> ```
+>
+> ⚠ **Và một luật vận hành rút ra, lần thứ HAI trong hai ngày:** siết một luật ở cửa vào thì
+> **phải nạp lại kho**, không chỉ chạy test. `K-B3` cấm ghi đè quá khứ, nên mẩu `<NMua>` đã
+> nằm sẵn trong `kp_dev` KHÔNG tự được che — phải xoá evidence rồi nạp lại (lần đầu là mã
+> khách sạn, `IM-36`).
+>
+> **Còn lại của `docs/14`: 3/10 chưa code** — `AR-p` · `AR-e` · `AR-i` (`AR-q` không cần code).
+
+
 > ✅ **`AR-l` + `AR-m` ĐÃ THÀNH CODE — 2026-09-16, chung MỘT migration. Chi tiết: `07` §3 `IM-35`.**
 > Trước đó 47 file đã nằm ngoài git (cả code ngày 13 lẫn phiếu quyết định ngày 15) — đã vào
 > làm **3 commit** theo chủ đề.

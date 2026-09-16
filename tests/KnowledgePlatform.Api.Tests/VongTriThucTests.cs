@@ -234,7 +234,7 @@ public sealed class VongTriThucTests(ApiDatabaseFixture db) : IClassFixture<ApiD
         var id = await NapRoiLayIdDauAsync(client, b.Nhom);
 
         var res = await client.PostAsJsonAsync($"/knowledge/{id}/approve",
-            new { nguoiDuyet = "chị Lan (support)", phamViXem = "noi-bo", lyDo = "đã đối chiếu 2 ticket" });
+            new { nguoiDuyet = "chị Lan (support)", phamViXem = "noi-bo", lyDo = "đã đối chiếu 2 ticket", xacNhanDuLieuThuongMai = true });
 
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var kq = await res.Content.ReadFromJsonAsync<JsonElement>();
@@ -243,6 +243,71 @@ public sealed class VongTriThucTests(ApiDatabaseFixture db) : IClassFixture<ApiD
         Assert.Equal("ACTIVE", kq.GetProperty("trangThaiSau").GetString());
         Assert.Equal("noi-bo", kq.GetProperty("phamViXem").GetString());
         Assert.Equal("chị Lan (support)", kq.GetProperty("nguoiDuyet").GetString());
+    }
+
+    /// <summary>
+    /// 🛑 **CỔNG `AR-n` (B2b-1) — dữ liệu THƯƠNG MẠI.** Chưa khai đã soát thì **400**, và
+    /// record **không đổi trạng thái gì cả**.
+    ///
+    /// Vì sao cổng nằm ở khâu DUYỆT chứ không ở khâu nạp: *"vào kho"* của `AR-n` là vào kho
+    /// TRI THỨC. Duyệt LÀ xuất bản — đó là lúc một mẩu thôi nằm trong dữ liệu thô và bắt đầu
+    /// hiện ra cho người khác qua một bản SOP. Ca thật: `ES-346608#comment-803265` ghi giá hợp
+    /// đồng theo năm của một khách sạn, hạn hợp đồng, và ý định ngừng dùng để chuyển sang PMS
+    /// tự xây. Loại đó KHÔNG có hình dạng nào để bắt bằng regex — nên chốt duy nhất là người.
+    ///
+    /// ⚠ Và phép thử này **không chứng minh dữ liệu thương mại đã bị chặn**. Nó chứng minh
+    /// đúng một việc: không ai xuất bản được mà không khai. Hệ thống KHÔNG đối chiếu được lời
+    /// khai đó, và hôm nay còn không biết mẩu nguồn là những mẩu nào (`assertion_evidence` có
+    /// 0 dòng). Đọc nhầm chỗ này thành "đã kiểm" là đúng thứ `G11` cấm.
+    /// </summary>
+    [Fact]
+    public async Task Chua_xac_nhan_du_lieu_thuong_mai_thi_KHONG_duyet_duoc()
+    {
+        var b = MoiBoi();
+        using var app = Dedicated(b, db.TenantAKey);
+        var client = app.CreateClient();
+
+        var id = await NapRoiLayIdDauAsync(client, b.Nhom);
+
+        var thieu = await client.PostAsJsonAsync($"/knowledge/{id}/approve",
+            new { nguoiDuyet = "chị Lan", phamViXem = "noi-bo" });
+        Assert.Equal(HttpStatusCode.BadRequest, thieu.StatusCode);
+        Assert.Contains("xacNhanDuLieuThuongMai", await thieu.Content.ReadAsStringAsync());
+
+        var khaiFalse = await client.PostAsJsonAsync($"/knowledge/{id}/approve",
+            new { nguoiDuyet = "chị Lan", phamViXem = "noi-bo", xacNhanDuLieuThuongMai = false });
+        Assert.Equal(HttpStatusCode.BadRequest, khaiFalse.StatusCode);
+
+        // Record KHÔNG được nhúc nhích — không có nửa vời.
+        await using var ctx = db.OpenContext(db.TenantAId);
+        var luu = await ctx.KnowledgeRecords.FirstAsync(r => r.Id == id);
+        Assert.Equal(StoredLifecycleState.Draft, luu.Lifecycle);
+        Assert.Null(luu.LastApproval);
+    }
+
+    /// <summary>
+    /// Khai rồi thì lời khai được **LƯU LẠI** cùng lượt duyệt. Không lưu thì nó chỉ là một ô
+    /// tích rồi biến mất — `M2` phần (c) đã dạy đúng điều đó: một lượt duyệt không để lại bằng
+    /// chứng thì không phân biệt được với một lượt chưa ai làm.
+    /// </summary>
+    [Fact]
+    public async Task Xac_nhan_roi_thi_loi_khai_duoc_LUU_vao_luot_duyet()
+    {
+        var b = MoiBoi();
+        using var app = Dedicated(b, db.TenantAKey);
+        var client = app.CreateClient();
+
+        var id = await NapRoiLayIdDauAsync(client, b.Nhom);
+
+        var res = await client.PostAsJsonAsync($"/knowledge/{id}/approve",
+            new { nguoiDuyet = "chị Lan", phamViXem = "noi-bo", xacNhanDuLieuThuongMai = true });
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+
+        await using var ctx = db.OpenContext(db.TenantAId);
+        var luu = await ctx.KnowledgeRecords.FirstAsync(r => r.Id == id);
+
+        Assert.True(luu.LastApproval!.CommercialDataConfirmed);
+        Assert.Equal("chị Lan", luu.LastApproval.ApprovedByActor);
     }
 
     /// <summary>
@@ -266,7 +331,7 @@ public sealed class VongTriThucTests(ApiDatabaseFixture db) : IClassFixture<ApiD
         client.DefaultRequestHeaders.Add("X-Tenant-Key", db.TenantAKey);
 
         var res = await client.PostAsJsonAsync($"/knowledge/{id}/approve",
-            new { nguoiDuyet = "ai đó", phamViXem = "noi-bo" });
+            new { nguoiDuyet = "ai đó", phamViXem = "noi-bo", xacNhanDuLieuThuongMai = true });
 
         Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
         Assert.Contains("AR-l", await res.Content.ReadAsStringAsync());
@@ -281,7 +346,7 @@ public sealed class VongTriThucTests(ApiDatabaseFixture db) : IClassFixture<ApiD
         var id = await NapRoiLayIdDauAsync(client, b.Nhom);
 
         var res = await client.PostAsJsonAsync($"/knowledge/{id}/approve",
-            new { nguoiDuyet = "", phamViXem = "noi-bo" });
+            new { nguoiDuyet = "", phamViXem = "noi-bo", xacNhanDuLieuThuongMai = true });
 
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
@@ -296,7 +361,7 @@ public sealed class VongTriThucTests(ApiDatabaseFixture db) : IClassFixture<ApiD
         var id = await NapRoiLayIdDauAsync(client, b.Nhom);
 
         var res = await client.PostAsJsonAsync($"/knowledge/{id}/approve",
-            new { nguoiDuyet = "chị Lan", phamViXem = "" });
+            new { nguoiDuyet = "chị Lan", phamViXem = "", xacNhanDuLieuThuongMai = true });
 
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
@@ -314,7 +379,7 @@ public sealed class VongTriThucTests(ApiDatabaseFixture db) : IClassFixture<ApiD
 
         using var appB = Dedicated(b, db.TenantBKey);
         var res = await appB.CreateClient().PostAsJsonAsync($"/knowledge/{id}/approve",
-            new { nguoiDuyet = "người của B", phamViXem = "noi-bo" });
+            new { nguoiDuyet = "người của B", phamViXem = "noi-bo", xacNhanDuLieuThuongMai = true });
 
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
@@ -521,7 +586,7 @@ public sealed class VongTriThucTests(ApiDatabaseFixture db) : IClassFixture<ApiD
         foreach (var id in ids)
         {
             var res = await client.PostAsJsonAsync($"/knowledge/{id}/approve",
-                new { nguoiDuyet = "chị Lan (support)", phamViXem = "noi-bo" });
+                new { nguoiDuyet = "chị Lan (support)", phamViXem = "noi-bo", xacNhanDuLieuThuongMai = true });
             res.EnsureSuccessStatusCode();
         }
     }
