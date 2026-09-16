@@ -299,6 +299,41 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> ✅ **PHÉP KIỂM ĐẦU-CUỐI ĐÃ CÓ — 2026-09-16. `scripts/kiem_dau_cuoi.py`, chi tiết `07` §3 `IM-38`.**
+> Ba ngày qua có ba lỗi thật, và **hai trong ba nằm đúng chỗ `dotnet test` không nhìn thấy**.
+> Nên lần này đo thẳng khoảng trống thay vì sửa tiếp từng lỗi:
+>
+> ```text
+> sản phẩm có           13 endpoint
+> bộ Postman phủ         5      (đứng nguyên từ 2026-08-30, trước cả vòng tri thức)
+> chưa từng được gọi     8      gồm TOÀN BỘ vòng tri thức
+> ngoài bộ test C#
+> ```
+>
+> 🛑 **Không phải lỗi của bộ test, và thêm test cũng không chữa được.** Bộ test tự dựng payload
+> của chính nó — đúng cho việc nó làm, nhưng nghĩa là mọi **bên gửi THẬT** nằm ngoài tầm nhìn
+> trình biên dịch. Minh chứng sạch trong cùng ngày: siết `Approve()` thêm một tham số bắt buộc
+> thì trình biên dịch bắt **27 chỗ gọi C#** ngay, và **không bắt được chỗ nào** trong hai script
+> Python + bộ Postman.
+>
+> 🎯 **ĐÃ CHỨNG MINH nó có răng** — cắm lại đúng hai lỗi lịch sử rồi chạy, không tuyên bố suông:
+> ```text
+> đột biến kiểu IM-36   bỏ subTenantCode khỏi load_fixture.py  -> mục F ĐỎ
+> đột biến kiểu IM-37   quay LaRong về IsNullOrWhiteSpace      -> mục B ĐỎ (nhận 4, mong 3)
+> ```
+> ⚠ Và phép thử thứ hai **chỉ bắt được vì payload mang HÌNH DẠNG THẬT**: bản đầu viết thẻ rỗng
+> bằng xuống dòng thật nên nó đếm ra 3 ở cả bản hỏng lẫn bản đúng — tức xanh trên chính cái bug
+> nó sinh ra để chặn. Cùng một bài học lại xuất hiện ở ngay công cụ chống nó: **vật liệu phải
+> lấy từ dữ liệu, đừng lấy từ trí nhớ người viết.**
+>
+> ```text
+> ✅ 32 phép kiểm · 0 sai · mã thoát 0   ·   302/302 test C# xanh · 0 warning
+> ⚠ Bộ Postman VẪN chưa cập nhật — file này không thay nó, chỉ làm việc nó lỗi thời thôi im lặng.
+> ```
+>
+> **Còn lại của `docs/14`: 3/10 chưa code** — `AR-p` · `AR-e` · `AR-i`.
+
+
 > ✅ **`AR-n` ĐÃ CODE — 2026-09-16, hai loại dữ liệu HAI cơ chế. Chi tiết: `07` §3 `IM-37`.**
 >
 > ```text

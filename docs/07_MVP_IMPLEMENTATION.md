@@ -432,6 +432,103 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-38` · 8/13 endpoint chưa từng được gọi bởi thứ gì ngoài bộ test — và phép kiểm mới BẮT ĐƯỢC cả hai lỗi của hai ngày trước
+
+**Ngày 2026-09-16, lượt cuối.** Ba ngày qua có ba lỗi thật, và **hai trong ba nằm đúng chỗ
+`dotnet test` không nhìn thấy**. Đây không phải trùng hợp, nên lần này đo thẳng khoảng trống
+đó thay vì sửa tiếp từng lỗi:
+
+```text
+Sản phẩm có           13 endpoint
+Bộ Postman phủ         5   health · health/ready · tenant-boundary · case-observed · case-evidence
+CHƯA TỪNG được gọi     8   sop-draft · approve · hoi · sua · GET knowledge/{id}
+ngoài bộ test C#           GET cases/{k}/evidence · evidence/rut-lai · sub-tenant-coverage
+```
+
+Bộ Postman đứng nguyên từ **2026-08-30** — trước cả vòng tri thức (`IM-31`, ngày 13). Nó
+không "hơi lỗi thời"; nó thiếu **hơn một nửa sản phẩm**.
+
+---
+
+### Vì sao không phải lỗi của bộ test, và vì sao thêm test cũng không chữa được
+
+Bộ test **tự dựng payload của chính nó**. Đó là điều đúng đắn cho việc nó làm (kiểm LUẬT, kể
+cả những nhánh không diễn đạt được qua HTTP), nhưng nó cũng nghĩa là: mọi **bên gửi THẬT** đều
+nằm ngoài tầm nhìn của trình biên dịch — hai script Python, một bộ Postman, và về sau là phần
+mềm của khách.
+
+Hôm nay có một minh chứng sạch cho cả hai chiều: siết `Approve()` thêm một tham số bắt buộc
+thì trình biên dịch bắt **27 chỗ gọi trong C#** ngay lập tức — và **không bắt được chỗ nào**
+trong số các bên gửi kia.
+
+---
+
+### `scripts/kiem_dau_cuoi.py` — gọi thật cả 13 endpoint, chỉ dùng thư viện chuẩn
+
+```text
+A  Sức khoẻ          health · health/ready · tenant-boundary
+B  Đường nạp         case-observed (idempotent) · case-evidence (+ cổng AR-l, che AR-n)
+C  Đường đọc         cases/{k}/evidence · internal/sub-tenant-coverage
+D  AR-m              evidence/rut-lai  (200 · 409 lần hai · 404 · 400 thiếu người)
+E  Vòng tri thức     sop-draft · hoi · approve (400 AR-n · 400 AR-a · 200) · knowledge/{id} · sua
+F  Bên gửi THẬT      chạy chính `load_fixture.py`, kiểm mã thoát
+```
+
+⚠ **Vì sao KHÔNG dùng newman:** bộ Postman cần `newman`, thứ **không có trên mọi máy** (đã đo
+2026-09-16: máy này không có, `npx --no-install` từ chối cài). Một phép kiểm chỉ chạy được
+trên một số máy là một phép kiểm sẽ bị bỏ qua. File này chỉ dùng thư viện chuẩn của Python,
+đúng quy ước sẵn có của repo (`load_fixture.py`, `check_corpus.py`, `quet_credential_repo.py`).
+
+🛑 **MỤC `F` PHẢI TỒN TẠI RIÊNG, và đây là chỗ dễ làm ẩu nhất.** Mục `A`-`E` dựng payload bằng
+CHÍNH file này, nên chúng **luôn khai đủ trường mới** — và sẽ xanh ngay cả khi mọi bên gửi
+khác của repo đã chết. Đó đúng là chuyện đã xảy ra: ngày 2026-09-16 `AR-l` thêm một trường bắt
+buộc, `load_fixture.py` nhận **400 cả lô**, mà 302 test xanh và mọi endpoint xanh. Cách duy
+nhất bắt được là **chạy chính nó**.
+
+---
+
+### 🎯 Đã CHỨNG MINH phép kiểm có răng — tái hiện đúng hai lỗi lịch sử
+
+Không tuyên bố suông "nó sẽ bắt được"; đã cắm lại đúng hai lỗi rồi chạy:
+
+```text
+ĐỘT BIẾN kiểu IM-36   bỏ subTenantCode khỏi load_fixture.py (giả lập bên gửi lỗi thời)
+                      -> mục F ĐỎ: "load_fixture.py chạy được (mã thoát 0): nhận 1, mong 0"
+
+ĐỘT BIẾN kiểu IM-37   quay LaRong về IsNullOrWhiteSpace trong ThirdPartyRedactor
+                      -> mục B ĐỎ: "AR-n che ĐÚNG 3 ... nhận 4, mong 3"
+```
+
+⚠ **Và phép thử thứ hai chỉ bắt được vì payload mang HÌNH DẠNG THẬT.** Bản đầu của file này
+viết thẻ rỗng bằng xuống dòng thật, nên nó đếm ra 3 ở **cả bản hỏng lẫn bản đúng** — tức nó sẽ
+xanh trên chính cái bug nó được viết ra để chặn. Đã sửa payload sang **chuỗi thoát nguyên
+văn** như corpus thật. Cùng một bài học lại xuất hiện ở ngay cái công cụ sinh ra để chống nó:
+*vật liệu phải lấy từ dữ liệu, đừng lấy từ trí nhớ của người viết.*
+
+---
+
+### Trạng thái verify
+
+```text
+✅ 32 phép kiểm · 0 sai · mã thoát 0, chạy thật trên app + kp_dev
+✅ 302/302 test C# xanh · 0 warning  (không đụng code sản phẩm ở lượt này)
+✅ 2 phép đột biến ra đỏ, mỗi phép tái hiện một lỗi thật của hai ngày trước
+✅ quet_credential_repo.py sạch
+```
+
+⚠ **Giới hạn, ghi ra để không ai đọc quá:**
+
+```text
+· Nó KHÔNG thay bộ test. Bộ test kiểm LUẬT; file này kiểm HỢP ĐỒNG còn gọi được —
+  và đó là thứ đã hỏng hai lần trong khi mọi test vẫn xanh.
+· Nó GHI dữ liệu thật vào kho đang trỏ tới (tiền tố `kiem-dau-cuoi:` để lọc ra được).
+  Dùng cho kho dev/CI, không chạy vào kho của khách.
+· Bộ Postman VẪN chưa được cập nhật. File này không thay nó — nó chỉ làm cho việc
+  Postman lỗi thời thôi im lặng.
+```
+
+---
+
 ## `IM-37` · `AR-n` — hai loại dữ liệu, HAI cơ chế khác nhau; và một lỗi chỉ CHẠY THẬT mới bắt được
 
 **Ngày 2026-09-16.** `AR-n` là quyết định duy nhất của `docs/14` có **hai nhánh cố ý khác

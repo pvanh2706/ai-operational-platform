@@ -211,6 +211,18 @@ có cách nào tự suy từ câu chữ — suy từ câu chữ là đoán, trá
 dotnet test src/KnowledgePlatform.slnx     # 302 test, tự apply migration
 ```
 
+Và một phép kiểm **thứ hai**, kiểm thứ khác hẳn — `dotnet test` **không thấy được** nó:
+
+```bash
+dotnet run --project src/KnowledgePlatform.Api    # cửa sổ khác
+python scripts/kiem_dau_cuoi.py                   # gọi THẬT cả 13 endpoint
+```
+
+Bộ test kiểm **LUẬT** và tự dựng payload của chính nó — đúng đắn cho việc nó làm, nhưng nghĩa
+là mọi **bên gửi thật** (hai script Python, bộ Postman, phần mềm của khách) nằm ngoài tầm nhìn
+của trình biên dịch. `kiem_dau_cuoi.py` kiểm **HỢP ĐỒNG còn gọi được**, và mục `F` của nó chạy
+chính `load_fixture.py` — thứ đã **chết 400 cả lô** một lần trong khi 302 test vẫn xanh.
+
 Test chạy trên **PostgreSQL thật**, cố ý. Row-level security là tính năng của database;
 test nó bằng in-memory provider là test một thứ khác rồi tự cho mình cảm giác an toàn.
 

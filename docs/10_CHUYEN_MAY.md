@@ -144,7 +144,19 @@ dotnet ef database update --project src/KnowledgePlatform.Infrastructure \
 # 3. Tenant cho máy dev
 psql -U kp_app -h localhost -d kp_dev -f scripts/dev-seed-tenant.sql
 
-# 4. Kiểm — phải 282/282 xanh (170 domain + 19 hạ tầng + 93 API)
+# 4. Kiểm — HAI phép, và phép thứ hai kiểm thứ bộ test không thấy
+
+⚠ **Chỉ chạy `dotnet test` là CHƯA ĐỦ để tin máy mới dựng đúng.** Bộ test tự dựng payload của
+chính nó, nên nó xanh kể cả khi mọi script nạp của repo đã chết — đã xảy ra thật 2026-09-16
+(`07` §3 `IM-36`). Chạy cả hai:
+
+```bash
+dotnet test src/KnowledgePlatform.slnx            # 302/302
+dotnet run --project src/KnowledgePlatform.Api    # cửa sổ khác
+python scripts/kiem_dau_cuoi.py                   # 32 phép kiểm, cả 13 endpoint + load_fixture
+```
+
+# 4b. Chi tiết bộ test — phải 302/302 xanh (184 domain + 19 hạ tầng + 99 API)
 dotnet test src/KnowledgePlatform.slnx
 
 # 4b. Kiểm rò credential vào file git theo dõi. Chạy ĐƯỢC ngay cả khi chưa có corpus —
