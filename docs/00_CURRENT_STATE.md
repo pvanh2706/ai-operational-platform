@@ -315,15 +315,30 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > ```text
 > ✅ 1  Xác thực NGƯỜI GỌI + AR-e          XONG 2026-09-16 — IM-39
 > ✅ 2  Webhook ra + link token có hạn     XONG 2026-09-16 — IM-40
->    3  Định tuyến: ngưỡng thành cấu hình, impl thật chờ credit   <- VIỆC TIẾP THEO
+>    3  Định tuyến: ngưỡng thành cấu hình, impl thật chờ credit
 >    4  Nối ISopDrafter vào host + trần chi tiêu
 >    5  Hai loại tín hiệu còn lại (F1-1 · F2-1)
 >    6  Hồ sơ chạy local Windows: PublicBaseUrl + biến môi trường
 >    7  OpenAPI first-party + Postman cho đủ bộ
 >    8  Kênh 2 + entity Document + MinIO
 >    9  FTS: tìm N case cũ TRONG nhóm
->   10  Phép kiểm nghiệm thu HAI TENANT    <- I2-1 nói đây LÀ thước đo "xong"
+> ✅ 10 Phép kiểm nghiệm thu HAI TENANT     XONG 2026-09-16 — IM-41
 > ```
+>
+> 🛑 **BƯỚC 10 LÀM SỚM (không theo thứ tự số) VÀ NÓ TÌM RA BA THỨ 344 TEST KHÔNG THẤY:**
+> ```text
+> 1  bản deploy DEDICATED của khách A đang LÀM VIỆC THAY khách B (vòng quét nền không
+>    hỏi chế độ deploy). Không rò dữ liệu -> mọi cơ chế tenant cũ đều XANH.
+> 2  payload VIẾT TAY làm endpoint trả 500 thay vì 400 (`dieuKien` gõ thay `quanSat`).
+>    Bộ test C# không tạo ra được ca này: nó luôn dựng object có kiểu.
+> 3  tạo khách hàng mới CHỈ làm được bằng SQL tay -> chưa phải "onboard được".
+> ```
+>
+> 🛑 **VÀ PHÁT HIỆN LỚN NHẤT KHÔNG SỬA ĐƯỢC BẰNG CODE:** ở chế độ shared, **DUYỆT bị từ
+> chối bằng 409** — cổng `AR-l`, cố ý. Hai khách onboard được, hỏi được, nhưng kho của họ
+> không có tri thức nào duyệt được, nên `/hoi` trả KHÔNG BIẾT cho mọi câu.
+> → **`I2-1` mới đạt nửa trên**: *onboard được* đã đo xong; *dùng thật được* còn chặn ở
+> `AR-l`, mà `AR-l` cần `G1-1` — thêm field mã khách sạn vào Jira, việc của tổ chức.
 >
 > 🎯 **Một hình dạng chung mà không câu hỏi nào tự nó cho thấy:** ba quyết định độc lập
 > (`D3-1` tóm tắt+link · `E3-1` chỉ người có quyền bấm · `S7` nhãn quyền xem) **cùng đòi một

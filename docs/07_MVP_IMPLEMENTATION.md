@@ -432,6 +432,71 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-41` · Phép kiểm nghiệm thu HAI KHÁCH HÀNG — và nó tìm ra BA thứ mà 344 test không thấy
+
+**Ngày 2026-09-16, bước 10 của lộ trình mức 3.** `I2-1` chốt nghiệm thu mức 3 là *"onboard
+được khách thứ hai mà không sửa code"*. Bước này dựng cái thước cho câu đó, và làm ngay sau
+bước 1-2 chứ không để cuối — theo đúng nguyên tắc *làm trước cái mà làm sau sẽ đắt*: nếu có
+rò trong phần hạ tầng vừa dựng thì mọi bước sau xây lên trên nó.
+
+```text
+tests/.../HaiKhachHangTests.cs   5 test hai tenant, gọi được cả vòng quét NỀN
+scripts/kiem_hai_khach.py        dựng 2 khách từ con số 0, CHỈ bằng CLI + HTTP công khai
+--tao-khach-hang                 lệnh mới — trước đó tạo khách phải viết SQL tay
+✅ 363/363 test xanh (212 + 19 + 132), trước 344 · 0 warning
+✅ đột biến "mọi lượt dùng chung tenant đầu" -> 4/5 test đỏ
+✅ chạy THẬT ở chế độ SHARED: 24 phép kiểm · 0 sai
+```
+
+**🛑 BA THỨ TÌM RA, và không thứ nào bộ test cũ thấy được:**
+
+```text
+1  Bản deploy DEDICATED của khách A ĐANG LÀM VIỆC THAY khách B.
+   Vòng quét nền duyệt danh bạ tenant mà không hỏi chế độ deploy. KHÔNG rò dữ liệu —
+   gói của B vẫn tới đích của B — nên RlsGuard, policy RLS và mọi test tenant cũ đều
+   XANH. Cái sai là PHẠM VI LÀM VIỆC, trái `G13`. -> Đã sửa: PhamViAsync().
+
+2  Payload VIẾT TAY làm endpoint trả 500 thay vì 400.
+   Gõ `dieuKien` thay cho `quanSat` -> NullReferenceException ở tận tầng chuyển đổi.
+   -> Đã sửa: SopDraftKiemTra ở cửa vào.
+
+3  Tạo khách hàng mới CHỈ làm được bằng SQL tay.
+   Không phải "sửa code", nhưng cũng không phải *onboard được*. -> --tao-khach-hang.
+```
+
+**🎯 VÀ MỘT PHÂN BIỆT TÔI ĐÃ ĐỌC NHẦM, ghi ra vì nó quyết định chỗ đặt phép kiểm:**
+`System.Text.Json` xử lý hai kiểu trường **khác hẳn nhau**, và tôi đã tưởng chúng như nhau.
+```text
+required property            thiếu -> NÉM JsonException -> ASP.NET đổi thành 400. KÍN SẴN.
+tham số POSITIONAL RECORD    thiếu -> IM LẶNG thành null. Không ai ném gì.
+```
+`SopBranch`, `SopSymptom`, `SopFixStep`, `SopDistribution` đều là positional record — đó mới
+là nhóm sinh ra lỗi 500, và là nhóm `SopDraftKiemTra` thật sự canh. Có một test riêng ghim
+đúng ranh giới này, để người sau không tưởng bộ kiểm đang giữ cả nhóm thứ nhất.
+
+**🛑 PHÁT HIỆN LỚN NHẤT, VÀ NÓ KHÔNG SỬA ĐƯỢC BẰNG CODE:**
+
+```text
+Ở chế độ SHARED, DUYỆT bị từ chối bằng 409 — cổng `AR-l` (`IM-31`), CỐ Ý.
+-> Hai khách onboard được, hỏi được, nhưng kho của họ KHÔNG có tri thức nào duyệt được.
+-> /hoi trả KHÔNG BIẾT cho mọi câu.
+```
+Nghĩa là **`I2-1` chỉ đạt được nửa trên**: *onboard được* thì đo xong và đúng; *dùng thật
+được* thì còn chặn ở `AR-l`, mà `AR-l` cần `G1-1` — thêm field mã khách sạn vào Jira, việc
+của tổ chức. Đây không phải lỗi phát sinh: tài liệu đã nói cổng ấy phải ở nguyên. Cái mới là
+**giờ nó thành một con số trong báo cáo nghiệm thu**, thay vì một dòng cảnh báo trong tài liệu.
+
+**⚠ Và chính phép kiểm này suýt XANH VÌ LÝ DO SAI.** Bản đầu kiểm chế độ shared bằng cách gọi
+không khoá rồi mong 401 — nhưng một bản DEDICATED có đòi khoá cũng trả 401 y hệt. Lần chạy
+đầu vì thế đo nhầm một tiến trình dedicated còn sót trên cổng 5119, rồi báo ba chỗ sai vô
+nghĩa. → Đã đổi sang **hỏi thẳng** `mode` từ `/internal/tenant-boundary`. Một phép kiểm xanh
+vì lý do sai nguy hiểm hơn một phép kiểm không có.
+
+**⚠ Còn lại:** phép kiểm này đo ONBOARD ĐƯỢC, không đo TRẢ LỜI CÓ ÍCH — thước đó là `M1`/`M2`
+(`docs/02`), và nó phụ thuộc người làm support, không phụ thuộc code.
+
+---
+
 ## `IM-40` · Đường TRẢ KẾT QUẢ VỀ đã tồn tại — và hai lần bộ test tự phơi ra chỗ nó đang nói dối
 
 **Ngày 2026-09-16, bước 2 của lộ trình mức 3 (`docs/18`).** Trước hôm nay sản phẩm tự mô tả

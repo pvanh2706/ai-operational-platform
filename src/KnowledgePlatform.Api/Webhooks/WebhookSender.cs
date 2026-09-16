@@ -242,12 +242,17 @@ public sealed class WebhookSenderService(
         }
     }
 
-    private async Task MotVongAsync(CancellationToken ct)
+    /// <summary>
+    /// Một vòng quét: duyệt TỪNG khách hàng, mỗi khách một scope riêng.
+    ///
+    /// ⚠ **Public để test gọi được, và đó không phải sự tiện tay.** Đây là chỗ DUY NHẤT
+    /// trong hệ thống gọi <c>Resolve()</c> ngoài middleware — tức đúng chỗ một lỗ rò tenant
+    /// sẽ nấp, và là chỗ RLS **không cứu được**: tenant đã được resolve, chỉ là resolve nhầm
+    /// người. Một cơ chế canh gác mà bộ test không với tới được thì không ai biết nó còn sống.
+    /// </summary>
+    public async Task MotVongAsync(CancellationToken ct)
     {
-        var danhBa = services.GetRequiredService<Tenancy.TenantDirectory>();
-        var tenants = await danhBa.LietKeIdAsync(ct);
-
-        foreach (var tenantId in tenants)
+        foreach (var tenantId in await PhamViAsync(ct))
         {
             if (ct.IsCancellationRequested) return;
 
@@ -260,5 +265,29 @@ public sealed class WebhookSenderService(
 
             await scope.ServiceProvider.GetRequiredService<WebhookSender>().GuiDenHanAsync(ct);
         }
+    }
+
+    /// <summary>
+    /// Những khách hàng mà BẢN DEPLOY NÀY được phép làm việc cho.
+    ///
+    /// 🛑 **Bản dedicated chỉ phục vụ ĐÚNG khách của nó, kể cả khi database tình cờ chứa
+    /// nhiều tenant** — và đây là một lỗi THẬT, tìm ra bằng phép kiểm nghiệm thu hai khách
+    /// hàng (`I2-1`), không phải bằng đọc lại code.
+    ///
+    /// Bản đầu duyệt thẳng danh bạ tenant. Nó KHÔNG rò dữ liệu qua ranh giới — gói của khách
+    /// B vẫn tới đúng địa chỉ của B — nên `RlsGuard`, policy RLS và mọi test tenant cũ đều
+    /// xanh. Cái sai là **phạm vi làm việc**: một máy dựng cho khách A tự đi gọi ra địa chỉ
+    /// của khách B. Trái `G13` (*một bản dedicated phục vụ MỘT khách*), và không ai nhìn ra
+    /// cho tới lúc có người hỏi *"sao máy này lại gọi ra đó"*.
+    ///
+    /// ⚠ Đúng loại lỗi mà cả dự án nhắm vào: không crash, không đỏ test nào, chỉ sai im lặng.
+    /// </summary>
+    private async Task<IReadOnlyList<Guid>> PhamViAsync(CancellationToken ct)
+    {
+        var cuaBanDeploy = services.GetRequiredService<Tenancy.DedicatedTenant>().TenantId;
+        if (cuaBanDeploy.HasValue) return [cuaBanDeploy.Value];
+
+        // Chế độ shared: phục vụ mọi khách, và mỗi khách một scope riêng.
+        return await services.GetRequiredService<Tenancy.TenantDirectory>().LietKeIdAsync(ct);
     }
 }

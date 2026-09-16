@@ -17,7 +17,11 @@ namespace KnowledgePlatform.Api.Tests;
 /// </summary>
 public sealed class BenNhanGia : HttpMessageHandler
 {
-    public List<(string Body, string? ChuKy, string? MaGoi)> DaNhan { get; } = [];
+    public List<(string Url, string Body, string? ChuKy, string? MaGoi)> DaNhan { get; } = [];
+
+    /// <summary>Những gói đã tới một địa chỉ cụ thể — dùng để hỏi "khách A có nhận nhầm của B không".</summary>
+    public IReadOnlyList<(string Url, string Body, string? ChuKy, string? MaGoi)> ToiDia(string url) =>
+        [.. DaNhan.Where(x => x.Url == url)];
 
     public HttpStatusCode TraVe { get; set; } = HttpStatusCode.OK;
 
@@ -26,6 +30,7 @@ public sealed class BenNhanGia : HttpMessageHandler
         var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(ct);
 
         DaNhan.Add((
+            request.RequestUri!.ToString(),
             body,
             request.Headers.TryGetValues(WebhookSender.HeaderChuKy, out var s) ? s.FirstOrDefault() : null,
             request.Headers.TryGetValues(WebhookSender.HeaderMaGoi, out var m) ? m.FirstOrDefault() : null));
@@ -282,7 +287,7 @@ public sealed class WebhookGuiVeTests(ApiDatabaseFixture db) : IClassFixture<Api
 
         Assert.Equal(1, await GuiMotVongAsync(app, b));
 
-        var (body, chuKy, maGoi) = _benNhan.DaNhan.Single();
+        var (_, body, chuKy, maGoi) = _benNhan.DaNhan.Single();
         var goi = JsonSerializer.Deserialize<JsonElement>(body);
 
         Assert.Equal("1", goi.GetProperty("phienBan").GetString());

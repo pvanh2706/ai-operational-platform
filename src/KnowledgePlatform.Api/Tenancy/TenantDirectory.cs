@@ -36,6 +36,34 @@ public sealed class TenantDirectory(string connectionString)
     }
 
     /// <summary>
+    /// Dựng một công ty khách hàng mới, trả về id.
+    ///
+    /// ⚠ Ghi thẳng bằng SQL chứ không qua <c>AppDbContext</c>, cùng lý do với phần đọc ở trên:
+    /// lúc này chưa có tenant nào để mà đặt vào <c>ITenantContext</c>. Bảng <c>kp.tenant</c>
+    /// không có RLS nên ghi được — và đó chính là điều làm nó thành DANH BẠ chứ không phải
+    /// dữ liệu của một khách hàng nào.
+    /// </summary>
+    public async Task<Guid> TaoAsync(string externalKey, string ten, CancellationToken ct = default)
+    {
+        var id = Guid.CreateVersion7();
+
+        await using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync(ct);
+
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText =
+            "INSERT INTO kp.tenant (\"Id\", \"Name\", \"ExternalKey\", \"CreatedAt\") " +
+            "VALUES (@id, @name, @key, @createdAt)";
+        cmd.Parameters.AddWithValue("id", id);
+        cmd.Parameters.AddWithValue("name", ten);
+        cmd.Parameters.AddWithValue("key", externalKey);
+        cmd.Parameters.AddWithValue("createdAt", DateTimeOffset.UtcNow);
+
+        await cmd.ExecuteNonQueryAsync(ct);
+        return id;
+    }
+
+    /// <summary>
     /// Liệt kê id của MỌI công ty khách hàng. Dùng cho tiến trình nền — nơi không có request
     /// nào để suy ra tenant, nên phải duyệt từng khách một.
     ///

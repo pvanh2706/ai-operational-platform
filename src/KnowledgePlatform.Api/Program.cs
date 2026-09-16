@@ -362,24 +362,22 @@ app.MapPost("/knowledge/sop-draft", async (
         SopDraftIngestHandler handler,
         CancellationToken ct) =>
     {
-        if (string.IsNullOrWhiteSpace(draft.Nhom))
+        // 🛑 Kiểm CẢ BÊN TRONG, không chỉ hai trường ngoài cùng.
+        //
+        // `SopDraft` khai `required` gần hết, nhưng `required` chỉ ràng buộc mã C# KHỞI TẠO
+        // nó — một gói JSON thiếu trường (hoặc gõ SAI TÊN trường) vẫn dựng được object với
+        // `null` nằm bên trong, rồi nổ bằng NullReferenceException ở tận tầng chuyển đổi:
+        // **500, không phải 400**. Đã xảy ra thật với `dieuKien` gõ thay cho `quanSat`.
+        //
+        // ⚠ Bộ test C# không bao giờ thấy ca này: nó luôn dựng SopDraft bằng object
+        //   initializer, nơi trình biên dịch ép đủ trường. Chỉ payload VIẾT TAY — đúng thứ
+        //   bên tích hợp gửi — mới tạo ra được. Xem SopDraftKiemTra.
+        if (SopDraftKiemTra.KiemTra(draft) is { } choSai)
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status400BadRequest,
-                title: "Bản nháp thiếu tên nhóm",
-                detail: "`nhom` là thứ nối bản nháp với bộ định tuyến. Thiếu nó thì record nạp vào " +
-                        "kho sẽ không bao giờ được tra ra.");
-        }
-
-        if (draft.BuocSua.Count == 0)
-        {
-            // Không bước sửa nào = không nguyên nhân nào = nạp xong kho vẫn rỗng.
-            // Nói ra thay vì trả 200 với created 0, thứ đọc ra thành "đã nạp rồi".
-            return Results.Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Bản nháp không có bước sửa nào",
-                detail: "Mỗi bước sửa là một nguyên nhân (T1). Không có bước sửa nào thì không có " +
-                        "gì để nạp — trả 200 ở đây sẽ đọc ra thành \"đã nạp xong\".");
+                title: "Bản nháp không dùng được",
+                detail: choSai);
         }
 
         return Results.Ok(await handler.HandleAsync(draft, ct));

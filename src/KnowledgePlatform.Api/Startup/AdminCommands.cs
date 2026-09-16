@@ -26,6 +26,10 @@ public static class AdminCommands
 
         switch (args[0])
         {
+            case "--tao-khach-hang":
+                await TaoKhachHangAsync(args, services, ct);
+                return true;
+
             case "--tao-khoa":
                 await TaoKhoaAsync(args, services, ct);
                 return true;
@@ -37,6 +41,48 @@ public static class AdminCommands
             default:
                 return false;
         }
+    }
+
+    /// <summary>
+    /// Dựng một công ty khách hàng mới.
+    ///
+    /// 🛑 **Lỗ tìm ra bằng phép kiểm nghiệm thu `I2-1`, không phải bằng đọc code:** trước lệnh
+    /// này, cách DUY NHẤT tạo khách hàng là chạy SQL tay (`scripts/dev-seed-tenant.sql`).
+    /// Không phải "sửa code", nhưng cũng không phải *onboard được* — nó là một bước thủ công
+    /// không ai viết ra, và người thứ hai làm việc đó sẽ làm sai theo một kiểu khác.
+    ///
+    /// ⚠ Là lệnh CLI chứ không phải endpoint, cùng lý do với <c>--tao-khoa</c>: một endpoint
+    /// tạo tenant thì tự nó cần xác thực, mà thứ xác thực lại thuộc về tenant chưa tồn tại.
+    /// </summary>
+    private static async Task TaoKhachHangAsync(string[] args, IServiceProvider services, CancellationToken ct)
+    {
+        if (args.Length < 3)
+        {
+            Console.Error.WriteLine("Dùng: --tao-khach-hang <external-key> <tên hiển thị>");
+            Environment.ExitCode = 2;
+            return;
+        }
+
+        var externalKey = args[1];
+        var ten = args[2];
+
+        var tenants = services.GetRequiredService<TenantDirectory>();
+
+        if (await tenants.FindIdByExternalKeyAsync(externalKey, ct) is not null)
+        {
+            // Không ném: chạy lại lệnh dựng khách phải AN TOÀN. Một script onboard chạy hai
+            // lần mà lần hai đổ vỡ là script không ai dám chạy lại khi đứt giữa chừng.
+            Console.WriteLine($"Đã có tenant với ExternalKey \"{externalKey}\" — không tạo thêm.");
+            return;
+        }
+
+        var id = await tenants.TaoAsync(externalKey, ten, ct);
+
+        Console.WriteLine($"Đã tạo công ty khách hàng \"{ten}\" — ExternalKey = {externalKey}");
+        Console.WriteLine($"    TenantId = {id}");
+        Console.WriteLine();
+        Console.WriteLine("Bước tiếp: tạo khoá API cho khách này");
+        Console.WriteLine($"    --tao-khoa {externalKey} \"<nhãn>\"");
     }
 
     private static async Task TaoKhoaAsync(string[] args, IServiceProvider services, CancellationToken ct)
