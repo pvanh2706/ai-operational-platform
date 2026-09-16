@@ -432,6 +432,91 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-40` · Đường TRẢ KẾT QUẢ VỀ đã tồn tại — và hai lần bộ test tự phơi ra chỗ nó đang nói dối
+
+**Ngày 2026-09-16, bước 2 của lộ trình mức 3 (`docs/18`).** Trước hôm nay sản phẩm tự mô tả
+là *"phần mềm của khách phát tín hiệu, sản phẩm thức tỉnh, xử lý, và **trả kết quả về**"* —
+nhưng `grep "HttpClient|webhook|callback"` trong `src/` trả về **0 dòng**. Chỉ có `/hoi` đồng
+bộ, tức bên kia phải tự hỏi. Giờ vòng đó khép được.
+
+```text
+A  kp.knowledge_link_token   POST /knowledge/{id}/link  ·  GET /xem/{token}      (D5-3)
+B  kp.webhook_endpoint       PUT/GET /internal/webhook                            (D1-1)
+   kp.webhook_delivery       hàng đợi BỀN + vòng quét nền, ký HMAC-SHA256
+✅ 344/344 test xanh (198 + 19 + 127), trước 318 · 0 warning
+✅ 6 đột biến -> 6 test đỏ đúng chỗ
+✅ chạy THẬT: kiem_dau_cuoi.py 51 phép kiểm · 0 sai (trước 38), thêm mục H và I
+✅ và một vòng khép kín THẬT tới một bên nhận Python: tín hiệu -> case -> xếp hàng ->
+   vòng quét nền -> định tuyến -> ký -> POST. Gói tới nơi mang đúng maGoi và chữ ký.
+```
+
+**🎯 QUYẾT ĐỊNH NẶNG NHẤT: webhook dùng lại `HoiHandler`, không tự truy vấn kho.** Tự truy
+vấn thì sẽ có **HAI chỗ** quyết định *"biết hay không biết"*, và hai chỗ đó **sẽ** lệch —
+hai cửa KHÔNG BIẾT của `docs/13` đúng là loại luật dễ quên một vế. Lúc lệch thì `/hoi` nói
+không biết còn webhook gửi ra hướng dẫn (hoặc ngược lại), và **không ai phát hiện vì cả hai
+đều "chạy"**. Bằng chứng nó đúng: lần chạy thật trả `dinh-tuyen-khong-biet` cho một ticket
+mới — khớp chính xác điều `docs/13` đã cảnh báo về bản định tuyến TRA SẴN.
+
+**🛑 HAI LẦN BỘ TEST TỰ PHƠI RA CHỖ NÓ ĐANG NÓI DỐI, ghi cả hai vì chúng khác loại:**
+
+```text
+1  Test "sửa xong thì link phải ĐÓNG" — tôi tự nghĩ ra, nghe rất hợp lý, và SAI với quyết
+   định đã có: V3 gắn cờ NEEDS_REVIEW nhưng KHÔNG rút khỏi /hoi. Hai đường đọc cùng một kho
+   mà trả lời khác nhau thì người dùng học được "thử đường kia xem" — thói quen đó vô hiệu
+   hoá CẢ HAI cổng. -> Đổi thành: link VẪN mở, và phải MANG CỜ.
+2  Ba test webhook đỏ vì cả class dùng chung một tenant: cấu hình đích và hàng đợi là dữ
+   liệu "CÓ hay KHÔNG CÓ" của cả tenant, nên test "chưa khai báo đích thì không xếp hàng"
+   đọc phải cái đích test trước vừa khai -> xanh/đỏ tuỳ THỨ TỰ CHẠY. Cùng hình dạng lỗi mà
+   `IM-31` đã ghi. -> Sửa ở GỐC: mỗi test một khách hàng riêng.
+```
+
+⚠ Và **lần thứ ba** bài học *"vật liệu test phải lấy từ dữ liệu, đừng lấy từ trí nhớ"*
+(`IM-37`, `IM-38`): test cổng che bản đầu bịa ra `pass 9h3kd0` rồi đỏ — không phải vì cổng
+hỏng, mà vì luật `AR-j` chỉ biết bí mật **dạng SỐ** (bốn hình dạng đo trên corpus thật).
+→ Đó là **xác nhận độc lập thứ hai** cho rủi ro `AR-j` vốn đã mở, lần này từ chiều ngược
+lại: vật liệu bịa, không phải corpus. Không giấu đi bằng cách sửa test cho xanh.
+
+**🛑 BA BẢNG MỚI, VÀ CHÚNG KHÔNG CÙNG MỘT LOẠI — chỗ này dễ đọc gộp nhất:**
+
+```text
+knowledge_link_token   MIỄN RLS   phải đọc TRƯỚC khi biết tenant (token quyết định tenant)
+webhook_endpoint       CÓ  RLS    lúc đụng tới nó ta ĐÃ biết tenant rồi
+webhook_delivery       CÓ  RLS    như trên
+```
+→ Câu hỏi đúng cho mỗi bảng mới là *"ai đọc nó, và lúc đó đã biết tenant chưa"*, **không**
+phải *"bảng trước làm sao thì làm vậy"*.
+
+**🎯 Và vòng quét nền DUYỆT THEO TENANT thay vì đọc một phát cả bảng.** Đọc một phát thì phải
+miễn RLS cho hai bảng webhook — mở thêm một lỗ ở đúng nơi `G7` gọi là nền tảng, đổi lấy vài
+truy vấn. Duyệt theo tenant giữ ranh giới còn hiệu lực **kể cả trong tiến trình nền**, chỗ
+không có request nào để mà kiểm. Giá: một truy vấn cho mỗi khách mỗi chu kỳ — với vài chục
+khách thì không đáng kể; tới vài nghìn thì đổi cách, và lúc đó **đổi sang gì cũng được TRỪ
+việc miễn RLS**.
+
+**Ba quyết định nhỏ có lý do đo được:**
+```text
+· Dòng hàng đợi KHÔNG chứa payload  -> lượt thử lại mang câu trả lời MỚI NHẤT. Kho tri thức
+                                       đổi liên tục; gửi lại bản đông cứng là gửi thứ đã sai.
+· Thất bại KHÔNG xoá dòng           -> `K-B3`. Câu "vì sao hôm ấy khách không nhận được gì"
+                                       chỉ trả lời được nếu dòng còn đó kèm LastError.
+· Bí mật ký lưu ĐỌC LẠI ĐƯỢC        -> khác ApiKey.SecretHash có chủ đích: khoá API là thứ ta
+                                       KIỂM (so hash đủ), bí mật này là thứ ta KÝ BẰNG.
+                                       ⚠ Hệ quả: dump database là lộ. Nâng lên mã hoá khi có
+                                       secret store thật.
+```
+
+**🛑 CÒN LẠI, đừng đọc thành đã xong:**
+```text
+· Định tuyến vẫn là bảng TRA SẴN -> webhook gửi ra "không biết" cho mọi ticket mới. Vòng ống
+  đã chạy; ĐỘ CHÍNH XÁC thì vẫn nằm ở Python (84,1%) và vẫn chờ credit.
+· Chưa có giới hạn tần suất, chưa chống replay ở chiều nhận (bên kia phải tự kiểm maGoi).
+· Chưa có đường ĐỌC hàng đợi. Hỏng ở đó hôm nay chỉ thấy được bằng cách mở database.
+· Bí mật ký chưa xoay vòng được: đổi địa chỉ thì giữ bí mật cũ (cố ý), nhưng chưa có lệnh
+  đổi riêng bí mật.
+```
+
+---
+
 ## `IM-39` · `AR-e` thành CODE — và cái cổng TRÁNH đầu tiên của dự án được gỡ vì đã GIẢI
 
 **Ngày 2026-09-16, lượt cuối.** Bước 1 của lộ trình mức 3 (`docs/18`). Xác thực người gọi

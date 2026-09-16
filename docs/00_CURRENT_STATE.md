@@ -314,8 +314,8 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > móng, đúng nguyên tắc đã dùng cho RLS: *làm trước cái mà làm sau sẽ đắt*.
 > ```text
 > ✅ 1  Xác thực NGƯỜI GỌI + AR-e          XONG 2026-09-16 — IM-39
->    2  Webhook ra + cổng che AR-o + link token có hạn
->    3  Định tuyến: ngưỡng thành cấu hình, impl thật chờ credit
+> ✅ 2  Webhook ra + link token có hạn     XONG 2026-09-16 — IM-40
+>    3  Định tuyến: ngưỡng thành cấu hình, impl thật chờ credit   <- VIỆC TIẾP THEO
 >    4  Nối ISopDrafter vào host + trần chi tiêu
 >    5  Hai loại tín hiệu còn lại (F1-1 · F2-1)
 >    6  Hồ sơ chạy local Windows: PublicBaseUrl + biến môi trường

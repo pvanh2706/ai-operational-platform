@@ -2,6 +2,7 @@ using KnowledgePlatform.Api.Knowledge;
 using KnowledgePlatform.Api.Signals;
 using KnowledgePlatform.Api.Startup;
 using KnowledgePlatform.Api.Tenancy;
+using KnowledgePlatform.Api.Webhooks;
 using KnowledgePlatform.Domain.Evidence;
 using KnowledgePlatform.Domain.Knowledge;
 using KnowledgePlatform.Domain.Sop;
@@ -36,6 +37,8 @@ builder.Services.Configure<AuthOptions>(
     builder.Configuration.GetSection(AuthOptions.SectionName));
 builder.Services.Configure<LinkXemOptions>(
     builder.Configuration.GetSection(LinkXemOptions.SectionName));
+builder.Services.Configure<WebhookOptions>(
+    builder.Configuration.GetSection(WebhookOptions.SectionName));
 
 // Danh bạ tenant nằm NGOÀI ranh giới tenant — xem TenantDirectory.
 builder.Services.AddSingleton(sp => new TenantDirectory(
@@ -76,6 +79,16 @@ builder.Services.AddScoped<LinkTokenContext>();
 builder.Services.AddScoped<LinkTokenEndpointFilter>();
 builder.Services.AddScoped<PhatLinkHandler>();
 builder.Services.AddScoped<XemLinkHandler>();
+builder.Services.AddScoped<WebhookConfigHandler>();
+builder.Services.AddScoped<WebhookSender>();
+
+// `D1-1` — đường TRẢ KẾT QUẢ VỀ. Hàng đợi bền + vòng quét nền, xem WebhookSenderService.
+builder.Services.AddHttpClient(WebhookSender.TenHttpClient);
+
+if (builder.Configuration.GetValue($"{WebhookOptions.SectionName}:BatVongQuet", true))
+{
+    builder.Services.AddHostedService<WebhookSenderService>();
+}
 
 // AR3 — interface mỏng, một dòng để đổi bản hiện thực. Bản đang cắm KHÔNG gọi API và
 // KHÔNG định tuyến: nó tra bảng kết quả đã đo (`docs/13`). Xem DinhTuyenTraSan.
@@ -623,6 +636,42 @@ app.MapGet("/xem/{token}", async (XemLinkHandler handler, CancellationToken ct) 
                 detail: kq.LyDo);
     })
     .AddEndpointFilter<LinkTokenEndpointFilter>();
+
+
+// --- Khai báo ĐÍCH GỬI KẾT QUẢ VỀ (D1-1) ---
+//
+// ⚠ Bí mật ký chỉ hiện ra ĐÚNG MỘT LẦN, lúc tạo mới — cùng luật với khoá API. Đổi địa chỉ
+//   thì KHÔNG đổi bí mật: bên nhận đang kiểm chữ ký bằng bí mật cũ.
+app.MapPut("/internal/webhook", async (
+        KhaiBaoWebhook body,
+        WebhookConfigHandler handler,
+        CancellationToken ct) =>
+    {
+        var kq = await handler.KhaiBaoAsync(body?.Url ?? string.Empty, ct);
+
+        return kq is not null
+            ? Results.Ok(kq)
+            : Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "URL không dùng được",
+                detail: "Phải là một địa chỉ http/https tuyệt đối.");
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapGet("/internal/webhook", async (WebhookConfigHandler handler, CancellationToken ct) =>
+    {
+        var kq = await handler.DocAsync(ct);
+
+        return kq is not null
+            ? Results.Ok(kq)
+            : Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Khách hàng này chưa khai báo đích gửi kết quả về",
+                detail: "PUT /internal/webhook để khai báo.");
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
 
 
 // --- ĐỌC evidence của một case (AR-g, chốt 2026-09-15) ---

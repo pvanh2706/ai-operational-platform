@@ -1,4 +1,5 @@
 using KnowledgePlatform.Domain.Cases;
+using KnowledgePlatform.Domain.Webhooks;
 using KnowledgePlatform.Domain.Tenancy;
 using KnowledgePlatform.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,37 @@ public sealed class CaseSignalHandler(AppDbContext db, ITenantContext tenant)
             Results: results);
     }
 
+    /// <summary>
+    /// `D1-1` — xếp hàng một lượt TRẢ KẾT QUẢ VỀ cho case vừa tạo. Đây là chỗ sản phẩm
+    /// *"thức tỉnh"*: tín hiệu vào, và kết quả sẽ tự đi ra.
+    ///
+    /// ⚠ **CHỈ XẾP HÀNG, không gửi tại đây.** Gọi thẳng bên thứ ba trong lúc xử lý tín hiệu
+    /// làm đường nạp phụ thuộc vào việc bên kia còn sống — và đường nạp là thứ `IM-16`/`IM-20`
+    /// đã dựng rất kỹ để nó chịu được lô lớn và gửi lại. Đổi nó thành đồng bộ là vứt hết.
+    ///
+    /// ⚠ **Chỉ xếp khi case THẬT SỰ MỚI.** Gửi lại của bên gửi (webhook của Jira retry, job
+    /// đồng bộ chạy lại) không được đẻ thêm một lượt trả về — nếu không thì tính idempotent
+    /// mà `IM-20` giữ ở đường VÀO lại rò ra ở đường RA.
+    ///
+    /// ⚠ **Không có đích gửi thì không xếp hàng.** Khách chưa cấu hình webhook thì hàng đợi
+    /// phải rỗng, chứ không phải đầy những dòng sẽ không bao giờ gửi được.
+    /// </summary>
+    private async Task XepHangGuiVeAsync(CanonicalCase c, CancellationToken ct)
+    {
+        var coDich = await db.Set<WebhookEndpoint>().AnyAsync(e => e.Active, ct);
+        if (!coDich) return;
+
+        db.Set<WebhookDelivery>().Add(new WebhookDelivery
+        {
+            TenantId = tenant.TenantId,
+            CaseId = c.Id,
+            CaseSourceReference = c.SourceReference,
+            Subject = c.Subject,
+        });
+
+        await db.SaveChangesAsync(ct);
+    }
+
     private async Task<CaseSignalResult> FindOrCreateAsync(CaseObservedSignal signal, CancellationToken ct)
     {
         var existing = await db.Cases
@@ -69,6 +101,7 @@ public sealed class CaseSignalHandler(AppDbContext db, ITenantContext tenant)
         try
         {
             await db.SaveChangesAsync(ct);
+            await XepHangGuiVeAsync(newCase, ct);
             return new CaseSignalResult(signal.SourceReference, newCase.Id, Created: true);
         }
         catch (DbUpdateException ex) when (IsDuplicateSourceReference(ex))

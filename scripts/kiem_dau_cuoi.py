@@ -426,6 +426,36 @@ def link_xem(rid: str | None) -> None:
     kiem("phát link mà không có khoá API -> 401", s, 401)
 
 
+def duong_gui_ve() -> None:
+    """
+    `D1-1` — đường TRẢ KẾT QUẢ VỀ. Ở đây chỉ kiểm hai endpoint CẤU HÌNH.
+
+    ⚠ Việc gửi thật cần một bên nhận đang chạy, nên nó KHÔNG nằm trong file này — nó được
+    giữ bằng bộ test (`WebhookGuiVeTests`, có bên nhận giả) cộng một lần chạy thật đã ghi
+    ở `07` §3 `IM-40`. Nói ra chỗ này KHÔNG được kiểm còn hơn để người đọc tưởng là có.
+    """
+    muc("I · Đường trả kết quả về  (D1-1)")
+
+    s, _ = goi("PUT", "/internal/webhook", {"url": "khong-phai-url"})
+    kiem("PUT /internal/webhook  url rác -> 400", s, 400)
+
+    dich = f"http://127.0.0.1:5199/nhan-{DAU}"
+    s, b = goi("PUT", "/internal/webhook", {"url": dich})
+    if not kiem("PUT /internal/webhook  url đúng -> 200", s, 200):
+        return
+
+    # Bí mật ký chỉ hiện ra lúc TẠO MỚI. Lần chạy sau (đã có dòng) thì nó là null — cả hai
+    # đều đúng, nên phép kiểm hỏi đúng thứ hỏi được: có ô đó trong response hay không.
+    kiem("  ... response có ô biMatKy", isinstance(b, dict) and "biMatKy" in b, True)
+
+    s, b = goi("GET", "/internal/webhook")
+    kiem("GET /internal/webhook -> 200", s, 200)
+    kiem("  ... đọc lại KHÔNG trả bí mật ký", (b or {}).get("biMatKy"), None)
+
+    s, _ = goi("GET", "/internal/webhook", khoa=None)
+    kiem("đọc cấu hình mà không có khoá API -> 401", s, 401)
+
+
 def xac_thuc() -> None:
     """
     `AR-e` — cổng xác thực người gọi. Mục này KIỂM ĐƯỢC RẤT ÍT nếu app đang chạy ở chế độ
@@ -476,6 +506,7 @@ def main() -> int:
     ben_gui_that()
     xac_thuc()
     link_xem(rid)
+    duong_gui_ve()
 
     print("\n" + "=" * 68)
     print(f"{_da_chay} phép kiểm  ·  {len(_sai)} sai")
@@ -489,7 +520,7 @@ def main() -> int:
         print("  đúng chỗ này là chỗ đã hỏng hai lần mà 302 test vẫn xanh (IM-36, IM-37).")
         return 1
 
-    print("\n✅ Cả 15 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
+    print("\n✅ Cả 17 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
     return 0
 
 

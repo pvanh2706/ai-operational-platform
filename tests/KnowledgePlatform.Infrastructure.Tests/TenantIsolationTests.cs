@@ -251,8 +251,17 @@ public sealed class TenantIsolationTests : IClassFixture<TestDatabaseFixture>
     {
         await using var db = _db.NewContext(new FixedTenantContext(Guid.CreateVersion7()));
 
+        // ⚠ Danh sách này SUY TỪ MODEL (`IM-7`), nên nó tự dài ra khi có entity mới cài
+        //   ITenantScoped — và test ghim con số để việc đó KHÔNG lặng lẽ. Hai bảng webhook
+        //   thêm 2026-09-16 (`D1-1`) đã làm nó đỏ đúng một lần, và đó là nó làm việc.
+        //
+        // 🛑 Đối lập có chủ đích với TenantExemptRelations: được BẢO VỆ thì tự động (quên là
+        //   bị bắt), được MIỄN thì phải có người ký tên. Hai danh sách, hai chiều, cùng một
+        //   nguyên tắc — thêm bảng mới phải rơi vào ĐÚNG MỘT trong hai, và cả hai đều đỏ khi
+        //   nó rơi nhầm chỗ.
         Assert.Equal(
-            ["assertion", "assertion_evidence", "canonical_case", "evidence_item", "knowledge_record"],
+            ["assertion", "assertion_evidence", "canonical_case", "evidence_item",
+             "knowledge_record", "webhook_delivery", "webhook_endpoint"],
             db.TenantScopedTables);
 
         await RlsGuard.VerifyAsync(db);

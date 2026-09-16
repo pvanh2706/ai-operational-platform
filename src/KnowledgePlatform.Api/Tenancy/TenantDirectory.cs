@@ -34,4 +34,31 @@ public sealed class TenantDirectory(string connectionString)
         var result = await cmd.ExecuteScalarAsync(ct);
         return result is Guid id ? id : null;
     }
+
+    /// <summary>
+    /// Liệt kê id của MỌI công ty khách hàng. Dùng cho tiến trình nền — nơi không có request
+    /// nào để suy ra tenant, nên phải duyệt từng khách một.
+    ///
+    /// ⚠ Đây là đường DUY NHẤT hợp lệ để một tiến trình nền chạm tới nhiều tenant, và nó
+    /// vẫn không vượt ranh giới: nó chỉ đọc DANH BẠ (bảng vốn không thuộc tenant nào), rồi
+    /// mỗi khách được phục vụ trong một scope riêng với tenant đặt tường minh. Cách còn lại —
+    /// miễn RLS cho bảng nghiệp vụ để đọc một phát — là mở một lỗ ở đúng chỗ `G7` gọi là nền tảng.
+    /// </summary>
+    public async Task<IReadOnlyList<Guid>> LietKeIdAsync(CancellationToken ct = default)
+    {
+        await using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync(ct);
+
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText =
+            """
+            SELECT "Id" FROM kp.tenant ORDER BY "CreatedAt"
+            """;
+
+        var ids = new List<Guid>();
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct)) ids.Add(reader.GetGuid(0));
+
+        return ids;
+    }
 }

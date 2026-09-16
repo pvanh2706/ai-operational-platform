@@ -2,6 +2,7 @@ using KnowledgePlatform.Domain.Cases;
 using KnowledgePlatform.Domain.Evidence;
 using KnowledgePlatform.Domain.Knowledge;
 using KnowledgePlatform.Domain.Tenancy;
+using KnowledgePlatform.Domain.Webhooks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -185,6 +186,31 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.HasIndex(x => x.KnowledgeRecordId);
 
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- Webhook: CÓ RLS (tenant-scoped) — khác hai bảng trên, xem WebhookEndpoint ---
+        b.Entity<WebhookEndpoint>(e =>
+        {
+            e.ToTable("webhook_endpoint");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Url).HasMaxLength(2048).IsRequired();
+            e.Property(x => x.SigningSecret).HasMaxLength(256).IsRequired();
+
+            // Một khách MỘT đích gửi, cho tới khi có nhu cầu đo được là cần nhiều.
+            e.HasIndex(x => x.TenantId).IsUnique();
+        });
+
+        b.Entity<WebhookDelivery>(e =>
+        {
+            e.ToTable("webhook_delivery");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.CaseSourceReference).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Subject).HasMaxLength(1024).IsRequired();
+            e.Property(x => x.LastError).HasMaxLength(1000);
+            e.Property(x => x.State).HasConversion<int>();
+
+            // Đường NÓNG của vòng quét: "còn chờ, và đã tới hạn".
+            e.HasIndex(x => new { x.TenantId, x.State, x.NextAttemptAt });
         });
 
         // --- Case: bản MỎNG cố ý, xem CanonicalCase ---

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KnowledgePlatform.Api.Tests;
 
@@ -19,7 +20,8 @@ namespace KnowledgePlatform.Api.Tests;
 /// Infrastructure: bộ đó có một test TẮT RLS tạm thời để kiểm <c>RlsGuard</c> biết
 /// ném. Dùng chung thì test đó làm test ở đây đỏ ngẫu nhiên.
 /// </summary>
-public sealed class ApiFactory(Dictionary<string, string?> settings) : WebApplicationFactory<Program>
+public sealed class ApiFactory(Dictionary<string, string?> settings, Action<IServiceCollection>? dichVu = null)
+    : WebApplicationFactory<Program>
 {
     public static string ConnectionString =>
         Environment.GetEnvironmentVariable("KP_API_TEST_DB")
@@ -31,6 +33,7 @@ public sealed class ApiFactory(Dictionary<string, string?> settings) : WebApplic
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
 
         builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(settings));
+        if (dichVu is not null) builder.ConfigureServices(dichVu);
     }
 
     /// <summary>Bản deploy riêng cho một khách hàng — chế độ của khách hàng #0 (`D3`).</summary>
@@ -59,7 +62,11 @@ public sealed class ApiFactory(Dictionary<string, string?> settings) : WebApplic
     /// ra một test trông như đang kiểm cái gì đó mà thật ra không.
     /// </summary>
     public ApiFactory With(string key, string? value) =>
-        new(new Dictionary<string, string?>(settings) { [key] = value });
+        new(new Dictionary<string, string?>(settings) { [key] = value }, dichVu);
+
+    /// <summary>Ghi đè dịch vụ trong DI — dùng để cắm một bên nhận webhook GIẢ.</summary>
+    public ApiFactory WithServices(Action<IServiceCollection> ghiDe) =>
+        new(new Dictionary<string, string?>(settings), ghiDe);
 
     /// <summary>
     /// Bỏ phần thừa nhận "chạy không khoá" — từ đây mọi endpoint đòi khoá API thật.
@@ -110,6 +117,21 @@ public sealed class ApiDatabaseFixture : IAsyncLifetime
 
     /// <summary>Header xác thực cho một khoá — đúng hình dạng mà bên tích hợp phải gửi.</summary>
     public static AuthenticationHeaderValue Bearer(string apiKey) => new("Bearer", apiKey);
+
+    /// <summary>
+    /// Dựng một công ty khách hàng MỚI, dùng riêng cho một test.
+    ///
+    /// ⚠ Vì sao cần, và nó là bài học đã trả giá một lần ở <c>VongTriThucTests</c>: cả class
+    /// chạy trên MỘT database, nên thứ một test ghi vào tenant dùng chung sẽ được test sau
+    /// đọc phải. Với dữ liệu "có hay không có" — hàng đợi gửi, cấu hình đích webhook — thì
+    /// điều đó không chỉ làm test đỏ, nó còn làm test XANH VÌ LÝ DO SAI.
+    /// </summary>
+    public async Task<(string Key, Guid Id)> TaoTenantMoiAsync()
+    {
+        var key = $"tenant-rieng-{Guid.CreateVersion7():N}";
+        var id = await SeedTenantAsync(key, caseCount: 0);
+        return (key, id);
+    }
 
     public Task DisposeAsync() => Task.CompletedTask;
 
