@@ -474,14 +474,22 @@ public sealed class TenantIsolationTests : IClassFixture<TestDatabaseFixture>
             AppDbContext.TenantExemptRelations,
             kv => Assert.False(string.IsNullOrWhiteSpace(kv.Value), $"Miễn trừ \"{kv.Key}\" không ghi lý do."));
 
-        // Hai ngoại lệ hợp lệ, và LÝ DO CỦA CHÚNG KHÁC NHAU — đừng đọc gộp:
-        //   tenant   không thuộc tenant nào (nó LÀ danh bạ)          `IM-14`
-        //   api_key  CÓ thuộc một tenant, nhưng nó là thứ QUYẾT ĐỊNH tenant của request,
-        //            nên không thể nằm sau cánh cửa nó đang mở        `AR-e`
+        // BA ngoại lệ hợp lệ, và lý do của chúng KHÔNG giống nhau — đừng đọc gộp:
+        //   tenant                không thuộc tenant nào (nó LÀ danh bạ)        `IM-14`
+        //   api_key               CÓ thuộc một tenant, nhưng nó là thứ QUYẾT ĐỊNH tenant
+        //                         của request -> không thể nằm sau cánh cửa nó đang mở  `AR-e`
+        //   knowledge_link_token  y hệt api_key: người bấm link không mang theo gì khác  `D5-3`
         //
         // ⚠ Danh sách này cố ý ĐẾM ĐỦ chứ không chỉ "chứa": thêm một bảng miễn RLS mà không
         //   ai để ý là đúng kiểu nới lỏng im lặng mà cả nhóm cơ chế này sinh ra để chặn.
-        //   Test này đã đỏ đúng lúc api_key ra đời — đó là nó làm việc, không phải phiền hà.
-        Assert.Equal(["api_key", "tenant"], AppDbContext.TenantExemptRelations.Keys.OrderBy(k => k));
+        //   Test đã đỏ ở CẢ HAI lần có bảng miễn trừ mới (api_key rồi knowledge_link_token) —
+        //   hai lần trong hai bước, và cả hai lần đều là nó làm việc chứ không phải phiền hà.
+        //
+        // 🛑 Mỗi dòng thêm vào đây phải trả lời được: ai đọc bảng này, và vì sao nó KHÔNG thể
+        //   tự bảo vệ bằng RLS. Hai bảng mới đều trả lời giống nhau — và cả hai đều trả giá
+        //   bằng cùng một ràng buộc: KHÔNG có DbSet, đọc qua đúng MỘT cửa.
+        Assert.Equal(
+            ["api_key", "knowledge_link_token", "tenant"],
+            AppDbContext.TenantExemptRelations.Keys.OrderBy(k => k));
     }
 }

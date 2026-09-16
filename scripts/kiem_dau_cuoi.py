@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gọi THẬT cả 13 endpoint của sản phẩm vào một app đang chạy, và nói ra chỗ nào hỏng.
+"""Gọi THẬT cả 15 endpoint của sản phẩm vào một app đang chạy, và nói ra chỗ nào hỏng.
 
     dotnet run --project src/KnowledgePlatform.Api      # cửa sổ khác
     python scripts/kiem_dau_cuoi.py
@@ -23,7 +23,7 @@ Hai lần vấp THẬT trong hai ngày, cả hai chỉ lộ ra khi CHẠY:
               xuống dòng bằng chuỗi thoát nguyên văn còn test viết xuống dòng thật. Tay
               người viết test không nghĩ ra hình dạng đó.                   (`IM-37`)
 
-Và một con số để thấy khoảng trống: sản phẩm có **13 endpoint**, bộ Postman phủ **5**, tức
+Và một con số để thấy khoảng trống: sản phẩm có **15 endpoint**, bộ Postman phủ **5**, tức
 **8 endpoint chưa từng được gọi bởi bất cứ thứ gì ngoài bộ test C#** — gồm cả vòng tri thức.
 
 ⚠ HAI MỤC, HAI CÂU HỎI KHÁC NHAU — đừng gộp:
@@ -295,7 +295,7 @@ def rut_lai(ma_ev: str) -> None:
     kiem("  ... thiếu nguoiDanhDau -> 400 (B1-1: chỉ NGƯỜI)", s, 400)
 
 
-def vong_tri_thuc() -> None:
+def vong_tri_thuc() -> str | None:
     muc("E · Vòng tri thức  (5 endpoint)")
     ma_ticket, nhom_that = ticket_co_nhom()
     nhom = f"{DAU}-{LAN}-{nhom_that}"   # nhóm RIÊNG mỗi lượt, để không đụng kho có sẵn
@@ -304,12 +304,12 @@ def vong_tri_thuc() -> None:
     s, b = goi("POST", "/knowledge/sop-draft", nhap_sop(nhom, ma_case))
     if not kiem("POST /knowledge/sop-draft", s, 200):
         print(f"       -> {json.dumps(b, ensure_ascii=False)[:400]}")
-        return
+        return None
     ids = [r["id"] for r in b.get("nguyenNhan", [])] if isinstance(b, dict) else []
     _da_tao["knowledge"] += len(ids)
     kiem("  ... sinh ít nhất 1 record", len(ids) >= 1, True)
     if not ids:
-        return
+        return None
     rid = ids[0]
 
     s, b = goi("POST", "/hoi", {"maTicket": ma_ticket})
@@ -353,6 +353,7 @@ def vong_tri_thuc() -> None:
     else:
         kiem("GET /knowledge/{id} trả ra phát biểu để sửa được", False, True)
 
+    return rid
 
 def ben_gui_that() -> None:
     """Chạy chính các script NẠP của repo, không chỉ gọi endpoint bằng payload tự dựng.
@@ -382,6 +383,47 @@ def ben_gui_that() -> None:
     if not kiem("load_fixture.py chạy được (mã thoát 0)", r.returncode, 0):
         duoi = (r.stdout or "")[-500:] + (r.stderr or "")[-500:]
         print(f"       -> {duoi.strip()[:700]}")
+
+
+def link_xem(rid: str | None) -> None:
+    """
+    `D5-3` — link xem tri thức, nửa "link" của `D3-1`.
+
+    ⚠ Mục này cần `Link:PublicBaseUrl`. Thiếu thì NÓI RA và bỏ qua, không im lặng báo xanh.
+    """
+    muc("H · Link xem tri thức  (D5-3)")
+
+    if rid is None:
+        print("  ⚠ BỎ QUA — mục E chưa duyệt được record nào để phát link.")
+        return
+
+    s, b = goi("POST", f"/knowledge/{rid}/link", {"nguoiPhat": "kiem-dau-cuoi"})
+
+    if s == 409 and isinstance(b, dict) and "PublicBaseUrl" in str(b.get("detail", "")):
+        print("  ⚠ BỎ QUA — app chưa cấu hình Link:PublicBaseUrl.")
+        print("    Chạy lại với Link__PublicBaseUrl=http://<tên máy trong LAN>:5119")
+        print("    ⚠ Và đó KHÔNG phải lỗi: từ chối còn hơn đoán ra link localhost.")
+        return
+
+    if not kiem("POST /knowledge/{id}/link  -> 200", s, 200):
+        return
+
+    token = b.get("token", "")
+    url = b.get("url", "")
+    kiem("  ... token mang tiền tố kpl_", token.startswith("kpl_"), True)
+    kiem("  ... url dựng từ CẤU HÌNH, không phải localhost",
+         url.endswith(f"/xem/{token}") and "localhost" not in url, True)
+
+    # Mở bằng link, KHÔNG gửi khoá API — chính token là giấy thông hành.
+    s, b = goi("GET", f"/xem/{token}", khoa=None)
+    kiem("GET /xem/{token} không cần khoá API -> 200", s, 200)
+    kiem("  ... mở được và có nội dung", isinstance(b, dict) and b.get("moDuoc") is True, True)
+
+    s, _ = goi("GET", "/xem/kpl_khongcothat_khongcothat", khoa=None)
+    kiem("token bịa -> 404 (giống hệt hết hạn / đã thu hồi)", s, 404)
+
+    s, _ = goi("POST", f"/knowledge/{rid}/link", {"hanNgay": 7}, khoa=None)
+    kiem("phát link mà không có khoá API -> 401", s, 401)
 
 
 def xac_thuc() -> None:
@@ -430,9 +472,10 @@ def main() -> int:
     ma_case, ma_ev = duong_nap()
     duong_doc(ma_case)
     rut_lai(ma_ev)
-    vong_tri_thuc()
+    rid = vong_tri_thuc()
     ben_gui_that()
     xac_thuc()
+    link_xem(rid)
 
     print("\n" + "=" * 68)
     print(f"{_da_chay} phép kiểm  ·  {len(_sai)} sai")
@@ -446,7 +489,7 @@ def main() -> int:
         print("  đúng chỗ này là chỗ đã hỏng hai lần mà 302 test vẫn xanh (IM-36, IM-37).")
         return 1
 
-    print("\n✅ Cả 13 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
+    print("\n✅ Cả 15 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
     return 0
 
 

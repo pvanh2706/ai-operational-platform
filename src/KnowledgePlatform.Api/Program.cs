@@ -34,6 +34,8 @@ builder.Services.Configure<DinhTuyenOptions>(
     builder.Configuration.GetSection(DinhTuyenOptions.SectionName));
 builder.Services.Configure<AuthOptions>(
     builder.Configuration.GetSection(AuthOptions.SectionName));
+builder.Services.Configure<LinkXemOptions>(
+    builder.Configuration.GetSection(LinkXemOptions.SectionName));
 
 // Danh bạ tenant nằm NGOÀI ranh giới tenant — xem TenantDirectory.
 builder.Services.AddSingleton(sp => new TenantDirectory(
@@ -43,6 +45,14 @@ builder.Services.AddSingleton(sp => new TenantDirectory(
 // xem ApiKeyDirectory. Chính nó quyết định tenant, nên không thể nằm sau cánh cửa đó.
 builder.Services.AddSingleton(sp => new ApiKeyDirectory(
     sp.GetRequiredService<IConfiguration>().GetConnectionString("Default")!));
+
+// Token xem tri thức (`D5-3`) — cũng ngoài ranh giới tenant, cùng lý do với ApiKeyDirectory:
+// người bấm link không mang theo thứ gì khác, nên chính token là thứ quyết định tenant.
+builder.Services.AddSingleton(sp => new LinkTokenDirectory(
+    sp.GetRequiredService<IConfiguration>().GetConnectionString("Default")!));
+
+// Đồng hồ tiêm được, để test kiểm ca HẾT HẠN mà không phải chờ thật.
+builder.Services.AddSingleton(TimeProvider.System);
 
 // Đặt một lần lúc khởi động bởi StartupChecks, không phải mỗi request.
 builder.Services.AddSingleton<DedicatedTenant>();
@@ -62,6 +72,10 @@ builder.Services.AddScoped<SopDraftIngestHandler>();
 builder.Services.AddScoped<KnowledgeApprovalHandler>();
 builder.Services.AddScoped<KnowledgeRevisionHandler>();
 builder.Services.AddScoped<HoiHandler>();
+builder.Services.AddScoped<LinkTokenContext>();
+builder.Services.AddScoped<LinkTokenEndpointFilter>();
+builder.Services.AddScoped<PhatLinkHandler>();
+builder.Services.AddScoped<XemLinkHandler>();
 
 // AR3 — interface mỏng, một dòng để đổi bản hiện thực. Bản đang cắm KHÔNG gọi API và
 // KHÔNG định tuyến: nó tra bảng kết quả đã đo (`docs/13`). Xem DinhTuyenTraSan.
@@ -548,6 +562,68 @@ app.MapGet("/knowledge/{id:guid}", async (
     .AddEndpointFilter<TenantEndpointFilter>();
 
 
+// --- PHÁT một link xem cho bản tri thức đã duyệt (D5-3) ---
+//
+// `D3-1` chốt lượt trả về mang **tóm tắt + link**. Đây là chỗ sinh ra nửa "link" đó.
+//
+// 🛑 Chỉ bản ĐÃ DUYỆT. Phát link cho bản `Draft` là đưa đầu ra thô của model cho người làm
+//   thật — cửa sau đi vòng qua đúng hai cổng mà `/hoi` đang giữ.
+app.MapPost("/knowledge/{id:guid}/link", async (
+        Guid id,
+        PhatLinkYeuCau? body,
+        PhatLinkHandler handler,
+        CancellationToken ct) =>
+    {
+        var nguoiPhat = body?.NguoiPhat;
+        if (string.IsNullOrWhiteSpace(nguoiPhat))
+        {
+            // Cùng tinh thần `AR-m`/`B1-1`: dấu vết do NGƯỜI để lại thì phải có tên người.
+            // Tự điền hộ "hệ thống" là xoá đúng thứ trả lời được câu "link rò ra kia do ai phát".
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Thiếu nguoiPhat",
+                detail: "Phải khai ai phát link này — để trả lời được câu \"link rò ra kia do ai phát\".");
+        }
+
+        var kq = await handler.PhatAsync(id, nguoiPhat, body?.HanNgay, ct);
+
+        if (kq.Phat) return Results.Ok(kq);
+
+        return kq.LyDo is null
+            ? Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Không thấy tri thức này",
+                detail: $"Không có bản ghi {id} trong phạm vi của khách hàng này.")
+            : Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Chưa phát link được",
+                detail: kq.LyDo);
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+
+// --- XEM bằng link (D5-3) — đường ra THỨ HAI của sản phẩm ---
+//
+// ⚠ KHÔNG có ApiKeyEndpointFilter, và đó là chủ đích: chính token LÀ giấy thông hành. Đây
+//   cũng là endpoint duy nhất lấy tenant từ ĐƯỜNG DẪN thay vì từ header — xem
+//   LinkTokenEndpointFilter cho lý do nó là filter chứ không phải middleware.
+//
+// 🛑 Nội dung đi qua cổng che `AR-o` trước khi ra. Thêm cửa ra mà quên cổng che là đúng
+//   hình dạng lỗi `IM-25` sinh ra để chặn.
+app.MapGet("/xem/{token}", async (XemLinkHandler handler, CancellationToken ct) =>
+    {
+        var kq = await handler.XemAsync(ct);
+
+        return kq.MoDuoc
+            ? Results.Ok(kq)
+            : Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Link đúng nhưng nội dung chưa mở được",
+                detail: kq.LyDo);
+    })
+    .AddEndpointFilter<LinkTokenEndpointFilter>();
+
 
 // --- ĐỌC evidence của một case (AR-g, chốt 2026-09-15) ---
 //
@@ -705,3 +781,8 @@ static string? ValidateEvidence(CaseEvidenceSignal s) => s switch
         => $"subTenantCode dài quá {SubTenantCodes.MaxLength} ký tự.",
     _ => null,
 };
+
+/// <summary>Thân của <c>POST /knowledge/{id}/link</c>.</summary>
+/// <param name="NguoiPhat">Ai phát link này. BẮT BUỘC — xem chỗ gọi.</param>
+/// <param name="HanNgay">Hạn tính bằng ngày. Bỏ trống thì lấy mặc định của cấu hình.</param>
+internal sealed record PhatLinkYeuCau(string? NguoiPhat, int? HanNgay);

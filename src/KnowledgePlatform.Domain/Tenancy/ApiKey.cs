@@ -75,76 +75,24 @@ public sealed class ApiKey
 }
 
 /// <summary>
-/// Sinh, tách và băm khoá API. Thuần tính toán, không chạm hạ tầng — nên bộ test của nó
-/// chạy ở đâu cũng được (`IM-18`).
+/// Hình dạng khoá API của `AR-e`: <c>kp_&lt;keyId&gt;_&lt;secret&gt;</c>.
 ///
-/// Hình dạng khoá: <c>kp_&lt;keyId&gt;_&lt;secret&gt;</c>
-/// <code>
-///   kp          tiền tố cố định, để nhìn một cái là biết chuỗi này là khoá của sản phẩm
-///               nào — và để máy quét bí mật nhận ra nó (scripts/quet_credential_repo.py)
-///   keyId       12 ký tự hex, CÔNG KHAI, dùng để tra dòng
-///   secret      32 byte ngẫu nhiên, mã base64url, CHỈ hiện ra đúng một lần lúc sinh
-/// </code>
+/// ⚠ Lớp này chỉ là <see cref="ChuoiBiMat"/> đã gắn sẵn tiền tố — **cố ý không tự viết lại
+/// phép tách**. Phần bí mật mã base64url nên khoảng một nửa số khoá có `_` bên trong; viết
+/// lại phép tách ở chỗ thứ hai là mời đúng cái bẫy đó quay lại ở chỗ chưa ai đột biến thử
+/// (`IM-39`). Token xem tri thức (`D5-3`) dùng chung đúng lớp đó với tiền tố khác.
 /// </summary>
 public static class ApiKeyMaterial
 {
     public const string TienTo = "kp";
 
-    /// <summary>Số byte ngẫu nhiên của phần bí mật. 32 byte = 256 bit.</summary>
-    private const int SoByteBiMat = 32;
+    /// <summary>Sinh một khoá mới. Chuỗi đầy đủ đưa cho khách, KHÔNG lưu.</summary>
+    public static (string KeyId, string SecretHash, string KhoaDayDu) Sinh() => ChuoiBiMat.Sinh(TienTo);
 
-    /// <summary>Số byte của phần công khai. 6 byte = 12 ký tự hex.</summary>
-    private const int SoByteKeyId = 6;
+    public static bool TryTach(string? raw, out string keyId, out string secret) =>
+        ChuoiBiMat.TryTach(raw, TienTo, out keyId, out secret);
 
-    /// <summary>
-    /// Sinh một khoá mới. Trả về cả chuỗi đầy đủ (đưa cho khách, KHÔNG lưu) lẫn hai phần
-    /// để lưu xuống bảng.
-    /// </summary>
-    public static (string KeyId, string SecretHash, string KhoaDayDu) Sinh()
-    {
-        var keyId = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(SoByteKeyId));
-        var secret = Base64Url(RandomNumberGenerator.GetBytes(SoByteBiMat));
+    public static string BamBiMat(string secret) => ChuoiBiMat.Bam(secret);
 
-        return (keyId, BamBiMat(secret), $"{TienTo}_{keyId}_{secret}");
-    }
-
-    /// <summary>
-    /// Tách một chuỗi khoá thành hai phần. Trả <c>false</c> nếu không đúng hình dạng —
-    /// và chỗ gọi phải trả lời y hệt như khi khoá SAI, không được nói ra rằng nó sai ở
-    /// bước tách: hai câu trả lời khác nhau là một kênh dò khoá.
-    /// </summary>
-    public static bool TryTach(string? raw, out string keyId, out string secret)
-    {
-        keyId = string.Empty;
-        secret = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(raw)) return false;
-
-        // Tách ĐÚNG 3 phần: phần bí mật là base64url nên tự nó CHỨA ĐƯỢC dấu gạch dưới.
-        // Tách hết rồi lấy phần cuối là sai — nó cắt cụt đúng những khoá có '_' bên trong,
-        // tức hỏng ngẫu nhiên với khoảng một nửa số khoá sinh ra.
-        var phan = raw.Split('_', 3);
-        if (phan.Length != 3) return false;
-        if (!string.Equals(phan[0], TienTo, StringComparison.Ordinal)) return false;
-        if (phan[1].Length == 0 || phan[2].Length == 0) return false;
-
-        keyId = phan[1];
-        secret = phan[2];
-        return true;
-    }
-
-    public static string BamBiMat(string secret) =>
-        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(secret)));
-
-    /// <summary>
-    /// So hash theo thời gian hằng số. So bằng <c>==</c> thoát sớm ở ký tự đầu khác nhau,
-    /// và thời gian đó đo được — cùng lý do đã viết ở <c>SignalKeyEndpointFilter</c>.
-    /// </summary>
-    public static bool HashKhop(string hashA, string hashB) =>
-        CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(hashA),
-            Encoding.UTF8.GetBytes(hashB));
-
-    private static string Base64Url(byte[] bytes) =>
-        Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    public static bool HashKhop(string hashA, string hashB) => ChuoiBiMat.HashKhop(hashA, hashB);
 }

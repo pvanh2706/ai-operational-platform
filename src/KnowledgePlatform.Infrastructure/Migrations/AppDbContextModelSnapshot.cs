@@ -201,6 +201,53 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.ToTable("assertion_evidence", "kp");
                 });
 
+            modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.KnowledgeLinkToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("KnowledgeRecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SecretHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TokenId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KnowledgeRecordId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TokenId")
+                        .IsUnique();
+
+                    b.ToTable("knowledge_link_token", "kp");
+                });
+
             modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.KnowledgeRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -317,6 +364,15 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.HasOne("KnowledgePlatform.Domain.Knowledge.Assertion", null)
                         .WithMany("EvidenceLinks")
                         .HasForeignKey("AssertionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.KnowledgeLinkToken", b =>
+                {
+                    b.HasOne("KnowledgePlatform.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

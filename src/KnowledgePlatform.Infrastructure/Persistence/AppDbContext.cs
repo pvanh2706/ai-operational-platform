@@ -53,6 +53,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             ["tenant"] = "Danh bạ khách hàng — nó LÀ tenant, không thuộc tenant nào. " +
                          "Phải đọc được TRƯỚC khi biết tenant của request, nên không thể tự bảo vệ bằng RLS (`IM-14`).",
 
+            ["knowledge_link_token"] = "Token mở tri thức bằng LINK (`D5-3`). ⚠ CÙNG lý do với api_key, " +
+                          "KHÔNG phải lý do của tenant: người bấm link không mang theo thứ gì khác, nên chính " +
+                          "token này là thứ quyết định tenant của request. Bù lại: không có DbSet, và đọc nó " +
+                          "đi qua đúng một cửa (LinkTokenDirectory).",
+
             ["api_key"] = "Khoá API của khách (`AR-e`). ⚠ LÝ DO KHÁC hàng trên, đừng đọc gộp: dòng này CÓ " +
                           "thuộc một tenant, nhưng chính nó là thứ QUYẾT ĐỊNH tenant của request — nên nó " +
                           "không thể nằm sau cánh cửa mà nó đang mở. Bù lại: không có DbSet, không endpoint " +
@@ -163,6 +168,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
                 .WithMany()
                 .HasForeignKey(x => x.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- KnowledgeLinkToken: CÓ TenantId, KHÔNG cài ITenantScoped — xem TenantExemptRelations ---
+        b.Entity<KnowledgeLinkToken>(e =>
+        {
+            e.ToTable("knowledge_link_token");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.TokenId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.SecretHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.CreatedBy).HasMaxLength(256).IsRequired();
+
+            e.HasIndex(x => x.TokenId).IsUnique();
+
+            // Thu hồi theo record (khi bản tri thức bị sửa) tra bằng cột này.
+            e.HasIndex(x => x.KnowledgeRecordId);
+
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // --- Case: bản MỎNG cố ý, xem CanonicalCase ---
