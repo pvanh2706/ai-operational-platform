@@ -334,9 +334,20 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > **Còn lại của `docs/14`: 5/10 chưa code** — `AR-p` · `AR-n` · `AR-e` · `AR-i` · (`AR-q` không
 > cần code). Và hai việc dọn mà chính hôm nay sinh thêm:
 > ```text
-> · Export lại corpus: giải quyết CÙNG LÚC nhãn machineReadability cũ (AR-k) và 137 mẩu
->   chưa có mã khách sạn. ⚠ Phải nạp vào KHO SẠCH — K-B3 cấm ghi đè, gửi chồng lên sẽ trả
->   200 mà không đổi gì (response nay nói thẳng: subTenantNotApplied).
+> · ✅ ĐÃ LÀM cùng ngày, qua đường FIXTURE chứ không cần Jira — `07` §3 `IM-36`.
+>   🛑 Và nó lộ ra một thứ chỉ chạy mới thấy: **cổng AR-l vừa giết đường `load_fixture.py`**
+>   — đường DUY NHẤT dựng lại dữ liệu trên máy không có credential Jira, thứ `docs/10` dặn
+>   dùng khi chuyển máy. `dotnet test` không bao giờ đỏ vì chuyện đó: bộ test tự dựng payload
+>   của chính nó, còn bên gửi thật là hai script Python nằm ngoài tầm trình biên dịch.
+>   ```text
+>   giá trị phân biệt  1 -> 3 (Medium 157 · High 101 · Low 87)   nhãn AR-k vào được DỮ LIỆU
+>   subTenantCode      khai tường minh "khong-xac-dinh" × 345
+>   load_fixture.py    400 cả lô -> 345 mẩu, exit 0
+>   coverage thật      soMaPhanBiet 0 · datDieuKienMoLai FALSE   <- hôm qua nói TRUE vì
+>                                                                   2 dòng tạo lúc thử
+>   ```
+>   ⚠ Vẫn CHƯA export lại từ Jira. `dry-run-*.json` giữ nguyên nhãn cũ — CỐ Ý, đó là mẫu vật
+>   để `check_corpus.py` còn cái mà bắt (đã kiểm cả hai chiều).
 > · Bộ Postman chưa có request cho hai endpoint mới. Và newman KHÔNG có trên máy này —
 >   docs/10 ghi là có, đó là dòng của máy CŨ. Đã sửa docs/10 (chỗ lỗi thời thứ sáu).
 > ```

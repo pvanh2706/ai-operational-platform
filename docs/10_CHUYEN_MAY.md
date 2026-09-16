@@ -198,6 +198,13 @@ dotnet run --project src/KnowledgePlatform.Api --launch-profile http   # cửa s
 python scripts/jira-export/load_fixture.py
 ```
 
+🛑 **FIXTURE CŨ HƠN 2026-09-16 KHÔNG NẠP ĐƯỢC NỮA — phải chạy lại `make_fixture.py`.**
+Từ `AR-l`, đường nạp bắt buộc khai `subTenantCode`, nên một file `fixture-evidence.json`
+sinh trước ngày đó nhận **400 cho CẢ LÔ**. Đây là chuyện đã xảy ra thật ngay hôm siết cổng
+(`07` §3 `IM-36`), và nó **không bao giờ đỏ trong `dotnet test`**: bộ test tự dựng payload
+của chính nó, còn bên gửi thật là hai script Python mà trình biên dịch không nhìn thấy.
+→ Luật rút ra: **siết cửa vào thì phải chạy lại cả hai script nạp**, không chỉ chạy test.
+
 🛑 **`make_fixture.py` mang một danh sách credential XÁC ĐỊNH BẰNG TAY trên corpus của
 2026-09-04.** Chạy nó trên corpus khác thì danh sách đó lỗi thời — đo thật trên corpus
 150 case: 16/19 mục không khớp, và **36 chỗ credential mới đi thẳng qua**. Script giờ tự

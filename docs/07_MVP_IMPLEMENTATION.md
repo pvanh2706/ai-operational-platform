@@ -432,6 +432,126 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-36` · Cổng `AR-l` giết đường fixture — đường DUY NHẤT chạy được trên máy không có credential Jira
+
+**Ngày 2026-09-16, ngay sau `IM-35`.** Tìm ra bằng cách **chạy**, không bằng đọc code.
+
+```text
+dry-run-*.json   bản xuất Jira thật (có secret, bị .gitignore)
+  -> make_fixture.py     thay secret bằng giá trị GIẢ GIỮ NGUYÊN HÌNH DẠNG
+  -> fixture-*.json      345 mẩu, sinh TRƯỚC cả AR-k lẫn AR-l
+  -> load_fixture.py     -> HTTP 400 CHO CẢ LÔ
+```
+
+🛑 **Vì sao đây không phải một bất tiện nhỏ.** `load_fixture.py` là đường **duy nhất** dựng
+lại được dữ liệu trên một máy **không có credential Jira** — chính docstring của nó nói thế
+(*"không có bí mật nào đi qua đây, nên nó chạy được trên máy bất kỳ ai clone repo"*), và
+`docs/10` dặn dùng nó khi chuyển máy. Cổng `AR-l` làm **đúng** việc của nó (fail closed, nói
+rõ vì sao), nhưng thứ nó chặn lại là con đường bàn giao.
+
+⚠ **Và nó sẽ không bao giờ đỏ trong `dotnet test`:** bộ test API tự dựng payload của chính
+nó, nên nó không biết gì về `fixture-*.json`. Một cửa vào siết chặt hơn thì mọi **bên gửi**
+phải sửa theo — và bên gửi ở đây là hai script Python nằm ngoài tầm nhìn của trình biên dịch.
+
+---
+
+### Sửa: gọi lại luật, KHÔNG chép luật
+
+`make_fixture.py` đang **chép nguyên si** `machineReadability` từ file dry-run, nên fixture
+mang `High` ở 345/345 — đúng cái hằng số mà `AR-k` đã chốt là bug. Nay nó `import` thẳng
+`doan_machine_readability` và `MA_KHACH_SAN` từ script export.
+
+```text
+                     TRƯỚC          SAU
+giá trị phân biệt    1              3     (Medium 157 · High 101 · Low 87)
+subTenantCode        không có       "khong-xac-dinh" × 345, khai TƯỜNG MINH
+load_fixture.py      400 cả lô      345 mẩu vào kho
+```
+
+Nhãn được tính **trên nội dung ĐÃ CHE**, không trên bản gốc: mẩu đi vào kho là bản đã che,
+nên nhãn phải mô tả đúng bản đó. Giá trị giả giữ nguyên hình dạng nên hai bên gần như luôn
+trùng — nhưng *"gần như"* không phải lý do để tính sai chỗ.
+
+---
+
+### 🛑 Một lý do CŨ bị lật ngược, và không được xoá lặng lẽ
+
+Bản trước ghi thẳng trong code: *"nhãn High: 345/345 (giữ nguyên — **đây LÀ bug AR-k, fixture
+phải tái hiện được nó**)"*. Câu đó **đúng** khi bug chưa có bản vá — giữ một mẫu vật để luật
+quét có cái mà bắt. Từ khi `AR-k` thành luật (2026-09-15) thì nó **lật ngược**: fixture mang
+nhãn hằng số nghĩa là fixture mô tả một đường nạp KHÔNG CÒN TỒN TẠI, và mọi phép kiểm chạy
+trên nó vẫn xanh.
+
+→ **Mẫu vật không biến mất, nó chuyển chỗ** — và đã kiểm cả hai chiều:
+
+```text
+check_corpus.py  fixture-*.json   -> 3 giá trị phân biệt, KHÔNG cảnh báo
+check_corpus.py  dry-run-*.json   -> 1 giá trị phân biệt, CÒN NGUYÊN cảnh báo AR-k
+```
+
+`dry-run-*.json` là bản xuất thô, không sinh lại — đó mới là chỗ đúng để giữ một mẫu vật
+lịch sử, chứ không phải ở file mà người ta nạp thẳng vào DB.
+
+---
+
+### 🛑 Vì sao KHÔNG bịa mã khách sạn giả, dù cả file này xây trên nguyên tắc "giá trị giả"
+
+`make_fixture.py` tồn tại để **thay giá trị thật bằng giá trị giả cùng hình dạng**. Theo phản
+xạ đó thì nên rắc vài mã khách sạn giả vào fixture cho phép đếm có cái mà đếm. **Không.**
+Khác biệt nằm ở chỗ: giá trị giả kia thay cho một **bí mật ĐÃ TỒN TẠI** ở nguồn; còn mã khách
+sạn thì **KHÔNG TỒN TẠI** ở nguồn (`customfield_12710` = `-1.0` ở 32/32). Bịa ra vài mã sẽ làm
+`datDieuKienMoLai` thành `true` trên kho dev vì một lý do **không có thật** — tức tự dựng lại
+đúng thứ mà ô `canTro` vừa sinh ra để chặn, chỉ một ngày sau khi sinh ra nó.
+
+✅ **Và đây là phần trả công:** trên corpus thật, phép đếm nay nói đúng.
+
+```text
+TRƯỚC (kp_dev có 2 dòng tạo lúc thử)   soMaPhanBiet 2  ·  datDieuKienMoLai TRUE   <- sai
+SAU  (345 mẩu fixture thật)            soMaPhanBiet 0  ·  datDieuKienMoLai FALSE  ·  canTro nói rõ
+```
+
+---
+
+### Nạp lại kho: xoá 145 mẩu cũ
+
+Chủ dự án chốt **xoá evidence cũ rồi nạp lại sạch** — `K-B3` cấm ghi đè nên gửi chồng lên
+không đổi được gì (`subTenantNotApplied`). Kiểm ràng buộc trước khi xoá, và nó sạch:
+
+```text
+assertion_evidence  0 dòng   -> KHÔNG có gì trỏ vào evidence, xoá an toàn
+delete              145 mẩu  (137 nạp trước luật + 8 dòng tạo lúc thử IM-35)
+load_fixture.py     345 mẩu vào kho, exit 0
+knowledge_record 8 · assertion 41 · canonical_case 216  -> giữ nguyên, không đụng
+```
+
+---
+
+### ⚠ HAI CẢNH BÁO CỦA `make_fixture.py` KHÔNG PHẢI DO LẦN SỬA NÀY
+
+Script thoát **mã 1** và in `🛑 CÒN 36 CHỖ NGHI LÀ CREDENTIAL SAU KHI THAY` cùng
+`MẤT <-- SAI 80771`. Đã **chứng minh là có sẵn**, không suy đoán: `git stash` phần sửa rồi
+chạy lại bản HEAD → **đúng 36 chỗ, đúng dòng `MẤT 80771`, đúng mã thoát 1**.
+
+Nguyên nhân đã nằm sẵn trong chính script: danh sách `THAY_THE` được soát **bằng tay** trên
+corpus 2026-09-04, còn corpus đang chạy là bản 12 tháng lớn hơn. Đây là món nợ RIÊNG, và nó
+vẫn mở — ghi ra đây để không ai đọc mã thoát 1 thành "lần sửa này làm hỏng".
+
+---
+
+### Trạng thái verify
+
+```text
+✅ 282/282 xanh (170 + 19 + 93) · 0 warning  (code C# KHÔNG đổi ở lượt này)
+✅ make_fixture.py sinh lại: 1 -> 3 giá trị phân biệt, subTenantCode khai tường minh
+✅ load_fixture.py CHẠY LẠI ĐƯỢC: 345 mẩu, exit 0 (trước: 400 cả lô)
+✅ check_corpus.py: fixture sạch cảnh báo · dry-run VẪN nổ cảnh báo AR-k
+✅ coverage trên corpus thật: soMaPhanBiet 0 · datDieuKienMoLai FALSE · canTro nói rõ
+✅ quet_credential_repo.py sạch
+⚠ 36 chỗ nghi credential + "MẤT 80771": CÓ SẴN TỪ TRƯỚC, đã chứng minh bằng bản HEAD
+```
+
+---
+
 ## `IM-35` · `AR-l` + `AR-m` vào chung MỘT migration — và phép đếm "mở lại được chưa" suýt nói dối ngay lần chạy đầu
 
 **Ngày 2026-09-16.** Hai quyết định còn lại nặng nhất của `docs/14` đã thành code. Gộp chung
@@ -587,9 +707,10 @@ chấn mà `IM-22` đã ghi về biểu thức policy.
 ```text
 · Cổng 409 (shared TỪ CHỐI DUYỆT) KHÔNG được gỡ. AR-l vẫn MỞ — có trường không phải
   có dữ liệu, và coverage đang nói rõ 137/145 mẩu chưa khai.
-· Corpus chưa export lại, nên kp_dev vẫn mang nhãn machineReadability CŨ (AR-k) và
-  137 mẩu không có mã khách sạn. Một lượt export lại giải quyết cả hai — nhưng nó phải
-  nạp vào KHO SẠCH, vì K-B3 cấm ghi đè.
+· ✅ ĐÃ XỬ LÝ cùng ngày qua đường FIXTURE — xem `IM-36`. kp_dev nay mang nhãn mới
+  (3 giá trị phân biệt) và mã khách sạn khai tường minh, nạp vào kho SẠCH sau khi xoá
+  145 mẩu cũ. ⚠ Vẫn CHƯA export lại từ Jira: `dry-run-*.json` giữ nguyên nhãn cũ, cố ý
+  (nó là mẫu vật lịch sử để check_corpus còn cái mà bắt).
 · Bộ Postman chưa có request cho /evidence/rut-lai và /internal/sub-tenant-coverage.
   Và newman KHÔNG có trên máy này (docs/10 §? ghi là có — đó là dòng của máy CŨ), nên
   lượt chạy thật ở trên đi bằng script gọi HTTP trực tiếp.

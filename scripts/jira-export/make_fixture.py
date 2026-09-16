@@ -39,6 +39,12 @@ import os
 import re
 import sys
 
+# Luật gán `machineReadability` (AR-k) và hằng số mã khách sạn (AR-l) DÙNG CHUNG với
+# script export — KHÔNG chép sang bản thứ hai. Fixture mà gán nhãn bằng một bản sao của
+# luật thì đến ngày luật đổi, fixture lặng lẽ mô tả một hệ thống không còn tồn tại, và
+# mọi phép kiểm chạy trên nó vẫn xanh. Đó đúng loại sai lệch mà cả repo này đang chống.
+from export_jira_to_channel1 import MA_KHACH_SAN, doan_machine_readability
+
 # Windows: khi output bi chuyen huong (pipe, ghi file, hoac chay tu trinh khac), Python
 # dat stdout ve codepage ANSI cua he thong - cp1252 tren may nay - va moi chu tieng Viet
 # lam no nem UnicodeEncodeError. Da vap that 2026-09-04: script chay dung khi in ra
@@ -155,6 +161,22 @@ def main() -> None:
     for e in evidence:
         e["content"] = thay(e["content"], e["sourceReference"])
 
+        # ─── AR-k + AR-l: fixture phải mang thứ mà đường nạp HÔM NAY sinh ra ───
+        #
+        # Tính nhãn TRÊN NỘI DUNG ĐÃ CHE, không trên bản gốc: mẩu đi vào kho là bản đã
+        # che, nên nhãn phải mô tả đúng bản đó. Giá trị giả giữ nguyên hình dạng nên hai
+        # bên gần như luôn trùng — nhưng "gần như" không phải lý do để tính sai chỗ.
+        e["machineReadability"] = doan_machine_readability(e["content"])
+
+        # AR-l: bên gửi PHẢI khai. Nguồn Jira không có mã khách sạn nào dùng được
+        # (customfield_12710 = -1.0 ở 32/32), nên lời khai THẬT ở đây là "chưa xác định".
+        # 🛑 KHÔNG bịa ra mã giả cho fixture, dù cả file này xây trên nguyên tắc "thay giá
+        #    trị thật bằng giá trị giả cùng hình dạng". Khác nhau ở chỗ: giá trị giả kia
+        #    thay cho một BÍ MẬT đã tồn tại, còn mã khách sạn thì KHÔNG TỒN TẠI ở nguồn.
+        #    Bịa ra vài mã sẽ làm `datDieuKienMoLai` thành true trên kho dev vì một lý do
+        #    không có thật — tức tự dựng lại đúng thứ `canTro` vừa sinh ra để chặn.
+        e["subTenantCode"] = MA_KHACH_SAN
+
     print("=" * 66)
     print("ĐÃ THAY (giá trị thật -> giả cùng hình dạng)")
     print("=" * 66)
@@ -231,10 +253,24 @@ def main() -> None:
     for a, b in GHI_CHU_TRUNG:
         print(f"  trùng byte: {a}\n              {b}")
     n_ngan = sum(1 for e in evidence if len(e["content"].strip()) < 30)
-    n_high = sum(1 for e in evidence if e["machineReadability"] == "High")
     print(f"  mẩu dưới 30 ký tự: {n_ngan}  (để test luật lọc rác)")
-    print(f"  nhãn High: {n_high}/{len(evidence)}  (giữ nguyên — đây LÀ bug AR-k,"
-          f" fixture phải tái hiện được nó)")
+
+    # ⚠ BẢN TRƯỚC 2026-09-16 CỐ Ý GIỮ `High` cho 345/345 mẩu, và ghi lý do: "đây LÀ bug
+    # AR-k, fixture phải tái hiện được nó". Lý do đó ĐÚNG khi bug chưa có bản vá. Từ khi
+    # AR-k thành luật (2026-09-15) thì nó lật ngược: fixture mang nhãn hằng số nghĩa là
+    # fixture mô tả một đường nạp KHÔNG CÒN TỒN TẠI.
+    # → Bản tái hiện bug KHÔNG biến mất: `dry-run-*.json` là bản xuất thô, vẫn nguyên
+    #   345/345 `High`, và `check_corpus.py` vẫn (đúng) báo hằng số trên chúng. Đó mới là
+    #   chỗ đúng để giữ một mẫu vật lịch sử — không phải ở file mà người ta nạp vào DB.
+    phan_bo = {}
+    for e in evidence:
+        phan_bo[e["machineReadability"]] = phan_bo.get(e["machineReadability"], 0) + 1
+    chi_tiet = "  ".join(f"{k} {v}" for k, v in sorted(phan_bo.items()))
+    print(f"  machineReadability: {len(phan_bo)} giá trị phân biệt  ({chi_tiet})")
+    if len(phan_bo) == 1:
+        print("     ^ MỘT giá trị duy nhất — đây là hình dạng lỗi của AR-k. Kiểm lại luật.")
+    print(f"  subTenantCode: \"{MA_KHACH_SAN}\" cho cả {len(evidence)} mẩu — AR-l:"
+          f" 0 giá trị PHÂN BIỆT, và đó là sự thật của nguồn này, không phải thiếu sót.")
 
     for ten, data in (("fixture-cases.json", cases), ("fixture-evidence.json", evidence)):
         p = os.path.join(HERE, ten)
