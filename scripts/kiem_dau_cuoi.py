@@ -66,7 +66,10 @@ for _luong in (sys.stdout, sys.stderr):
             pass
 
 GOC = os.environ.get("APP_BASE", "http://localhost:5119").rstrip("/")
-KHOA_TIN_HIEU = os.environ.get("INGEST_SIGNAL_KEY")
+# `AR-e` 2026-09-16: khoá API theo TỪNG KHÁCH, thay khoá dùng chung cũ.
+# Để trống khi máy dev bật Auth:AcknowledgeUnauthenticatedApi — giữ đường này chạy
+# được trên máy không có gì cả, đúng bài học `IM-36`.
+KHOA_API = os.environ.get("KP_API_KEY")
 HERE = os.path.dirname(os.path.abspath(__file__))
 BANG_DINH_TUYEN = os.path.join(
     HERE, "..", "docs", "ket-qua-phan-tich", "dinh-tuyen-150-case.json")
@@ -81,13 +84,20 @@ _da_tao = {"case": 0, "evidence": 0, "knowledge": 0}
 
 # ---------------------------------------------------------------- hạ tầng gọi
 
-def goi(method: str, duong: str, body=None) -> tuple[int, object]:
+_MAC_DINH = object()
+
+
+def goi(method: str, duong: str, body=None, khoa=_MAC_DINH, them=None) -> tuple[int, object]:
+    """`khoa`: bỏ trống = dùng KP_API_KEY · None = KHÔNG gửi khoá · chuỗi = gửi đúng chuỗi đó."""
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(GOC + duong, data=data, method=method)
     if data:
         req.add_header("Content-Type", "application/json")
-    if KHOA_TIN_HIEU:
-        req.add_header("X-Signal-Key", KHOA_TIN_HIEU)
+    dung = KHOA_API if khoa is _MAC_DINH else khoa
+    if dung:
+        req.add_header("Authorization", "Bearer " + dung)
+    for k, v in (them or {}).items():
+        req.add_header(k, v)
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             raw = r.read().decode("utf-8")
@@ -374,6 +384,43 @@ def ben_gui_that() -> None:
         print(f"       -> {duoi.strip()[:700]}")
 
 
+def xac_thuc() -> None:
+    """
+    `AR-e` — cổng xác thực người gọi. Mục này KIỂM ĐƯỢC RẤT ÍT nếu app đang chạy ở chế độ
+    thừa nhận không khoá, nên nó nói thẳng ra điều đó thay vì im lặng báo xanh: một phép
+    kiểm xanh khi không có gì để kiểm là phép kiểm nguy hiểm (`doc_quyet_dinh.py` đã ghi
+    đúng câu này, và nó đúng ở cả đây).
+    """
+    muc("G · Xác thực người gọi  (AR-e)")
+
+    if not KHOA_API:
+        print("  ⚠ BỎ QUA — chưa đặt KP_API_KEY, nên app đang ở chế độ thừa nhận không khoá.")
+        print("    Mục này chỉ có nghĩa khi chạy:")
+        print("      Auth__AcknowledgeUnauthenticatedApi=false  +  KP_API_KEY=kp_...")
+        print("    ⚠ Đừng đọc phần còn lại của file này thành 'xác thực đã được kiểm'.")
+        return
+
+    s, _ = goi("GET", "/internal/tenant-boundary", khoa=None)
+    kiem("không gửi khoá -> 401", s, 401)
+
+    s, _ = goi("GET", "/internal/tenant-boundary", khoa="kp_khongcothat_khongcothat")
+    kiem("khoá bịa -> 401 (giống hệt ca thiếu khoá, không lộ khoá nào có thật)", s, 401)
+
+    # Header CŨ đã chết. Kiểm nó cụ thể, vì "còn nhận header cũ" là kiểu hỏng im lặng nhất:
+    # mọi thứ vẫn chạy, và lỗ hổng mà AR-e vừa vá thì vẫn mở qua đường cũ.
+    s, _ = goi("GET", "/internal/tenant-boundary", khoa=None, them={"X-Tenant-Key": "dev-tenant"})
+    kiem("X-Tenant-Key một mình -> 401 (header cũ KHÔNG còn mở được cửa)", s, 401)
+
+    s, b = goi("GET", "/internal/tenant-boundary")
+    kiem("khoá đúng -> 200", s, 200)
+    kiem("  ... và trả đúng hình dạng cũ",
+         isinstance(b, dict) and "rowsVisibleWithoutTenantFilter" in b, True)
+
+    s, _ = goi("POST", "/signals/case-observed",
+               [{"sourceReference": f"{DAU}:are-1", "subject": "kiểm AR-e"}], khoa=None)
+    kiem("endpoint GHI không khoá -> 401", s, 401)
+
+
 def main() -> int:
     print("=" * 68)
     print(f"KIỂM ĐẦU-CUỐI  ·  {GOC}  ·  lượt {LAN}")
@@ -385,6 +432,7 @@ def main() -> int:
     rut_lai(ma_ev)
     vong_tri_thuc()
     ben_gui_that()
+    xac_thuc()
 
     print("\n" + "=" * 68)
     print(f"{_da_chay} phép kiểm  ·  {len(_sai)} sai")

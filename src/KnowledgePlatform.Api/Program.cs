@@ -32,9 +32,16 @@ builder.Services.Configure<IngestOptions>(
     builder.Configuration.GetSection(IngestOptions.SectionName));
 builder.Services.Configure<DinhTuyenOptions>(
     builder.Configuration.GetSection(DinhTuyenOptions.SectionName));
+builder.Services.Configure<AuthOptions>(
+    builder.Configuration.GetSection(AuthOptions.SectionName));
 
 // Danh bạ tenant nằm NGOÀI ranh giới tenant — xem TenantDirectory.
 builder.Services.AddSingleton(sp => new TenantDirectory(
+    sp.GetRequiredService<IConfiguration>().GetConnectionString("Default")!));
+
+// Khoá API (`AR-e`) cũng nằm NGOÀI ranh giới tenant, và vì một lý do KHÁC —
+// xem ApiKeyDirectory. Chính nó quyết định tenant, nên không thể nằm sau cánh cửa đó.
+builder.Services.AddSingleton(sp => new ApiKeyDirectory(
     sp.GetRequiredService<IConfiguration>().GetConnectionString("Default")!));
 
 // Đặt một lần lúc khởi động bởi StartupChecks, không phải mỗi request.
@@ -44,8 +51,9 @@ builder.Services.AddSingleton<DedicatedTenant>();
 // thì do TenantResolutionMiddleware quyết, không phải do đường code khác nhau.
 builder.Services.AddScoped<RequestTenantContext>();
 builder.Services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<RequestTenantContext>());
+builder.Services.AddScoped<CallerIdentity>();
 builder.Services.AddScoped<TenantEndpointFilter>();
-builder.Services.AddScoped<SignalKeyEndpointFilter>();
+builder.Services.AddScoped<ApiKeyEndpointFilter>();
 builder.Services.AddScoped<CaseSignalHandler>();
 builder.Services.AddScoped<CaseEvidenceHandler>();
 builder.Services.AddScoped<CaseEvidenceReadHandler>();
@@ -80,6 +88,10 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
+
+// Lệnh vận hành của `AR-e` (tạo/thu hồi khoá): chạy rồi THOÁT, không mở cổng nghe.
+// Cố ý đứng TRƯỚC StartupChecks — xem AdminCommands.
+if (await AdminCommands.TryRunAsync(args, app.Services)) return;
 
 // Thất bại nào ở đây cũng là KHÔNG KHỞI ĐỘNG ĐƯỢC, không phải cảnh báo.
 await StartupChecks.RunAsync(app.Services);
@@ -159,6 +171,7 @@ app.MapGet("/internal/tenant-boundary", async (
             rowsVisibleWithoutTenantFilter = new { cases, evidence, knowledge },
         });
     })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 // --- KÊNH 1: đường nhận tín hiệu từ phần mềm có sẵn của khách (06 §1) ---
@@ -213,7 +226,7 @@ app.MapPost("/signals/case-observed", async (
 
         return Results.Ok(await handler.HandleAsync(signals, ct));
     })
-    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 // --- KÊNH 1, cửa thứ hai: NỘI DUNG của case (AR-f, chốt 2026-08-30) ---
@@ -297,7 +310,7 @@ app.MapPost("/signals/case-evidence", async (
 
         return Results.Ok(await handler.HandleAsync(signals, caseIds, ct));
     })
-    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 // =============================================================================
@@ -344,7 +357,7 @@ app.MapPost("/knowledge/sop-draft", async (
 
         return Results.Ok(await handler.HandleAsync(draft, ct));
     })
-    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 // --- (b) Duyệt: nội dung + quyền xem trong MỘT hành động (S7) ---
@@ -428,7 +441,7 @@ app.MapPost("/knowledge/{id:guid}/approve", async (
                 title: "Không thấy tri thức này",
                 detail: $"Không có bản ghi {id} trong phạm vi của khách hàng này.");
     })
-    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 // --- (c)+(d) Hỏi: một ticket vừa đến thì làm gì — và cổng "KHÔNG BIẾT" ---
@@ -457,7 +470,7 @@ app.MapPost("/hoi", async (
 
         return Results.Ok(await handler.HoiAsync(cauHoi, ct));
     })
-    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 
@@ -508,7 +521,7 @@ app.MapPost("/knowledge/{id:guid}/sua", async (
                 title: "Không thấy tri thức này",
                 detail: $"Không có bản ghi {id} trong phạm vi của khách hàng này.");
     })
-    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 // --- Đọc MỘT tri thức kèm TOÀN BỘ lịch sử assertion — chỗ diff(A,B) đọc được ---
@@ -531,7 +544,7 @@ app.MapGet("/knowledge/{id:guid}", async (
                 title: "Không thấy tri thức này",
                 detail: $"Không có bản ghi {id} trong phạm vi của khách hàng này.");
     })
-    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 
@@ -559,7 +572,7 @@ app.MapGet("/cases/{khoaNguon}/evidence", async (
                 detail: $"Không có Case nào mang khoá \"{khoaNguon}\" trong phạm vi của khách hàng này. " +
                         "Khoá nguồn có dấu `/` thì phải mã hoá thành %2F.");
     })
-    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 // --- AR-m: đánh dấu một mẩu ĐÃ BỊ NGƯỜI GỬI RÚT LẠI ---
@@ -623,7 +636,7 @@ app.MapPost("/evidence/rut-lai", async (
             _ => Results.Ok(kq),
         };
     })
-    .AddEndpointFilter<SignalKeyEndpointFilter>()
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 // --- AR-l: điều kiện MỞ LẠI, hỏi được bằng một lượt gọi ---
@@ -637,6 +650,7 @@ app.MapPost("/evidence/rut-lai", async (
 app.MapGet("/internal/sub-tenant-coverage", async (
         CaseEvidenceReadHandler handler,
         CancellationToken ct) => Results.Ok(await handler.DoPhuMaKhachSanAsync(ct)))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
 

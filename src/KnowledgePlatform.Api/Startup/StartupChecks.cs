@@ -26,9 +26,11 @@ public static class StartupChecks
         var config = sp.GetRequiredService<IConfiguration>();
         var tenancy = sp.GetRequiredService<IOptions<TenancyOptions>>().Value;
 
+        var auth = sp.GetRequiredService<IOptions<AuthOptions>>().Value;
+
         RequireConnectionString(config);
+        RequireApiAuthDecision(tenancy, auth);
         await ResolveTenancyAsync(sp, tenancy, ct);
-        RequireSignalEndpointDecision(sp.GetRequiredService<IOptions<IngestOptions>>().Value);
 
         // Kiểm RLS trên database THẬT. Danh sách bảng suy ra từ model (`IM-7`),
         // nên thêm entity tenant-scoped mà migration quên bật RLS là ném ở đây.
@@ -54,31 +56,41 @@ public static class StartupChecks
     }
 
     /// <summary>
-    /// Endpoint tín hiệu là endpoint GHI. Không xác thực nghĩa là bất kỳ ai cũng
-    /// bơm được case giả vào dữ liệu khách hàng — làm sai kho tri thức và làm sai
-    /// luôn `M2`. Nên phải có khoá, hoặc phải có người nói ra rằng mình biết.
+    /// `AR-e`: người gọi phải chứng minh được mình là khách hàng nào.
+    ///
+    /// Hai nhánh, và chúng KHÔNG đối xứng — chỗ này đáng đọc kỹ:
+    /// <list type="bullet">
+    ///   <item><b>dedicated</b>: tenant đến từ cấu hình, nên chạy không khoá vẫn có nghĩa
+    ///         (một bản deploy, một khách). Cho phép, nhưng phải THỪA NHẬN tường minh —
+    ///         nguyên tắc cũ của `IM-13`: sơ suất phải thành quyết định.</item>
+    ///   <item><b>shared</b>: khoá API là thứ DUY NHẤT nói được request thuộc khách nào.
+    ///         Bật cờ thừa nhận ở đây không phải là "chấp nhận rủi ro" mà là vô nghĩa —
+    ///         không còn đường nào xác định tenant. Nên cờ bị TỪ CHỐI, không phải cảnh báo.</item>
+    /// </list>
     /// </summary>
-    private static void RequireSignalEndpointDecision(IngestOptions ingest)
+    private static void RequireApiAuthDecision(TenancyOptions tenancy, AuthOptions auth)
     {
-        if (!string.IsNullOrWhiteSpace(ingest.SignalApiKey)) return;
-        if (ingest.AcknowledgeUnauthenticatedSignalEndpoint) return;
+        if (tenancy.Mode == TenancyMode.SharedMultiTenant && auth.AcknowledgeUnauthenticatedApi)
+        {
+            throw new InvalidOperationException(
+                """
+                Auth:AcknowledgeUnauthenticatedApi = true KHÔNG dùng được ở chế độ SharedMultiTenant.
 
-        throw new InvalidOperationException(
-            $"""
-             Endpoint tín hiệu POST /signals/case-observed chưa có khoá.
+                Ở chế độ này, khoá API là thứ DUY NHẤT nói được request thuộc khách hàng nào
+                (AR-e). Bỏ xác thực đi thì không còn gì để xác định tenant — không phải "kém
+                an toàn hơn", mà là KHÔNG CHẠY ĐƯỢC.
 
-             Đây là endpoint GHI: không có khoá thì bất kỳ ai gọi được cũng bơm được
-             case giả vào dữ liệu của khách hàng. Nó không crash, không báo — nó chỉ
-             làm sai kho tri thức và sai thước đo M2.
+                Muốn chạy không khoá thì dùng Tenancy:Mode=DedicatedSingleTenant, nơi tenant
+                đến từ cấu hình.
+                """);
+        }
 
-             Chọn một trong hai, tường minh:
-                 Ingest:SignalApiKey = <chuỗi bí mật>
-                 Ingest:AcknowledgeUnauthenticatedSignalEndpoint = true   (dev/test)
+        if (!auth.AcknowledgeUnauthenticatedApi) return;
 
-             ⚠ Khoá dùng chung KHÔNG phải câu trả lời cho AR-e: nó không phân biệt
-               được khách A với khách B ở chế độ shared, không thu hồi theo từng
-               khách, không chống replay. Nó chỉ là cái chốt trong lúc chờ.
-             """);
+        // Tới đây: dedicated + đã thừa nhận. Hợp lệ, không ném. Cảnh báo để nó không im lặng.
+        Console.Error.WriteLine(
+            "⚠ Auth:AcknowledgeUnauthenticatedApi = true — API đang chạy KHÔNG cần khoá. " +
+            "Chỉ dùng cho máy dev và bộ test.");
     }
 
     private static async Task ResolveTenancyAsync(
@@ -111,25 +123,10 @@ public static class StartupChecks
                 break;
 
             case TenancyMode.SharedMultiTenant:
-                if (!tenancy.AcknowledgeUnauthenticatedTenantHeader)
-                {
-                    throw new InvalidOperationException(
-                        $"""
-                         Chế độ Tenancy:Mode=SharedMultiTenant CHƯA CÓ XÁC THỰC (AR-e còn OPEN).
-
-                         Tenant được lấy từ header "{tenancy.TenantKeyHeader}", và hiện chưa có gì
-                         kiểm người gọi có quyền dùng khoá đó hay không. Bất kỳ ai gọi được API
-                         đều đọc được dữ liệu của bất kỳ khách hàng nào, chỉ cần biết khoá.
-
-                         Muốn chạy chế độ này (ví dụ để test, hoặc trong mạng nội bộ đã khoá) thì
-                         phải nói ra tường minh:
-                             Tenancy:AcknowledgeUnauthenticatedTenantHeader = true
-
-                         Cờ này không bảo vệ gì cả — nó chỉ làm việc deploy một API chưa xác thực
-                         trở thành QUYẾT ĐỊNH, không phải SƠ SUẤT.
-                         """);
-                }
-
+                // ✅ Không còn cổng thừa nhận ở đây. `AR-e` đã thành code: tenant đến từ khoá
+                //    API đã kiểm, nên không còn trạng thái "chạy mà chưa xác thực" để thừa nhận.
+                //    Cờ cũ (`Tenancy:AcknowledgeUnauthenticatedTenantHeader`) đã bị xoá — xem
+                //    ghi chú trong TenancyOptions.
                 holder.Assign(null);
                 break;
 

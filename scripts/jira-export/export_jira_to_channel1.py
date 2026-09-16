@@ -459,7 +459,7 @@ def batches(items: list[dict]) -> list[list[dict]]:
 def push(cfg: Config, path: str, items: list[dict], label: str) -> None:
     headers = {}
     if cfg.signal_key:
-        headers["X-Signal-Key"] = cfg.signal_key
+        headers["Authorization"] = "Bearer " + cfg.signal_key  # AR-e: khoá theo từng khách
     received = created = 0
     for n, batch in enumerate(batches(items), 1):
         result = http_json(f"{cfg.app_base}{path}", headers, body=batch)

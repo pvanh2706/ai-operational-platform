@@ -34,14 +34,15 @@ for _luong in (sys.stdout, sys.stderr):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.environ.get("APP_BASE_URL", "http://localhost:5119").rstrip("/")
-KEY = os.environ.get("APP_SIGNAL_KEY") or None
+# `AR-e` 2026-09-16: Bearer khoá API theo từng khách, thay X-Signal-Key dùng chung.
+KEY = os.environ.get("KP_API_KEY") or None
 MAX_PER_BATCH = 500
 
 
 def post(path: str, body: list) -> dict:
     headers = {"Content-Type": "application/json; charset=utf-8"}
     if KEY:
-        headers["X-Signal-Key"] = KEY
+        headers["Authorization"] = "Bearer " + KEY
     req = urllib.request.Request(
         f"{APP}{path}", method="POST", headers=headers,
         data=json.dumps(body, ensure_ascii=False).encode("utf-8"))

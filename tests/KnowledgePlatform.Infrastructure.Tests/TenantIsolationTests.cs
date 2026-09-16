@@ -474,7 +474,14 @@ public sealed class TenantIsolationTests : IClassFixture<TestDatabaseFixture>
             AppDbContext.TenantExemptRelations,
             kv => Assert.False(string.IsNullOrWhiteSpace(kv.Value), $"Miễn trừ \"{kv.Key}\" không ghi lý do."));
 
-        // Hôm nay đúng MỘT ngoại lệ hợp lệ: bảng danh bạ tenant (`IM-14`).
-        Assert.Equal(["tenant"], AppDbContext.TenantExemptRelations.Keys.OrderBy(k => k));
+        // Hai ngoại lệ hợp lệ, và LÝ DO CỦA CHÚNG KHÁC NHAU — đừng đọc gộp:
+        //   tenant   không thuộc tenant nào (nó LÀ danh bạ)          `IM-14`
+        //   api_key  CÓ thuộc một tenant, nhưng nó là thứ QUYẾT ĐỊNH tenant của request,
+        //            nên không thể nằm sau cánh cửa nó đang mở        `AR-e`
+        //
+        // ⚠ Danh sách này cố ý ĐẾM ĐỦ chứ không chỉ "chứa": thêm một bảng miễn RLS mà không
+        //   ai để ý là đúng kiểu nới lỏng im lặng mà cả nhóm cơ chế này sinh ra để chặn.
+        //   Test này đã đỏ đúng lúc api_key ra đời — đó là nó làm việc, không phải phiền hà.
+        Assert.Equal(["api_key", "tenant"], AppDbContext.TenantExemptRelations.Keys.OrderBy(k => k));
     }
 }

@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace KnowledgePlatform.Api.Tenancy;
 
 /// <summary>
@@ -33,24 +31,21 @@ public sealed class TenancyOptions
     /// </summary>
     public string? TenantExternalKey { get; set; }
 
-    /// <summary>
-    /// Chỉ dùng ở chế độ <see cref="TenancyMode.SharedMultiTenant"/>.
-    ///
-    /// ⚠ **CHƯA CÓ XÁC THỰC.** Ở chế độ shared, tenant đến từ một header của
-    /// người gọi, và hiện chưa có gì kiểm người gọi có quyền dùng khoá đó hay
-    /// không — `AR-e` còn OPEN. Nghĩa là bất kỳ ai gọi được API đều đọc được dữ
-    /// liệu của bất kỳ khách hàng nào, chỉ cần biết khoá.
-    ///
-    /// Nên chế độ shared **từ chối khởi động** trừ khi cờ này được đặt tường minh
-    /// bằng <c>true</c>. Không phải để bảo vệ hệ thống — cờ nào cũng bật được —
-    /// mà để không ai deploy nó do SƠ SUẤT. Cùng lý do với `IM-5`: cái bẫy đáng
-    /// sợ là cái không ai thấy.
-    /// </summary>
-    public bool AcknowledgeUnauthenticatedTenantHeader { get; set; }
-
-    /// <summary>Header mang khoá ngoài của tenant ở chế độ shared.</summary>
-    [Required]
-    public string TenantKeyHeader { get; set; } = "X-Tenant-Key";
+    // ⚠ ĐÃ XOÁ 2026-09-16 cùng lúc `AR-e` thành code: `AcknowledgeUnauthenticatedTenantHeader`
+    //   và `TenantKeyHeader`.
+    //
+    //   Ghi lại vì việc xoá một cái cờ an toàn là thứ phải giải thích được, không phải thứ
+    //   lặng lẽ biến mất khỏi diff. Cờ đó tồn tại để việc deploy một API chưa xác thực trở
+    //   thành QUYẾT ĐỊNH thay vì SƠ SUẤT (`IM-13`) — nó là TRÁNH, và tài liệu đã luôn gọi
+    //   đúng tên nó như vậy.
+    //
+    //   Giờ thì thứ nó tránh đã được GIẢI: ở chế độ shared, tenant đến từ một khoá đã kiểm
+    //   (`ApiKeyDirectory`), không còn từ header `X-Tenant-Key` mà người gọi tự điền. Không
+    //   còn trạng thái "chạy mà chưa xác thực" để mà thừa nhận.
+    //
+    //   ⚠ Đây là lần ĐẦU TIÊN trong dự án một cổng TRÁNH được gỡ vì đã GIẢI. Ba cổng tránh
+    //     khác vẫn còn nguyên và KHÔNG được gỡ theo: cổng 409 của `AR-l`, lời khai
+    //     `xacNhanDuLieuThuongMai` của `AR-n` B2b, và luật che một-hình-dạng của `AR-n` B2a.
 }
 
 public enum TenancyMode
@@ -66,8 +61,8 @@ public enum TenancyMode
     DedicatedSingleTenant = 1,
 
     /// <summary>
-    /// Một bản deploy phục vụ nhiều khách hàng, tenant đến từ ngữ cảnh request.
-    /// Chưa có xác thực — xem <see cref="TenancyOptions.AcknowledgeUnauthenticatedTenantHeader"/>.
+    /// Một bản deploy phục vụ nhiều khách hàng, tenant đến từ KHOÁ API đã kiểm
+    /// (<c>AR-e</c>, <see cref="ApiKeyDirectory"/>) — không từ header người gọi tự điền.
     /// </summary>
     SharedMultiTenant = 2,
 }

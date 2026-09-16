@@ -90,8 +90,8 @@ public sealed class TenantBoundaryThroughHttpTests(ApiDatabaseFixture db)
         using var factory = ApiFactory.Shared();
         using var client = factory.CreateClient();
 
-        var a = await GetBoundaryAsync(client, db.TenantAKey);
-        var b = await GetBoundaryAsync(client, db.TenantBKey);
+        var a = await GetBoundaryAsync(client, db.TenantAApiKey);
+        var b = await GetBoundaryAsync(client, db.TenantBApiKey);
 
         Assert.Equal(db.TenantAId, a.TenantId);
         Assert.Equal(db.TenantBId, b.TenantId);
@@ -114,38 +114,41 @@ public sealed class TenantBoundaryThroughHttpTests(ApiDatabaseFixture db)
         for (var i = 0; i < 4; i++)
         {
             Assert.Equal(ApiDatabaseFixture.CasesForA,
-                (await GetBoundaryAsync(client, db.TenantAKey)).RowsVisibleWithoutTenantFilter.Cases);
+                (await GetBoundaryAsync(client, db.TenantAApiKey)).RowsVisibleWithoutTenantFilter.Cases);
             Assert.Equal(ApiDatabaseFixture.CasesForB,
-                (await GetBoundaryAsync(client, db.TenantBKey)).RowsVisibleWithoutTenantFilter.Cases);
+                (await GetBoundaryAsync(client, db.TenantBApiKey)).RowsVisibleWithoutTenantFilter.Cases);
         }
     }
 
     [Fact]
-    public async Task Che_do_shared_thieu_header_tenant_thi_400_va_khong_tra_du_lieu()
+    public async Task Che_do_shared_thieu_khoa_thi_401_va_khong_tra_du_lieu()
     {
         using var factory = ApiFactory.Shared();
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync(BoundaryPath);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // ⚠ Đổi từ 400 sang 401 khi `AR-e` thành code: trước đây thiếu header tenant là
+        // "không biết bạn là ai" (400); giờ là "bạn chưa chứng minh được mình là ai" (401).
+        // Khác nhau thật, không phải đổi số cho đẹp.
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.DoesNotContain("rowsVisible", await response.Content.ReadAsStringAsync());
     }
 
     /// <summary>
-    /// Khoá không tồn tại trả 400 **giống hệt** trường hợp thiếu header, cố ý.
+    /// Khoá không tồn tại trả 401 **giống hệt** trường hợp thiếu khoá, cố ý.
     /// Phân biệt hai ca đó là nói cho người gọi biết khoá nào CÓ tồn tại — tức là
     /// tiết lộ thông tin về khách hàng khác.
     /// </summary>
     [Fact]
-    public async Task Che_do_shared_khoa_tenant_khong_ton_tai_thi_400()
+    public async Task Che_do_shared_khoa_khong_ton_tai_thi_401_giong_het_thieu_khoa()
     {
         using var factory = ApiFactory.Shared();
         using var client = factory.CreateClient();
 
-        var response = await GetRawAsync(client, "khoa-khong-ton-tai");
+        var response = await GetRawAsync(client, "kp_khongcothat_khongcothat");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     // =====================================================================
@@ -164,18 +167,23 @@ public sealed class TenantBoundaryThroughHttpTests(ApiDatabaseFixture db)
     }
 
     /// <summary>
-    /// Chế độ shared chưa có xác thực (`AR-e` OPEN). Nó chạy được, nhưng phải là
-    /// một QUYẾT ĐỊNH tường minh — không phải thứ deploy được do sơ suất.
+    /// ⚠ **Thay cho test cũ**, và khác biệt đáng đọc: bản cũ kiểm rằng chế độ shared TỪ CHỐI
+    /// KHỞI ĐỘNG khi chưa ai thừa nhận là "chưa có xác thực" — một cổng TRÁNH (`IM-13`).
+    /// `AR-e` đã GIẢI thứ nó tránh, nên cổng đó bị gỡ và cờ cũ bị xoá.
+    ///
+    /// Cái thay nó KHÔNG phải cùng một cổng đổi tên: bỏ xác thực ở chế độ shared giờ không
+    /// còn là "chấp nhận rủi ro" mà là **vô nghĩa** — không còn đường nào xác định tenant.
+    /// Nên nó bị TỪ CHỐI, kể cả khi có người thừa nhận tường minh.
     /// </summary>
     [Fact]
-    public void Tu_choi_khoi_dong_che_do_shared_khi_chua_thua_nhan_la_chua_co_xac_thuc()
+    public void Che_do_shared_TU_CHOI_co_thua_nhan_chay_khong_khoa()
     {
-        using var factory = ApiFactory.Shared(acknowledgeNoAuth: false);
+        using var factory = ApiFactory.Shared().With("Auth:AcknowledgeUnauthenticatedApi", "true");
 
         var ex = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
 
-        Assert.Contains("CHƯA CÓ XÁC THỰC", ex.Message);
-        Assert.Contains("AcknowledgeUnauthenticatedTenantHeader", ex.Message);
+        Assert.Contains("AcknowledgeUnauthenticatedApi", ex.Message);
+        Assert.Contains("SharedMultiTenant", ex.Message);
     }
 
     /// <summary>
@@ -232,18 +240,22 @@ public sealed class TenantBoundaryThroughHttpTests(ApiDatabaseFixture db)
 
     // =====================================================================
 
-    private async Task<BoundaryResponse> GetBoundaryAsync(HttpClient client, string tenantKey)
+    private async Task<BoundaryResponse> GetBoundaryAsync(HttpClient client, string apiKey)
     {
-        var response = await GetRawAsync(client, tenantKey);
+        var response = await GetRawAsync(client, apiKey);
         response.EnsureSuccessStatusCode();
 
         return (await response.Content.ReadFromJsonAsync<BoundaryResponse>())!;
     }
 
-    private static async Task<HttpResponseMessage> GetRawAsync(HttpClient client, string tenantKey)
+    /// <summary>
+    /// ⚠ Đổi 2026-09-16 cùng `AR-e`: tenant đến từ KHOÁ ĐÃ KIỂM, không từ header người gọi
+    /// tự điền. Tham số vì thế là chuỗi khoá API, không phải <c>ExternalKey</c> của tenant.
+    /// </summary>
+    private static async Task<HttpResponseMessage> GetRawAsync(HttpClient client, string apiKey)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, BoundaryPath);
-        request.Headers.Add("X-Tenant-Key", tenantKey);
+        request.Headers.Authorization = ApiDatabaseFixture.Bearer(apiKey);
 
         return await client.SendAsync(request);
     }

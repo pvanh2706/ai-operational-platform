@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using KnowledgePlatform.Domain.Tenancy;
 using KnowledgePlatform.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
@@ -37,15 +38,17 @@ public sealed class ApiFactory(Dictionary<string, string?> settings) : WebApplic
     {
         ["Tenancy:Mode"] = "DedicatedSingleTenant",
         ["Tenancy:TenantExternalKey"] = tenantExternalKey,
-        ["Ingest:AcknowledgeUnauthenticatedSignalEndpoint"] = "true",
+        ["Auth:AcknowledgeUnauthenticatedApi"] = "true",
     });
 
-    /// <summary>Một bản deploy phục vụ nhiều khách hàng, tenant từ header.</summary>
-    public static ApiFactory Shared(bool acknowledgeNoAuth = true) => new(new()
+    /// <summary>
+    /// Một bản deploy phục vụ nhiều khách hàng. Tenant đến từ KHOÁ API (`AR-e`), nên
+    /// mọi request ở chế độ này phải mang <c>Authorization: Bearer kp_...</c> —
+    /// không còn header <c>X-Tenant-Key</c> để tự khai mình là ai.
+    /// </summary>
+    public static ApiFactory Shared() => new(new()
     {
         ["Tenancy:Mode"] = "SharedMultiTenant",
-        ["Tenancy:AcknowledgeUnauthenticatedTenantHeader"] = acknowledgeNoAuth ? "true" : "false",
-        ["Ingest:AcknowledgeUnauthenticatedSignalEndpoint"] = "true",
     });
 
     public static ApiFactory WithSettings(Dictionary<string, string?> settings) => new(settings);
@@ -58,10 +61,11 @@ public sealed class ApiFactory(Dictionary<string, string?> settings) : WebApplic
     public ApiFactory With(string key, string? value) =>
         new(new Dictionary<string, string?>(settings) { [key] = value });
 
-    /// <summary>Đặt khoá cho endpoint tín hiệu, và bỏ luôn phần thừa nhận "chạy không khoá".</summary>
-    public ApiFactory WithSignalApiKey(string apiKey) =>
-        With("Ingest:SignalApiKey", apiKey)
-            .With("Ingest:AcknowledgeUnauthenticatedSignalEndpoint", "false");
+    /// <summary>
+    /// Bỏ phần thừa nhận "chạy không khoá" — từ đây mọi endpoint đòi khoá API thật.
+    /// Dùng cho test kiểm chính cái cổng đó; phần lớn test khác không cần.
+    /// </summary>
+    public ApiFactory RequireApiKey() => With("Auth:AcknowledgeUnauthenticatedApi", "false");
 }
 
 /// <summary>
@@ -76,6 +80,17 @@ public sealed class ApiDatabaseFixture : IAsyncLifetime
     public Guid TenantAId { get; private set; }
     public Guid TenantBId { get; private set; }
 
+    /// <summary>
+    /// Khoá API thật của từng khách (`AR-e`), sinh đúng bằng đường mà vận hành sẽ dùng.
+    ///
+    /// ⚠ Cố ý KHÔNG nhét một chuỗi khoá viết tay vào đây. Bài học `IM-37`/`IM-38` lặp lại:
+    /// vật liệu test phải đi qua chính đường sinh của sản phẩm, không lấy từ trí nhớ người
+    /// viết test — nếu không thì hình dạng khoá đổi mà test vẫn xanh.
+    /// </summary>
+    public string TenantAApiKey { get; private set; } = string.Empty;
+
+    public string TenantBApiKey { get; private set; } = string.Empty;
+
     /// <summary>Số case đã tạo cho từng khách — con số mà API phải thấy, và chỉ thấy đúng nó.</summary>
     public const int CasesForA = 2;
     public const int CasesForB = 5;
@@ -87,7 +102,14 @@ public sealed class ApiDatabaseFixture : IAsyncLifetime
 
         TenantAId = await SeedTenantAsync(TenantAKey, CasesForA);
         TenantBId = await SeedTenantAsync(TenantBKey, CasesForB);
+
+        var khoa = new Tenancy.ApiKeyDirectory(ApiFactory.ConnectionString);
+        TenantAApiKey = await khoa.TaoAsync(TenantAId, "test — tenant A");
+        TenantBApiKey = await khoa.TaoAsync(TenantBId, "test — tenant B");
     }
+
+    /// <summary>Header xác thực cho một khoá — đúng hình dạng mà bên tích hợp phải gửi.</summary>
+    public static AuthenticationHeaderValue Bearer(string apiKey) => new("Bearer", apiKey);
 
     public Task DisposeAsync() => Task.CompletedTask;
 

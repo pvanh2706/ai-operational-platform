@@ -8,31 +8,14 @@ namespace KnowledgePlatform.Api.Signals;
 /// bất kỳ ai cũng bơm được case giả vào dữ liệu của khách hàng — làm sai kho tri
 /// thức, và làm sai luôn `M2` (thước đo chính của tháng đầu).
 ///
-/// `AR-e` (xác thực người gọi) còn OPEN, nên đây **chưa phải** câu trả lời cho nó.
-/// Đây là cái chốt nhỏ nhất có thể để endpoint không mở toang trong lúc chờ:
-/// một khoá dùng chung, so sánh theo thời gian hằng số.
+/// ✅ **`AR-e` ĐÃ ĐÓNG 2026-09-16.** Khoá dùng chung (`SignalApiKey`) và cờ thừa nhận của
+/// nó đã bị xoá khỏi đây — xác thực giờ là khoá API theo từng khách hàng, xem
+/// <c>ApiKeyEndpointFilter</c>. Còn lại trong lớp này chỉ là hai cái TRẦN, và chúng không
+/// liên quan gì tới xác thực.
 /// </summary>
 public sealed class IngestOptions
 {
     public const string SectionName = "Ingest";
-
-    /// <summary>
-    /// Khoá mà phần mềm của khách phải gửi kèm tín hiệu. Không có khoá và không
-    /// thừa nhận tường minh (xem <see cref="AcknowledgeUnauthenticatedSignalEndpoint"/>)
-    /// thì ứng dụng **không khởi động được**.
-    /// </summary>
-    public string? SignalApiKey { get; set; }
-
-    /// <summary>
-    /// Cho phép chạy endpoint tín hiệu KHÔNG có khoá. Dùng cho máy dev và test.
-    ///
-    /// Giống <c>Tenancy:AcknowledgeUnauthenticatedTenantHeader</c> (`IM-13`): cờ này
-    /// không bảo vệ gì cả — nó chỉ làm việc mở một endpoint ghi không xác thực trở
-    /// thành **quyết định** thay vì **sơ suất**.
-    /// </summary>
-    public bool AcknowledgeUnauthenticatedSignalEndpoint { get; set; }
-
-    public string ApiKeyHeader { get; set; } = "X-Signal-Key";
 
     /// <summary>
     /// Trần số tín hiệu trong một request. Vượt là **từ chối cả request** kèm nói rõ

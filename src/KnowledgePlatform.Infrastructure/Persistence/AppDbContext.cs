@@ -52,6 +52,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
         {
             ["tenant"] = "Danh bạ khách hàng — nó LÀ tenant, không thuộc tenant nào. " +
                          "Phải đọc được TRƯỚC khi biết tenant của request, nên không thể tự bảo vệ bằng RLS (`IM-14`).",
+
+            ["api_key"] = "Khoá API của khách (`AR-e`). ⚠ LÝ DO KHÁC hàng trên, đừng đọc gộp: dòng này CÓ " +
+                          "thuộc một tenant, nhưng chính nó là thứ QUYẾT ĐỊNH tenant của request — nên nó " +
+                          "không thể nằm sau cánh cửa mà nó đang mở. Bù lại: không có DbSet, không endpoint " +
+                          "nào trả dòng của bảng này ra, và đọc nó đi qua đúng một cửa (ApiKeyDirectory).",
         };
 
     /// <summary>
@@ -133,6 +138,31 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.Property(x => x.Name).HasMaxLength(256).IsRequired();
             e.Property(x => x.ExternalKey).HasMaxLength(256).IsRequired();
             e.HasIndex(x => x.ExternalKey).IsUnique();
+        });
+
+        // --- ApiKey: CÓ TenantId nhưng KHÔNG cài ITenantScoped, và đó là chủ đích ---
+        // Xem TenantExemptRelations["api_key"] cho lý do đầy đủ. Cố ý KHÔNG có DbSet:
+        // entity vẫn nằm trong model (nên migration sinh ra bình thường và RlsGuard vẫn
+        // thấy bảng), nhưng không có `db.ApiKeys` để ai đó lỡ tay truy vấn — một bảng
+        // miễn RLS mà lại tiện query là cách tạo ra đường rò không ai cố ý viết.
+        b.Entity<ApiKey>(e =>
+        {
+            e.ToTable("api_key");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.KeyId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.SecretHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Label).HasMaxLength(256).IsRequired();
+
+            // Tra theo KeyId là đường NÓNG của mọi request có xác thực -> phải là index,
+            // và duy nhất vì KeyId là thứ định danh dòng.
+            e.HasIndex(x => x.KeyId).IsUnique();
+
+            // Xoá tenant thì khoá của nó đi theo. Không có đường nào để một khoá mồ côi
+            // trỏ vào một tenant không còn tồn tại.
+            e.HasOne<Tenant>()
+                .WithMany()
+                .HasForeignKey(x => x.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // --- Case: bản MỎNG cố ý, xem CanonicalCase ---

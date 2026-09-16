@@ -432,6 +432,92 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-39` · `AR-e` thành CODE — và cái cổng TRÁNH đầu tiên của dự án được gỡ vì đã GIẢI
+
+**Ngày 2026-09-16, lượt cuối.** Bước 1 của lộ trình mức 3 (`docs/18`). Xác thực người gọi
+theo từng khách hàng, thay khoá dùng chung.
+
+```text
+kp.api_key           Id · TenantId · KeyId · SecretHash · Label · CreatedAt · RevokedAt
+Authorization        Bearer kp_<keyId>_<secret>        <- thay X-Tenant-Key VÀ X-Signal-Key
+lệnh vận hành        --tao-khoa <tenant> "<nhãn>"  ·  --thu-hoi-khoa <keyId>
+✅ 318/318 test xanh (198 + 19 + 101), trước 302 · 0 warning
+✅ chạy THẬT: 8 phép kiểm trên app sống · kiem_dau_cuoi.py 38 phép kiểm, 0 sai (trước 32)
+```
+
+**🎯 Điều đáng nhất không phải cái bảng mới, mà là chỗ lỗ hổng thật sự nằm.** Khoá dùng
+chung cũ trả lời câu *"người gọi có biết mật khẩu không"*. Ranh giới tenant hỏi câu
+*"người gọi LÀ AI"*. Chừng nào tenant còn đến từ `X-Tenant-Key` — một header mà chính người
+gọi tự điền — thì **mọi lớp xác thực thêm vào đều là trang trí**: biết khoá là khai được
+mình là bất kỳ khách nào. Nên `AR-e` không đóng bằng cách thêm một cổng; nó đóng bằng cách
+**đổi nguồn của tenant**. Header cũ vì thế bị xoá hẳn, không giữ song song — giữ hai đường
+vào là giữ nguyên lỗ hổng và thêm một đường để quên.
+
+**✅ Lần ĐẦU TIÊN một cổng TRÁNH được gỡ vì đã GIẢI.** `Tenancy:AcknowledgeUnauthenticatedTenantHeader`
+(`IM-13`) tồn tại để việc deploy một API chưa xác thực thành QUYẾT ĐỊNH thay vì SƠ SUẤT.
+Tài liệu luôn gọi đúng tên nó: TRÁNH. Giờ thứ nó tránh đã được giải, nên nó bị xoá.
+```text
+⚠ Ba cổng TRÁNH khác VẪN CÒN, và KHÔNG được gỡ theo:
+   cổng 409 của AR-l · lời khai xacNhanDuLieuThuongMai (AR-n B2b) · luật che một-hình-dạng (AR-n B2a)
+```
+
+**🛑 Ba quyết định thiết kế mà người review sẽ hỏi, trả lời sẵn:**
+
+```text
+· api_key MIỄN RLS, và lý do KHÁC kp.tenant. tenant miễn vì không thuộc tenant nào;
+  api_key thì CÓ thuộc một tenant — nó miễn vì chính nó QUYẾT ĐỊNH tenant, nên không
+  thể nằm sau cánh cửa nó đang mở. Bù lại: KHÔNG có DbSet (đọc qua đúng một cửa), và
+  không endpoint nào trả dòng của bảng này ra.
+· Lưu HASH, không lưu khoá trần — `0e602c3` đã một lần phải gỡ credential thật khỏi 5
+  file được git theo dõi. Tự đẻ ra một bảng chứa khoá trần là mời sự cố đó quay lại ở
+  chỗ không ai quét.
+· SHA-256 chứ không bcrypt/argon2: bí mật là 32 byte từ RandomNumberGenerator, không
+  phải mật khẩu người gõ. Làm chậm hàm băm không mua thêm gì khi entropy đã là 2^256.
+· Lệnh CLI chứ không endpoint quản trị: một endpoint tạo khoá tự nó cần xác thực, và
+  thứ xác thực nó lại là khoá -> vòng tròn. Ai đó sẽ giải bằng một "khoá quản trị" cấu
+  hình sẵn, và thế là khoá dùng chung quay lại bằng cửa sau.
+```
+
+**🛑 CÁI BẪY THẬT CỦA HÌNH DẠNG KHOÁ, và nó hỏng NGẪU NHIÊN nên test một lần rất dễ xanh
+giả.** Phần bí mật mã base64url, mà base64url dùng `-` và `_` thay `+` và `/` — nên **khoảng
+một nửa** số khoá sinh ra có dấu gạch dưới BÊN TRONG. Tách bằng *"lấy phần sau dấu `_` cuối
+cùng"* cắt cụt đúng những khoá đó.
+```text
+đột biến: Split('_') rồi lấy phần tử CUỐI   -> 2 test đỏ, đúng hai test viết ra để chặn nó
+```
+⚠ Và một test cố ý sinh **200 khoá** rồi khẳng định có ít nhất một khoá chứa `_`: sinh một
+lượt là ca hỏng chỉ xuất hiện ~50% số lần chạy — tức một bộ test **đỏ ngẫu nhiên**, thứ mà
+người ta sẽ chạy lại cho tới khi xanh rồi đi tiếp.
+
+**✅ Một cổng canh làm đúng việc của nó, ghi lại vì nó là bằng chứng cơ chế còn sống:** thêm
+`api_key` vào `TenantExemptRelations` làm test `Moi_mien_tru_deu_phai_co_ly_do` **ĐỎ NGAY** —
+nó khẳng định danh sách miễn trừ đếm ĐỦ, không chỉ "chứa". Một bảng miễn RLS lọt vào mà không
+ai để ý đúng là kiểu nới lỏng im lặng mà cả nhóm cơ chế này sinh ra để chặn.
+
+**⚠ Một cổng khởi động bị gỡ, và lý do KHÔNG phải "bớt phiền":** `RequireSignalEndpointDecision`
+từ chối khởi động khi endpoint ghi không có khoá và không ai thừa nhận. Cổng đó cần thiết vì
+mặc định lúc ấy là **MỞ** — quên cấu hình là endpoint ghi phơi ra. Với `AR-e`, mặc định đã là
+**ĐÓNG**: không cấu hình gì thì không khoá nào hợp lệ và mọi endpoint trả 401. Không còn trạng
+thái nguy hiểm nào để chặn lúc khởi động. Test cũ được thay bằng test kiểm chính cái mặc định
+đóng đó.
+
+**⚠ Đường FIXTURE vẫn sống — kiểm trước, không phải hy vọng.** `IM-36` đã một lần giết đường
+`load_fixture.py` bằng một cổng mới, và đó là đường DUY NHẤT dựng lại dữ liệu trên máy không
+có credential Jira. Lần này ba script đọc `KP_API_KEY` và **bỏ trống vẫn chạy** trên máy dev
+(cờ thừa nhận). Mục F của `kiem_dau_cuoi.py` xanh chính là bằng chứng đường đó còn sống.
+
+**🛑 CÒN LẠI, đừng đọc thành đã xong:**
+```text
+· Khoá xác thực HỆ THỐNG gọi vào. NGƯỜI đọc vẫn chưa có gì xác thực — D5-3 (link token
+  có hạn) và E3-1 (chỉ người có quyền duyệt) đều đang đợi thứ đó. Xem docs/18.
+· Chưa có chống replay, chưa có giới hạn tần suất. C1-1 chọn "rẻ nhất mà giải đúng vấn
+  đề", và hai thứ đó không nằm trong vấn đề nó giải.
+· Chưa có đường ĐỌC danh sách khoá của một khách. Cố ý: chưa ai cần, và mỗi đường đọc
+  thêm là một chỗ dòng của bảng miễn-RLS này có thể lọt ra ngoài.
+```
+
+---
+
 ## `IM-38` · 8/13 endpoint chưa từng được gọi bởi thứ gì ngoài bộ test — và phép kiểm mới BẮT ĐƯỢC cả hai lỗi của hai ngày trước
 
 **Ngày 2026-09-16, lượt cuối.** Ba ngày qua có ba lỗi thật, và **hai trong ba nằm đúng chỗ

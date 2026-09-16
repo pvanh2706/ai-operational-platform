@@ -328,7 +328,7 @@ public sealed class VongTriThucTests(ApiDatabaseFixture db) : IClassFixture<ApiD
 
         using var shared = ApiFactory.Shared().With("DinhTuyen:DuongDanBangTraSan", b.BangDinhTuyen);
         var client = shared.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Tenant-Key", db.TenantAKey);
+        client.DefaultRequestHeaders.Authorization = ApiDatabaseFixture.Bearer(db.TenantAApiKey);
 
         var res = await client.PostAsJsonAsync($"/knowledge/{id}/approve",
             new { nguoiDuyet = "ai đó", phamViXem = "noi-bo", xacNhanDuLieuThuongMai = true });

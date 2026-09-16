@@ -46,35 +46,52 @@ public sealed class DedicatedTenant
 ///     tức là quên ở đây không thành lỗ rò.
 /// Endpoint nào cần tenant thì tự đòi, bằng <see cref="TenantEndpointFilter"/>.
 /// </summary>
-public sealed class TenantResolutionMiddleware(RequestDelegate next, IOptions<TenancyOptions> options)
+public sealed class TenantResolutionMiddleware(
+    RequestDelegate next,
+    IOptions<TenancyOptions> options,
+    IOptions<AuthOptions> authOptions)
 {
     private readonly TenancyOptions _options = options.Value;
+    private readonly AuthOptions _auth = authOptions.Value;
 
     public async Task InvokeAsync(
         HttpContext context,
         RequestTenantContext tenantContext,
-        TenantDirectory directory,
+        ApiKeyDirectory apiKeys,
+        CallerIdentity caller,
         DedicatedTenant dedicated)
     {
+        // Xác thực TRƯỚC, vì ở chế độ shared chính lượt này quyết định tenant.
+        var khoa = await XacThucAsync(context, apiKeys);
+
         switch (_options.Mode)
         {
             case TenancyMode.DedicatedSingleTenant:
                 // Tenant từ CẤU HÌNH — nhánh mà `G13` cho phép. Đã tra và xác nhận
                 // tồn tại lúc khởi động, nên ở đây không có truy vấn nào.
-                tenantContext.Resolve(dedicated.TenantId ?? throw new InvalidOperationException(
-                    "Chế độ dedicated nhưng tenant chưa được tra lúc khởi động."));
+                var cuaBanDeploy = dedicated.TenantId ?? throw new InvalidOperationException(
+                    "Chế độ dedicated nhưng tenant chưa được tra lúc khởi động.");
+
+                tenantContext.Resolve(cuaBanDeploy);
+
+                // ⚠ Khoá HỢP LỆ của khách KHÁC vẫn là khoá không dùng được ở đây. Không có
+                // dòng này thì một bản deploy dedicated của khách A chấp nhận khoá của khách
+                // B — request sẽ chạy dưới tenant A, tức khoá của B ghi vào dữ liệu của A.
+                // RLS không cứu được: nó chỉ biết tenant đã resolve, không biết ai đưa ra nó.
+                if (khoa is { ConHieuLuc: true } && khoa.TenantId == cuaBanDeploy)
+                {
+                    caller.XacNhan(khoa.ApiKeyId);
+                }
                 break;
 
             case TenancyMode.SharedMultiTenant:
-                var key = context.Request.Headers[_options.TenantKeyHeader].ToString();
-                if (!string.IsNullOrWhiteSpace(key))
+                // `AR-e` ĐÃ ĐÓNG Ở ĐÂY: tenant đến từ khoá đã kiểm, không từ một header mà
+                // người gọi tự điền. Header `X-Tenant-Key` đã bị bỏ — giữ nó song song là
+                // giữ nguyên lỗ hổng và thêm một đường để quên.
+                if (khoa is { ConHieuLuc: true })
                 {
-                    var id = await directory.FindIdByExternalKeyAsync(key, context.RequestAborted);
-
-                    // Khoá lạ → KHÔNG resolve. Cố ý không trả 404 ở đây: "khoá này
-                    // có tồn tại không" là thông tin về khách hàng khác, và endpoint
-                    // sẽ trả 400 chung chung qua TenantEndpointFilter.
-                    if (id.HasValue) tenantContext.Resolve(id.Value);
+                    tenantContext.Resolve(khoa.TenantId);
+                    caller.XacNhan(khoa.ApiKeyId);
                 }
                 break;
 
@@ -87,6 +104,22 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next, IOptions<Te
         }
 
         await next(context);
+    }
+
+    /// <summary>
+    /// Đọc header và tra khoá. Trả <c>null</c> cho mọi kiểu hỏng — middleware KHÔNG chặn,
+    /// việc chặn là của <see cref="ApiKeyEndpointFilter"/>, cùng lý do đã ghi ở phần tóm tắt
+    /// của lớp này: <c>/health</c> phải trả lời được khi chưa có gì cả.
+    /// </summary>
+    private async Task<ApiKeyLookup?> XacThucAsync(HttpContext context, ApiKeyDirectory apiKeys)
+    {
+        var raw = context.Request.Headers[_auth.HeaderName].ToString();
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        var tienTo = _auth.Scheme + " ";
+        if (!raw.StartsWith(tienTo, StringComparison.OrdinalIgnoreCase)) return null;
+
+        return await apiKeys.XacThucAsync(raw[tienTo.Length..].Trim(), context.RequestAborted);
     }
 }
 

@@ -185,21 +185,21 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
         using var client = factory.CreateClient();
 
         // Case này thuộc khách hàng B.
-        var caseOfB = await NewCaseAsync(client, db.TenantBKey);
+        var caseOfB = await NewCaseAsync(client, db.TenantBApiKey);
 
-        var evidenceOfA = await CountEvidenceAsync(client, db.TenantAKey);
-        var evidenceOfB = await CountEvidenceAsync(client, db.TenantBKey);
+        var evidenceOfA = await CountEvidenceAsync(client, db.TenantAApiKey);
+        var evidenceOfB = await CountEvidenceAsync(client, db.TenantBApiKey);
 
         // Khách hàng A biết khoá đó và thử gắn vào.
         var response = await PostEvidenceRawAsync(client,
-            [Evidence(Unique("jira-comment"), caseOfB)], db.TenantAKey);
+            [Evidence(Unique("jira-comment"), caseOfB)], db.TenantAApiKey);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("không tồn tại", await response.Content.ReadAsStringAsync());
 
         // Không ghi gì, cho cả hai bên.
-        Assert.Equal(evidenceOfA, await CountEvidenceAsync(client, db.TenantAKey));
-        Assert.Equal(evidenceOfB, await CountEvidenceAsync(client, db.TenantBKey));
+        Assert.Equal(evidenceOfA, await CountEvidenceAsync(client, db.TenantAApiKey));
+        Assert.Equal(evidenceOfB, await CountEvidenceAsync(client, db.TenantBApiKey));
     }
 
     [Fact]
@@ -210,8 +210,8 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
 
         var shared = "jira:ES-1234#comment-7";
 
-        var forA = await PostEvidenceAsync(client, [Evidence(shared)], db.TenantAKey);
-        var forB = await PostEvidenceAsync(client, [Evidence(shared)], db.TenantBKey);
+        var forA = await PostEvidenceAsync(client, [Evidence(shared)], db.TenantAApiKey);
+        var forB = await PostEvidenceAsync(client, [Evidence(shared)], db.TenantBApiKey);
 
         Assert.True(forA.Results[0].Created);
         Assert.True(forB.Results[0].Created);
@@ -503,7 +503,7 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
         Assert.Equal(TimeSpan.Zero, saved.ObservedAt!.Value.Offset);
     }
 
-    private static async Task<string> NewCaseAsync(HttpClient client, string? tenantKey = null)
+    private static async Task<string> NewCaseAsync(HttpClient client, string? apiKey = null)
     {
         var reference = Unique("jira");
 
@@ -515,7 +515,7 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
             }),
         };
 
-        if (tenantKey is not null) request.Headers.Add("X-Tenant-Key", tenantKey);
+        if (apiKey is not null) request.Headers.Authorization = ApiDatabaseFixture.Bearer(apiKey);
 
         var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();
@@ -524,35 +524,35 @@ public sealed class CaseEvidenceTests(ApiDatabaseFixture db) : IClassFixture<Api
     }
 
     private static async Task<HttpResponseMessage> PostEvidenceRawAsync(
-        HttpClient client, object[] items, string? tenantKey = null)
+        HttpClient client, object[] items, string? apiKey = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, EvidencePath)
         {
             Content = JsonContent.Create(items),
         };
 
-        if (tenantKey is not null) request.Headers.Add("X-Tenant-Key", tenantKey);
+        if (apiKey is not null) request.Headers.Authorization = ApiDatabaseFixture.Bearer(apiKey);
 
         return await client.SendAsync(request);
     }
 
     private static Task<EvidenceBatchResult> PostEvidenceAsync(HttpClient client, params object[] items) =>
-        PostEvidenceAsync(client, items, tenantKey: null);
+        PostEvidenceAsync(client, items, apiKey: null);
 
     private static async Task<EvidenceBatchResult> PostEvidenceAsync(
-        HttpClient client, object[] items, string? tenantKey)
+        HttpClient client, object[] items, string? apiKey)
     {
-        var response = await PostEvidenceRawAsync(client, items, tenantKey);
+        var response = await PostEvidenceRawAsync(client, items, apiKey);
         response.EnsureSuccessStatusCode();
 
         return (await response.Content.ReadFromJsonAsync<EvidenceBatchResult>())!;
     }
 
-    private static async Task<int> CountEvidenceAsync(HttpClient client, string? tenantKey = null)
+    private static async Task<int> CountEvidenceAsync(HttpClient client, string? apiKey = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, BoundaryPath);
 
-        if (tenantKey is not null) request.Headers.Add("X-Tenant-Key", tenantKey);
+        if (apiKey is not null) request.Headers.Authorization = ApiDatabaseFixture.Bearer(apiKey);
 
         var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();

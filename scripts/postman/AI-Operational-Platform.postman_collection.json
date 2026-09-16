@@ -618,7 +618,7 @@
       "description": "Hai hành vi trông như lỗ hổng nhưng là cấu hình dev có chủ đích.\nĐể đây cho khỏi mất thời gian truy nhầm.",
       "item": [
         {
-          "name": "D1 · X-Tenant-Key KHÔNG đổi được tenant",
+          "name": "D1 · X-Tenant-Key đã CHẾT (AR-e)",
           "request": {
             "method": "GET",
             "header": [
@@ -637,7 +637,7 @@
                 "tenant-boundary"
               ]
             },
-            "description": "Bản dev chạy `Tenancy:Mode = DedicatedSingleTenant` — một bản deploy, một khách hàng.\nTenant lấy từ **cấu hình**, đã tra và xác nhận tồn tại lúc khởi động. Header bị bỏ qua\nhoàn toàn, `tenantId` trả về không đổi.\n\nHeader `X-Tenant-Key` chỉ có tác dụng ở chế độ `SharedMultiTenant`. Cả hai chế độ đi\nqua cùng một cài đặt `ITenantContext` (G13) — khác nhau ở chỗ middleware quyết, không\nở đường code riêng.\n\nỞ chế độ shared, khoá lạ KHÔNG trả 404: \"khoá này có tồn tại không\" là thông tin về\nkhách hàng khác. Nó trả 400 chung chung."
+            "description": "⚠ CẬP NHẬT 2026-09-16 — `AR-e` đã thành code.\n\nHeader `X-Tenant-Key` KHÔNG còn tồn tại ở bất kỳ chế độ nào. Trước đây nó là nguồn tenant ở chế độ `SharedMultiTenant`, và đó chính là lỗ hổng: người gọi TỰ KHAI mình là khách nào. Giờ tenant đến từ khoá API đã kiểm (`Authorization: Bearer kp_...`).\n\nRequest này gửi header cũ và KHÔNG gửi khoá. Trên máy dev (`Auth:AcknowledgeUnauthenticatedApi = true`) nó vẫn 200 vì cổng khoá được thừa nhận bỏ qua — nhưng tenant vẫn là tenant của CẤU HÌNH, không phải thứ header khai.\n\nBỏ cờ thừa nhận đi thì request này là 401. Phép kiểm đó nằm ở `scripts/kiem_dau_cuoi.py` mục G, nơi chạy được cả hai chế độ."
           },
           "response": [],
           "event": [
@@ -658,17 +658,13 @@
           ]
         },
         {
-          "name": "D2 · X-Signal-Key sai vẫn qua (trên máy dev)",
+          "name": "D2 · Không khoá vẫn qua trên máy dev (cờ thừa nhận)",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "X-Signal-Key",
-                "value": "sai-be-bet"
               }
             ],
             "url": {
@@ -681,7 +677,7 @@
                 "case-observed"
               ]
             },
-            "description": "`appsettings.Development.json` đặt `Ingest:AcknowledgeUnauthenticatedSignalEndpoint = true`,\nnên endpoint dev chạy KHÔNG cần khoá và header sai bị bỏ qua → 200.\n\nĐây là trạng thái **đã biết**, không phải bị bỏ sót: nếu không cấu hình khoá và cũng\nkhông thừa nhận tường minh thì ứng dụng đã không khởi động được (StartupChecks).\n\nMuốn thấy 401: đặt biến môi trường `Ingest__SignalApiKey` rồi khởi động lại app.\nKhi đó thiếu khoá và sai khoá trả CÙNG một thông báo — hai câu trả lời khác nhau là\nmột kênh dò khoá. So sánh dùng thời gian hằng số, vì so bằng `==` thoát sớm ở ký tự\nđầu khác nhau và thời gian đó đo được.\n\n⚠ Khoá dùng chung này là chốt TẠM, không phải câu trả lời cho AR-e: nó không phân biệt\nđược khách A với khách B ở chế độ shared, không thu hồi theo từng khách, không chống replay.",
+            "description": "⚠ CẬP NHẬT 2026-09-16 — `AR-e`. Khoá dùng chung `X-Signal-Key` đã bị XOÁ khỏi sản phẩm, cùng với `Ingest:SignalApiKey` và cờ thừa nhận riêng của nó.\n\nThay vào đó: `Auth:AcknowledgeUnauthenticatedApi = true` trong `appsettings.Development.json` cho phép cả API chạy không khoá trên máy dev.\n\n⚠ Cờ này bị TỪ CHỐI ở chế độ `SharedMultiTenant` — ở đó khoá API là thứ duy nhất xác định được tenant, nên bỏ nó đi không phải 'kém an toàn hơn' mà là không chạy được.",
             "body": {
               "mode": "raw",
               "raw": "[\n  {\"sourceReference\": \"test:key-check-{{$timestamp}}\", \"subject\": \"Thu khoa sai\"}\n]",

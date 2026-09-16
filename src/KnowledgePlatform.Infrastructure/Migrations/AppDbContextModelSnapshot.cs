@@ -238,6 +238,45 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.ToTable("knowledge_record", "kp");
                 });
 
+            modelBuilder.Entity("KnowledgePlatform.Domain.Tenancy.ApiKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("KeyId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SecretHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KeyId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("api_key", "kp");
+                });
+
             modelBuilder.Entity("KnowledgePlatform.Domain.Tenancy.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -328,6 +367,15 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                         });
 
                     b.Navigation("LastApproval");
+                });
+
+            modelBuilder.Entity("KnowledgePlatform.Domain.Tenancy.ApiKey", b =>
+                {
+                    b.HasOne("KnowledgePlatform.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.Assertion", b =>

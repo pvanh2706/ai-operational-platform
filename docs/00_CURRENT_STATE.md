@@ -299,6 +299,51 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> ✅ **MỨC 3 CÓ LỘ TRÌNH VÀ ĐÃ ĐI XONG BƯỚC 1 — 2026-09-16.** Phiếu: `docs/18` (20/20, 0 mâu
+> thuẫn). Nhật ký kỹ thuật: `07` §3 `IM-39`.
+>
+> Câu hỏi mở đầu là *"còn bao nhiêu bước nữa thì hoàn thành và tích hợp được"*, và câu trả
+> lời trung thực vẫn là **ba con số cho ba nghĩa của chữ "tích hợp"**:
+> ```text
+> mức 1  phần mềm khác BƠM dữ liệu vào     0 bước — chạy được từ trước
+> mức 2  một khách, HAI CHIỀU              7 bước
+> mức 3  bán được cho khách thứ HAI       +3 bước   (I1-1 cắt Capability 2 ra -> tổng 10)
+> ```
+>
+> **Lộ trình 10 bước, và thứ tự KHÔNG phải lựa chọn** — ba quyết định cùng trỏ vào một nền
+> móng, đúng nguyên tắc đã dùng cho RLS: *làm trước cái mà làm sau sẽ đắt*.
+> ```text
+> ✅ 1  Xác thực NGƯỜI GỌI + AR-e          XONG 2026-09-16 — IM-39
+>    2  Webhook ra + cổng che AR-o + link token có hạn
+>    3  Định tuyến: ngưỡng thành cấu hình, impl thật chờ credit
+>    4  Nối ISopDrafter vào host + trần chi tiêu
+>    5  Hai loại tín hiệu còn lại (F1-1 · F2-1)
+>    6  Hồ sơ chạy local Windows: PublicBaseUrl + biến môi trường
+>    7  OpenAPI first-party + Postman cho đủ bộ
+>    8  Kênh 2 + entity Document + MinIO
+>    9  FTS: tìm N case cũ TRONG nhóm
+>   10  Phép kiểm nghiệm thu HAI TENANT    <- I2-1 nói đây LÀ thước đo "xong"
+> ```
+>
+> 🎯 **Một hình dạng chung mà không câu hỏi nào tự nó cho thấy:** ba quyết định độc lập
+> (`D3-1` tóm tắt+link · `E3-1` chỉ người có quyền bấm · `S7` nhãn quyền xem) **cùng đòi một
+> thứ hệ thống không có**: biết NGƯỜI gọi là ai. `AR-e` vừa làm xong vế HỆ THỐNG; vế NGƯỜI
+> vẫn trống, và nó là tiền đề chung của cả ba chứ không phải chi tiết của riêng câu nào.
+>
+> 🛑 **20/20 quyết định KHÔNG nghĩa là hết chặn.** Bốn thứ còn chặn, không thứ nào gỡ được
+> bằng một quyết định:
+> ```text
+> credit Anthropic · credential Jira trên máy này · field mã khách sạn trong Jira (G1-1)
+> · gói duyệt docs/12+16+17 đang chờ người làm support
+> ```
+>
+> ⚠ **Và một dữ kiện về chính cách hỏi:** 22/23 lượt chọn đầu rơi đúng vào ô `(đề xuất)`.
+> Lượt duy nhất chủ dự án tự viết ra một phương án khác (`H1` — *"chạy local Windows trước"*)
+> **lập tức phơi ra hai chỗ va chạm mà cả bốn ô agent đưa đều không chạm tới** (link
+> `localhost` gửi cho người khác là chết; Jira tự PUSH cần gọi tới được máy đó). Đó đúng là
+> thứ mà mục cảnh báo "toàn chọn đề xuất" của `docs/14` lo thiếu — lần này nó không thiếu.
+
+
 > ✅ **PHÉP KIỂM ĐẦU-CUỐI ĐÃ CÓ — 2026-09-16. `scripts/kiem_dau_cuoi.py`, chi tiết `07` §3 `IM-38`.**
 > Ba ngày qua có ba lỗi thật, và **hai trong ba nằm đúng chỗ `dotnet test` không nhìn thấy**.
 > Nên lần này đo thẳng khoảng trống thay vì sửa tiếp từng lỗi:
