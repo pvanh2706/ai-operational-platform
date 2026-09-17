@@ -432,6 +432,69 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-45` · Vòng KHÔNG-CREDIT cho định tuyến — cái nạng, và vì sao phải gọi nó là cái nạng
+
+**Ngày 2026-09-17.** Bước 3 và 4 đều chặn ở credit Anthropic. Chủ dự án hỏi: *xuất dữ liệu ra,
+thêm prompt để AI đọc rồi nạp kết quả về, được không?* — được, và **một nửa đã có sẵn**:
+
+```text
+bước 4  soạn nháp SOP   ĐÃ CÓ từ `IM-29`: SoanNhapRunner --xuat-payload -> AI -> POST sop-draft
+bước 3  định tuyến      CHƯA CÓ  ->  làm hôm nay
+```
+
+```text
+kp.dinh_tuyen_da_nap        kho kết quả NGƯỜI nạp, tenant-scoped, CÓ RLS
+--xuat-dinh-tuyen <khách> <file> [n]   xuất ticket chưa định tuyến + taxonomy + prompt
+--nap-dinh-tuyen  <khách> <file> <ai>  nạp về, từ chối tên nhóm bịa
+DinhTuyenKho                kho TRƯỚC, bảng đã đo SAU; nguồn nói rõ đến từ đâu
+✅ 400/400 test xanh (212 + 19 + 169), trước 391 · 0 warning
+✅ chạy THẬT cả vòng: xuất 5 ticket -> đóng vai AI -> nạp -> /hoi trả đúng nhóm đã nạp
+```
+
+**🛑 VÌ SAO GỌI NÓ LÀ CÁI NẠNG, VÀ VÌ SAO ĐIỀU ĐÓ PHẢI NẰM TRONG CODE chứ không chỉ trong
+tài liệu.** Bảng này là **bộ nhớ của một việc NGƯỜI làm**, không phải sản phẩm tự định tuyến.
+Mỗi lô ticket mới lại cần một lượt xuất-dán-nạp nữa. Nguy cơ thật là sáu tháng sau có người
+nhìn thấy `/hoi` trả đúng nhóm rồi kết luận *"định tuyến chạy rồi"*.
+→ Nên `KetQuaDinhTuyen.Nguon` mang **tiền tố nói rõ nguồn**: `nguoi-nap:` hay `tra-san:`.
+  Một câu trả lời không phân biệt được hai thứ đó là cách nhanh nhất để về sau **không ai
+  chấm lại được gì** — đúng chỗ mà `R-K4` đã phải hạ cấp một kết luận vì nó viết ở sai mức.
+
+**🛑 VÀ NÓ KHÔNG MANG CON SỐ 84,1%.** Con số ấy đo trên MỘT prompt và MỘT model ở `docs/13`.
+Một ngữ cảnh chat khác, một model khác, một ngày khác — chất lượng có thể khác, và **không ai
+biết khác bao nhiêu cho tới khi chấm lại** bằng `cham_routing.py`. Lệnh nạp in ra đúng câu đó
+sau mỗi lần chạy.
+
+**Bốn cổng chặn ở đường nạp, mỗi cổng vì một sự cố đã có:**
+```text
+tên nhóm không trong taxonomy  -> TỪ CHỐI, và KHÔNG "sửa cho giống". Sửa hộ là biến một lỗi
+                                  nhìn thấy được thành một lỗi im lặng. `G6`/`AP3`, và
+                                  `cham_routing.py` gọi đây là bẫy thứ ba.
+khoá nguồn không có case       -> TỪ CHỐI. Nạp cho case không tồn tại là rác im lặng.
+KHONG-BIET                     -> NHẬN. 62/150 ticket rơi vào đó ở phép đo trước; từ chối nó
+                                  là ép người nạp đoán bừa.
+nạp lại                        -> ĐÈ. Người nạp lại là người đang sửa thứ họ thấy sai. Khác
+                                  `K-B3` (không ghi đè quá khứ của TRI THỨC đã duyệt).
+```
+
+**Ba cái chốt chép nguyên từ `SoanNhapRunner --xuat-payload`**, không phải để nhất quán cho
+đẹp mà vì mỗi cái có một sự cố đứng sau:
+```text
+· nội dung đi qua cổng che AR-o TRƯỚC khi ra file — đã kiểm bằng vật liệu lấy từ luật đo được
+· từ chối ghi vào chỗ trong repo mà git KHÔNG chặn — HỎI GIT, không so tên thư mục.
+  Repo đã rò một lần theo đúng hình dạng đó (`888c8e7`). Đã chạy thử: nó từ chối thật.
+· bắt truyền đường dẫn tường minh, không có mặc định tiện tay
+```
+
+**⚠ Đầu vào cố ý NGHÈO:** chỉ tiêu đề + **mẩu SỚM NHẤT** của case. Đúng định nghĩa `docs/13`
+§1 — thứ có mặt LÚC TICKET ĐẾN. `thu_retrieval.py` đã đo được rằng đưa cả transcript vào còn
+**tệ hơn**, vì transcript chứa sẵn câu chẩn đoán: đó là đưa đáp án vào đề.
+
+**⚠ Còn lại:** vòng này chỉ giải bước 3. Bước 4 (nối `ISopDrafter` vào host) vẫn dùng đường
+`SoanNhapRunner --xuat-payload` rời — chạy được, nhưng là một công cụ khác, không phải một
+lệnh của host.
+
+---
+
 ## `IM-44` · Hồ sơ deploy là một LỆNH CHẠY ĐƯỢC, không phải một mục trong tài liệu
 
 **Ngày 2026-09-17, bước 6.** `H1-5` chốt *chạy local Windows trước*, `H1b-1` chốt *máy nằm

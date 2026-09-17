@@ -80,6 +80,7 @@ builder.Services.AddScoped<LinkTokenContext>();
 builder.Services.AddScoped<LinkTokenEndpointFilter>();
 builder.Services.AddScoped<PhatLinkHandler>();
 builder.Services.AddScoped<XemLinkHandler>();
+builder.Services.AddScoped<VongKhongCredit>();
 builder.Services.AddScoped<WebhookConfigHandler>();
 builder.Services.AddScoped<WebhookSender>();
 
@@ -95,11 +96,17 @@ if (builder.Configuration.GetValue($"{WebhookOptions.SectionName}:BatVongQuet", 
 // KHÔNG định tuyến: nó tra bảng kết quả đã đo (`docs/13`). Xem DinhTuyenTraSan.
 // Singleton vì nó chỉ đọc một file một lần rồi giữ trong bộ nhớ; không có trạng thái
 // theo request, và KHÔNG chạm tenant — nên nó không phải chỗ rò ranh giới.
-builder.Services.AddSingleton<IDinhTuyenNhom>(sp =>
+// Bảng đã đo: đọc file MỘT LẦN, nên singleton. Nó không chạm tenant.
+builder.Services.AddSingleton(sp =>
 {
     var cfg = sp.GetRequiredService<IOptions<DinhTuyenOptions>>().Value;
-    return new DinhTuyenTraSan(cfg.DuongDanBangTraSan ?? DinhTuyenOptions.DuongDanMacDinh());
+    return new DinhTuyenTraSanNguon(
+        new DinhTuyenTraSan(cfg.DuongDanBangTraSan ?? DinhTuyenOptions.DuongDanMacDinh()));
 });
+
+// Bản đang cắm: KHO KẾT QUẢ ĐÃ NẠP của khách hàng này, rơi về bảng đã đo nếu chưa có.
+// SCOPED vì nó đọc dữ liệu của tenant trong request — xem DinhTuyenKho.
+builder.Services.AddScoped<IDinhTuyenNhom, DinhTuyenKho>();
 
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {

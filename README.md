@@ -223,6 +223,11 @@ Và một phép kiểm **thứ hai**, kiểm thứ khác hẳn — `dotnet test`
 dotnet run --project src/KnowledgePlatform.Api    # cửa sổ khác
 python scripts/kiem_dau_cuoi.py                   # gọi THẬT cả 18 endpoint
 python scripts/kiem_hai_khach.py                 # NGHIỆM THU I2-1: dựng 2 khách từ 0
+
+# VÒNG KHÔNG-CREDIT cho định tuyến: xuất -> dán cho một ngữ cảnh AI -> nạp về
+dotnet run --project src/KnowledgePlatform.Api -- --xuat-dinh-tuyen dev-tenant D:/tmp/dt.json 50
+dotnet run --project src/KnowledgePlatform.Api -- --nap-dinh-tuyen dev-tenant D:/tmp/kq.json "tên bạn"
+# ⚠ Đây là CÁI NẠNG, không phải định tuyến tự động — mỗi lô ticket mới cần một lượt nữa.
 curl http://localhost:5119/openapi/v1.json       # hợp đồng tích hợp, sinh từ code
                                                  # (app phải chạy Tenancy__Mode=SharedMultiTenant)
 ```

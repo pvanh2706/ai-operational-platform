@@ -260,8 +260,8 @@ public sealed class TenantIsolationTests : IClassFixture<TestDatabaseFixture>
         //   nguyên tắc — thêm bảng mới phải rơi vào ĐÚNG MỘT trong hai, và cả hai đều đỏ khi
         //   nó rơi nhầm chỗ.
         Assert.Equal(
-            ["assertion", "assertion_evidence", "canonical_case", "evidence_item",
-             "knowledge_record", "webhook_delivery", "webhook_endpoint"],
+            ["assertion", "assertion_evidence", "canonical_case", "dinh_tuyen_da_nap",
+             "evidence_item", "knowledge_record", "webhook_delivery", "webhook_endpoint"],
             db.TenantScopedTables);
 
         await RlsGuard.VerifyAsync(db);

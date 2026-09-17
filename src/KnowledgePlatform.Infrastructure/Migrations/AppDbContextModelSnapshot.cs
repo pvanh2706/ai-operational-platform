@@ -285,6 +285,49 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.ToTable("knowledge_record", "kp");
                 });
 
+            modelBuilder.Entity("KnowledgePlatform.Domain.Sop.DinhTuyenDaNap", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("GiaiThich")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("KhoaNguon")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTimeOffset>("NapLuc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NguoiNap")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Nguon")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Nhom")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "KhoaNguon")
+                        .IsUnique();
+
+                    b.ToTable("dinh_tuyen_da_nap", "kp");
+                });
+
             modelBuilder.Entity("KnowledgePlatform.Domain.Tenancy.ApiKey", b =>
                 {
                     b.Property<Guid>("Id")

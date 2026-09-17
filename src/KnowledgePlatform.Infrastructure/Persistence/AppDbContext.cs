@@ -1,6 +1,7 @@
 using KnowledgePlatform.Domain.Cases;
 using KnowledgePlatform.Domain.Evidence;
 using KnowledgePlatform.Domain.Knowledge;
+using KnowledgePlatform.Domain.Sop;
 using KnowledgePlatform.Domain.Tenancy;
 using KnowledgePlatform.Domain.Webhooks;
 using Microsoft.EntityFrameworkCore;
@@ -186,6 +187,24 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.HasIndex(x => x.KnowledgeRecordId);
 
             e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- Định tuyến do NGƯỜI nạp (vòng không-credit) — tenant-scoped, CÓ RLS ---
+        b.Entity<DinhTuyenDaNap>(e =>
+        {
+            e.ToTable("dinh_tuyen_da_nap");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.KhoaNguon).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Nhom).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Nguon).HasMaxLength(128).IsRequired();
+            e.Property(x => x.GiaiThich).HasMaxLength(2048);
+            e.Property(x => x.NguoiNap).HasMaxLength(256).IsRequired();
+
+            // Một khoá nguồn có ĐÚNG một kết quả trong mỗi tenant. Nạp lại thì ĐÈ, cố ý:
+            // người nạp lại là người đang sửa một kết quả họ thấy sai — khác hẳn `K-B3`
+            // (không ghi đè QUÁ KHỨ của tri thức đã duyệt). Đây là bộ nhớ thao tác, không
+            // phải tri thức.
+            e.HasIndex(x => new { x.TenantId, x.KhoaNguon }).IsUnique();
         });
 
         // --- Webhook: CÓ RLS (tenant-scoped) — khác hai bảng trên, xem WebhookEndpoint ---

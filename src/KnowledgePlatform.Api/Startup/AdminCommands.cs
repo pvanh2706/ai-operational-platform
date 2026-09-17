@@ -27,6 +27,14 @@ public static class AdminCommands
 
         switch (args[0])
         {
+            case "--xuat-dinh-tuyen":
+                await LenhDinhTuyen.XuatAsync(args, services, ct);
+                return true;
+
+            case "--nap-dinh-tuyen":
+                await LenhDinhTuyen.NapAsync(args, services, ct);
+                return true;
+
             case "--kiem-cau-hinh":
                 Environment.ExitCode = await SoiCauHinh.ChayAsync(services, ct);
                 return true;
