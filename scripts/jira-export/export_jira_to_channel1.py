@@ -19,8 +19,12 @@ Cấu hình qua biến môi trường — KHÔNG có credential nào nằm trong
     JIRA_PAT          một trong  Personal Access Token (Jira 8.14+, header Bearer)
     JIRA_USER/_PASS   hai cách   Basic auth cho bản cũ hơn
     APP_BASE_URL      tuỳ chọn   mặc định http://localhost:5119 (launchSettings)
-    APP_SIGNAL_KEY    tuỳ chọn   máy dev không cần (appsettings.Development.json
-                                 đã thừa nhận endpoint không khoá); deploy thật thì cần
+    KP_API_KEY        tuỳ chọn   khoá API của khách (`kp_<id>_<secret>`), gửi bằng
+                                 Authorization: Bearer. Máy dev không cần khi
+                                 Auth:AcknowledgeUnauthenticatedApi đang bật; deploy
+                                 thật thì BẮT BUỘC. Tạo bằng:
+                                     dotnet run --project src/KnowledgePlatform.Api --                                        --tao-khoa <mã-khách> "connector Jira"
+                                 (APP_SIGNAL_KEY vẫn đọc được — tên cũ, sẽ bỏ.)
     MAX_ISSUES        tuỳ chọn   trần số issue kéo về, 0 = không trần. §8.2 nói
                                  n = 50-200 là đủ cho phép đếm.
 
@@ -117,7 +121,11 @@ def read_config() -> Config:
         jira_auth_header=auth,
         jql=jql,
         app_base=os.environ.get("APP_BASE_URL", "http://localhost:5119").rstrip("/"),
-        signal_key=os.environ.get("APP_SIGNAL_KEY") or None,
+        # `AR-e` 2026-09-16: khoá API theo TỪNG khách, gửi bằng Authorization: Bearer.
+        # Giữ APP_SIGNAL_KEY làm đường lùi vì hai máy đang đặt sẵn biến đó — nhưng tên
+        # mới là KP_API_KEY, giống hai script còn lại. Một dự án có hai tên cho cùng một
+        # thứ là một dự án sẽ có người đặt nhầm cái còn lại.
+        signal_key=os.environ.get("KP_API_KEY") or os.environ.get("APP_SIGNAL_KEY") or None,
         max_issues=int(os.environ.get("MAX_ISSUES", "0")),
     )
 
