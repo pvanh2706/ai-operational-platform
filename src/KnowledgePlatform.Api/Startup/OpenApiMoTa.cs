@@ -1,0 +1,239 @@
+using Microsoft.AspNetCore.OpenApi;
+using Microsoft.OpenApi;
+
+namespace KnowledgePlatform.Api.Startup;
+
+/// <summary>Mô tả một endpoint cho bên tích hợp đọc.</summary>
+/// <param name="Nhom">Gom nhóm trong tài liệu. Bên tích hợp đọc theo VIỆC, không theo đường dẫn.</param>
+public sealed record MoTaEndpoint(string Nhom, string TomTat, string MoTa);
+
+/// <summary>
+/// **HỢP ĐỒNG TÍCH HỢP, viết ở MỘT chỗ.** `H4-1` chốt sinh tài liệu tự động; đây là phần
+/// duy nhất không sinh được — lời giải thích cho người đọc.
+///
+/// 🛑 **Vì sao gom vào một bảng thay vì rắc `.WithSummary()` khắp `Program.cs`:**
+/// <list type="bullet">
+///   <item>Toàn bộ chữ mà BÊN NGOÀI đọc nằm trong một file — review được như một tài liệu,
+///     thay vì phải ghép từ 17 chỗ.</item>
+///   <item>Và quan trọng hơn: bảng này **đối chiếu được với danh sách route thật**. Thêm
+///     endpoint mà quên mô tả thì <see cref="StartupChecks"/> **NÉM LÚC KHỞI ĐỘNG** — cùng
+///     cơ chế `RlsGuard` dùng cho bảng thiếu RLS. Rắc rải rác thì không ai đối chiếu được,
+///     và `IM-38` đã đo đúng chuyện đó xảy ra: bộ Postman đứng ở 5/13 endpoint mà không ai
+///     nhận ra, vì không có gì so nó với thực tế.</item>
+/// </list>
+///
+/// ⚠ **OpenAPI KHÔNG tả được đường webhook GỬI RA** — nó chỉ tả những gì bên ngoài GỌI VÀO.
+/// Thứ bên tích hợp cần nhất (hình dạng gói, cách kiểm chữ ký) vì thế nằm ở
+/// `docs/19_HOP_DONG_TICH_HOP.md`, và phần <see cref="MoTaTaiLieu"/> dưới đây trỏ sang đó.
+/// </summary>
+public static partial class OpenApiMoTa
+{
+    private const string NhomHaTang = "Hạ tầng";
+    private const string NhomTinHieu = "Kênh 1 — nhận tín hiệu";
+    private const string NhomTriThuc = "Tri thức";
+    private const string NhomHoi = "Hỏi & trả lời";
+    private const string NhomTichHop = "Tích hợp";
+
+    /// <summary>Khoá là <c>"METHOD /đường/dẫn"</c>, đúng dạng route pattern của ASP.NET.</summary>
+    public static IReadOnlyDictionary<string, MoTaEndpoint> Bang { get; } =
+        new Dictionary<string, MoTaEndpoint>(StringComparer.Ordinal)
+        {
+            ["GET /health"] = new(NhomHaTang,
+                "Còn sống không",
+                "Không chạm database, không cần khoá. Dùng cho load balancer."),
+
+            ["GET /health/ready"] = new(NhomHaTang,
+                "Sẵn sàng nhận việc chưa",
+                "Chạm database và kiểm ranh giới tenant. Trả 503 khi chưa sẵn sàng. " +
+                "⚠ Phép kiểm ở đây NÔNG HƠN lúc khởi động, cố ý: deploy cuốn chiếu không được " +
+                "rút cả đội tiến trình khoẻ ra khỏi luồng."),
+
+            ["GET /internal/tenant-boundary"] = new(NhomHaTang,
+                "Đếm dữ liệu mà khoá này thấy được",
+                "Đếm bằng SQL THÔ không có điều kiện tenant — nên con số trả về chính là bằng " +
+                "chứng row-level security đang chặn. Dùng để tự kiểm, không phải để báo cáo."),
+
+            ["GET /internal/sub-tenant-coverage"] = new(NhomHaTang,
+                "Điều kiện mở lại ranh giới khách sạn (AR-l)",
+                "Đếm số mã khách sạn PHÂN BIỆT trong kho. ⚠ Có TRƯỜNG không phải có DỮ LIỆU: " +
+                "đọc ô `canTro` trước khi đọc `datDieuKienMoLai`."),
+
+            ["POST /signals/case-observed"] = new(NhomTinHieu,
+                "Báo có việc mới ở nguồn",
+                "Tạo Case nếu `sourceReference` chưa có, không thì trả lại Case cũ — GỬI LẠI " +
+                "KHÔNG SINH BẢN THỨ HAI. Vượt trần thì TỪ CHỐI CẢ LÔ kèm nói rõ trần, cố ý " +
+                "không cắt bớt im lặng. Nếu khách đã khai báo webhook, mỗi Case MỚI sẽ xếp " +
+                "một lượt trả kết quả về."),
+
+            ["POST /signals/case-evidence"] = new(NhomTinHieu,
+                "Nạp mẩu dẫn chứng của một case",
+                "`subTenantCode` là BẮT BUỘC (AR-l): chưa biết thì khai `khong-xac-dinh`, " +
+                "không thuộc khách sạn nào thì khai `khong-thuoc-khach-san`. Bỏ trống là 400 — " +
+                "cố ý không tự điền hộ, vì \"chưa biết\" khác \"chưa ai hỏi\". " +
+                "Nội dung đi qua luật che dữ liệu bên thứ ba ngay tại cửa vào."),
+
+            ["POST /evidence/rut-lai"] = new(NhomTinHieu,
+                "Đánh dấu một mẩu đã bị NGƯỜI GỬI rút lại",
+                "CHỈ NGƯỜI đặt được dấu này (AR-m). Hợp đồng tín hiệu cố ý không mang ba trường " +
+                "đó, nên connector không có đường nào tự suy từ câu chữ."),
+
+            ["GET /cases/{khoaNguon}/evidence"] = new(NhomTinHieu,
+                "Đọc lại evidence của một case",
+                "Tra theo KHOÁ NGUỒN — thứ bên gửi đã biết về case của chính họ. ⚠ Khoá nguồn " +
+                "chứa dấu `/` phải mã hoá thành `%2F`: đó là ràng buộc của HTTP, không phải của " +
+                "sản phẩm."),
+
+            ["POST /knowledge/sop-draft"] = new(NhomTriThuc,
+                "Nạp một bản nháp quy trình",
+                "Nạp KHÔNG phải duyệt: record vào kho ở trạng thái `DRAFT` và KHÔNG ra khỏi " +
+                "`/hoi` cho tới khi có người duyệt. Idempotent theo cặp (nhóm, tên nguyên nhân)."),
+
+            ["POST /knowledge/{id}/approve"] = new(NhomTriThuc,
+                "Duyệt — nội dung và quyền xem trong MỘT hành động",
+                "`xacNhanDuLieuThuongMai` là LỜI KHAI của người duyệt rằng đã soát dữ liệu " +
+                "thương mại của khách; thiếu là 400. Đó KHÔNG phải một phép kiểm tự động — loại " +
+                "dữ liệu đó không có hình dạng nào để bắt bằng luật. " +
+                "🛑 Ở chế độ nhiều khách dùng chung, endpoint này TỪ CHỐI bằng 409 (AR-l chưa giải)."),
+
+            ["POST /knowledge/{id}/sua"] = new(NhomTriThuc,
+                "Người sửa lại một bản đã duyệt",
+                "Bản gốc KHÔNG bị đè — cả hai phiên bản cùng nằm trong kho. Record tự mang cờ " +
+                "`NEEDS_REVIEW`, nhưng KHÔNG bị rút khỏi `/hoi`: người đang xử lý ticket cần bản " +
+                "tốt nhất hiện có kèm cảnh báo, không cần một cánh cửa đóng."),
+
+            ["GET /knowledge/{id}"] = new(NhomTriThuc,
+                "Đọc một tri thức kèm TOÀN BỘ lịch sử",
+                "Khác `/hoi` ở chỗ trả cả bản cũ lẫn bản mới — đây là đường đọc để so bản máy " +
+                "soạn với bản người sửa."),
+
+            ["POST /knowledge/{id}/link"] = new(NhomTichHop,
+                "Phát một link xem, có hạn và thu hồi được",
+                "CHỈ phát được cho bản ĐÃ DUYỆT. Link mang token riêng, mở được nhiều lần trong " +
+                "hạn. Cần cấu hình `Link:PublicBaseUrl` — thiếu là 409 chứ KHÔNG đoán, vì đoán " +
+                "sẽ sinh ra link `localhost` chỉ mở được trên chính máy chạy app."),
+
+            ["GET /xem/{token}"] = new(NhomTichHop,
+                "Mở một tri thức bằng link",
+                "KHÔNG cần khoá API — chính token là giấy thông hành. Nội dung đi qua cổng che " +
+                "trước khi ra. Link sai, hết hạn hay đã thu hồi đều trả 404 GIỐNG HỆT NHAU, cố ý: " +
+                "phân biệt chúng là nói cho người cầm link biết token đó từng có thật."),
+
+            ["POST /hoi"] = new(NhomHoi,
+                "Hỏi một câu, nhận hướng dẫn hoặc KHÔNG BIẾT",
+                "`bietTraLoi: false` là một câu trả lời HỢP LỆ, không phải lỗi — đọc `lyDoKhongBiet` " +
+                "để biết cửa nào đã chặn. Chỉ trả về tri thức ĐÃ DUYỆT. Mỗi phát biểu mang mức " +
+                "kiểm chứng riêng; `MÂU THUẪN` là một giá trị hạng nhất, không phải lỗi."),
+
+            ["PUT /internal/webhook"] = new(NhomTichHop,
+                "Khai báo nơi nhận kết quả trả về",
+                "Bí mật ký CHỈ hiện ra đúng một lần, ngay sau khi tạo. Đổi địa chỉ thì KHÔNG đổi " +
+                "bí mật — bên nhận đang kiểm chữ ký bằng bí mật cũ. " +
+                "⚠ Hình dạng gói gửi đi và cách kiểm chữ ký: xem docs/19_HOP_DONG_TICH_HOP.md."),
+
+            ["GET /internal/webhook"] = new(NhomTichHop,
+                "Đọc lại cấu hình nơi nhận",
+                "KHÔNG trả bí mật ký. Mất thì khai báo lại để sinh cái mới."),
+        };
+
+    /// <summary>Khoá tra bảng cho một route.</summary>
+    public static string Khoa(string method, string route) => $"{method} /{route.TrimStart('/')}";
+
+    /// <summary>
+    /// Route nào chưa có mô tả. Rỗng nghĩa là hợp đồng còn đủ.
+    ///
+    /// ⚠ Bỏ phần ràng buộc kiểu khỏi route (<c>{id:guid}</c> -> <c>{id}</c>): bảng viết theo
+    /// cách bên tích hợp ĐỌC đường dẫn, không theo cách ASP.NET khai báo nó.
+    /// </summary>
+    public static IReadOnlyList<string> ThieuMoTa(IEnumerable<(string Method, string Route)> routes) =>
+        [.. routes
+            .Select(r => Khoa(r.Method, BoRangBuocKieu(r.Route)))
+            .Where(k => !Bang.ContainsKey(k))
+            .Distinct()
+            .OrderBy(k => k, StringComparer.Ordinal)];
+
+    /// <summary>
+    /// Mô tả cho endpoint KHÔNG còn tồn tại. Chiều ngược của <see cref="ThieuMoTa"/>.
+    ///
+    /// 🛑 **Chiều này tồn tại vì một lý do cụ thể, không phải cho đối xứng: nó làm cổng canh
+    /// TỰ PHÁT HIỆN ĐƯỢC KHI CHÍNH NÓ BỊ NGẮT.** Bản đầu đọc danh sách route từ DI, và lúc
+    /// gọi thì danh sách ấy còn RỖNG — cổng duyệt qua không có gì, không bao giờ ném, và
+    /// trông hệt như đang canh. Với chiều này, danh sách rỗng nghĩa là **cả 17 mô tả đều
+    /// thành thừa** -> ném ngay.
+    ///
+    /// ⚠ Một cơ chế canh gác mà hỏng thành IM LẶNG là cơ chế tệ nhất: nó còn lấy mất cả sự
+    /// cảnh giác của người đọc. Đây là giá của việc ấy, trả bằng mười dòng.
+    /// </summary>
+    public static IReadOnlyList<string> MoTaThua(IEnumerable<(string Method, string Route)> routes)
+    {
+        var that = routes.Select(r => Khoa(r.Method, BoRangBuocKieu(r.Route))).ToHashSet(StringComparer.Ordinal);
+
+        return [.. Bang.Keys.Where(k => !that.Contains(k)).OrderBy(k => k, StringComparer.Ordinal)];
+    }
+
+    /// <summary><c>{id:guid}</c> -> <c>{id}</c>. Tài liệu OpenAPI cũng bỏ ràng buộc kiểu.</summary>
+    public static string BoRangBuocKieu(string route) =>
+        RangBuocKieu().Replace(route, "{$1}");
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\{(\w+):[^}]+\}")]
+    private static partial System.Text.RegularExpressions.Regex RangBuocKieu();
+
+    /// <summary>
+    /// Gắn mô tả vào tài liệu OpenAPI đã sinh, và viết phần đầu tài liệu.
+    /// </summary>
+    public sealed class TrinhGan : IOpenApiDocumentTransformer
+    {
+        public Task TransformAsync(OpenApiDocument doc, OpenApiDocumentTransformerContext ctx, CancellationToken ct)
+        {
+            doc.Info = new OpenApiInfo
+            {
+                Title = "AI Operational Knowledge & Process Platform",
+                Version = "v1",
+                Description = MoTaTaiLieu,
+            };
+
+            foreach (var (duong, muc) in doc.Paths)
+            {
+                foreach (var (kieu, thaoTac) in muc.Operations ?? [])
+                {
+                    if (!Bang.TryGetValue(Khoa(kieu.ToString().ToUpperInvariant(), duong), out var mt)) continue;
+
+                    thaoTac.Summary = mt.TomTat;
+                    thaoTac.Description = mt.MoTa;
+                    thaoTac.Tags = new HashSet<OpenApiTagReference> { new(mt.Nhom, doc) };
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private const string MoTaTaiLieu = """
+        Service phản ứng theo SỰ KIỆN: phần mềm có sẵn của khách phát tín hiệu, sản phẩm này
+        thức tỉnh, xử lý, và trả kết quả về.
+
+        ## Xác thực
+
+        Mọi endpoint trừ `/health`, `/health/ready` và `/xem/{token}` đòi một khoá API riêng
+        của từng khách hàng:
+
+            Authorization: Bearer kp_<id>_<secret>
+
+        Khoá xác định LUÔN khách hàng — không có header nào để tự khai mình là ai. Sai khoá,
+        thiếu khoá, khoá đã thu hồi, hay khoá của khách khác đều trả **401 giống hệt nhau**:
+        phân biệt chúng là dựng sẵn một kênh dò.
+
+        ## Hai thứ tài liệu này KHÔNG tả được
+
+        1. **Đường webhook GỬI RA.** OpenAPI chỉ tả những gì bên ngoài gọi VÀO. Hình dạng gói
+           trả kết quả, khoá idempotency và cách kiểm chữ ký HMAC nằm ở
+           `docs/19_HOP_DONG_TICH_HOP.md`.
+        2. **Chất lượng câu trả lời.** Endpoint chạy không có nghĩa là kho có tri thức để trả.
+           `bietTraLoi: false` là trạng thái THƯỜNG GẶP hôm nay, không phải lỗi.
+
+        ## Một quy ước xuyên suốt
+
+        Sản phẩm này coi **"không biết" là dữ liệu hạng nhất**. Nhiều endpoint trả 200 kèm một
+        ô nói rõ là chưa biết, thay vì trả lỗi hay trả rỗng. Đọc rỗng thành "không có vấn đề
+        gì" là đúng thứ thiết kế này sinh ra để chặn.
+        """;
+}

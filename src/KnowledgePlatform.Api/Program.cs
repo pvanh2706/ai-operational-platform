@@ -114,6 +114,13 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 
 builder.Services.AddProblemDetails();
 
+// `H4-1` — hợp đồng tích hợp SINH TỪ CODE, không viết tay. `IM-38` đã đo được rằng bản viết
+// tay tự lỗi thời trong im lặng: bộ Postman đứng ở 5/13 endpoint mà không ai nhận ra.
+//
+// ⚠ Gói `Microsoft.AspNetCore.OpenApi` là FIRST-PARTY của .NET, không phải Swashbuckle hay
+//   NSwag — nên lo ngại "thêm một dependency bên thứ ba" ghi ở `docs/18` §H4 không áp ở đây.
+builder.Services.AddOpenApi(o => o.AddDocumentTransformer<OpenApiMoTa.TrinhGan>());
+
 var app = builder.Build();
 
 // Lệnh vận hành của `AR-e` (tạo/thu hồi khoá): chạy rồi THOÁT, không mở cổng nghe.
@@ -124,6 +131,13 @@ if (await AdminCommands.TryRunAsync(args, app.Services)) return;
 await StartupChecks.RunAsync(app.Services);
 
 app.UseMiddleware<TenantResolutionMiddleware>();
+
+// Hợp đồng tích hợp, sinh từ chính các endpoint bên dưới: GET /openapi/v1.json
+//
+// ⚠ KHÔNG đòi khoá, cố ý: nó tả HÌNH DẠNG hợp đồng, không chứa dữ liệu khách hàng nào. Mọi
+//   endpoint nó liệt kê vẫn trả 401 nếu gọi không khoá. Giấu tài liệu đi không làm hệ thống
+//   an toàn hơn — nó chỉ làm bên tích hợp phải đoán.
+app.MapOpenApi();
 
 // --- Liveness: không chạm database, không cần tenant ---
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
@@ -776,6 +790,14 @@ app.MapGet("/internal/sub-tenant-coverage", async (
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
+
+// 🛑 Đối chiếu DANH SÁCH ROUTE THẬT với bảng mô tả — thêm endpoint mà quên viết hợp đồng
+//    thì KHÔNG KHỞI ĐỘNG ĐƯỢC. Phải đứng SAU mọi lệnh Map, nên nó không nằm chung với
+//    StartupChecks (chạy trước khi endpoint được khai báo).
+//
+//    Cùng cơ chế `RlsGuard` dùng cho bảng thiếu RLS, và vì cùng một lý do: cái phải có thì
+//    nên tự động (quên là bị bắt). `IM-38` đo được cái giá của việc không có nó.
+StartupChecks.RequireMoTaEndpoint(app);
 
 app.Run();
 

@@ -52,6 +52,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.parse
+import re
 import urllib.request
 import uuid
 
@@ -86,6 +87,19 @@ _da_tao = {"case": 0, "evidence": 0, "knowledge": 0}
 
 _MAC_DINH = object()
 
+# Mọi đường đã gọi trong lượt chạy này, dạng đã chuẩn hoá — dùng cho mục J.
+_da_goi: set[tuple[str, str]] = set()
+
+
+def _chuan_hoa(duong: str) -> str:
+    """Đưa một đường dẫn thật về dạng route của hợp đồng: /knowledge/<guid> -> /knowledge/{id}."""
+    d = duong.split("?")[0]
+    d = re.sub(r"/kpl_[A-Za-z0-9_-]+", "/{token}", d)
+    d = re.sub(r"/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+               "/{id}", d)
+    d = re.sub(r"^/cases/[^/]+/evidence$", "/cases/{khoaNguon}/evidence", d)
+    return d
+
 
 def goi(method: str, duong: str, body=None, khoa=_MAC_DINH, them=None) -> tuple[int, object]:
     """`khoa`: bỏ trống = dùng KP_API_KEY · None = KHÔNG gửi khoá · chuỗi = gửi đúng chuỗi đó."""
@@ -93,6 +107,8 @@ def goi(method: str, duong: str, body=None, khoa=_MAC_DINH, them=None) -> tuple[
     req = urllib.request.Request(GOC + duong, data=data, method=method)
     if data:
         req.add_header("Content-Type", "application/json")
+    _da_goi.add((method.upper(), _chuan_hoa(duong)))
+
     dung = KHOA_API if khoa is _MAC_DINH else khoa
     if dung:
         req.add_header("Authorization", "Bearer " + dung)
@@ -112,6 +128,25 @@ def goi(method: str, duong: str, body=None, khoa=_MAC_DINH, them=None) -> tuple[
         print(f"\n🛑 KHÔNG GỌI ĐƯỢC {GOC} — {e.reason}")
         print("   App chưa chạy? `dotnet run --project src/KnowledgePlatform.Api`")
         sys.exit(2)
+
+
+_doi_khoa: bool | None = None
+
+
+def app_doi_khoa() -> bool:
+    """
+    App có THẬT SỰ đòi khoá API không — hỏi thẳng, hỏi một lần, nhớ lại.
+
+    ⚠ Ba mục từng suy điều này từ biến môi trường `KP_API_KEY` và ĐỎ HÀNG LOẠT vì lý do không
+    liên quan: máy dev bật `Auth:AcknowledgeUnauthenticatedApi` thì mọi endpoint mở toang.
+    Suy ra một trạng thái thay vì hỏi nó là cùng hình dạng lỗi với phép kiểm chế độ shared ở
+    `kiem_hai_khach.py`.
+    """
+    global _doi_khoa
+    if _doi_khoa is None:
+        ma, _ = goi("GET", "/internal/tenant-boundary", khoa=None)
+        _doi_khoa = ma == 401
+    return _doi_khoa
 
 
 def kiem(nhan: str, that, mong) -> bool:
@@ -411,8 +446,15 @@ def link_xem(rid: str | None) -> None:
     token = b.get("token", "")
     url = b.get("url", "")
     kiem("  ... token mang tiền tố kpl_", token.startswith("kpl_"), True)
-    kiem("  ... url dựng từ CẤU HÌNH, không phải localhost",
-         url.endswith(f"/xem/{token}") and "localhost" not in url, True)
+    kiem("  ... url dựng đúng hình dạng", url.endswith(f"/xem/{token}"), True)
+
+    # ⚠ Phép kiểm "không phải localhost" chỉ có nghĩa khi Link:PublicBaseUrl KHÁC địa chỉ đang
+    #   gọi. Trùng nhau thì không cách nào phân biệt "đọc từ cấu hình" với "suy từ request" —
+    #   nói ra thay vì báo một màu xanh không chứng minh được gì.
+    if url.startswith(GOC):
+        print("       (không phân biệt được cấu hình/suy-từ-request: PublicBaseUrl trùng địa chỉ gọi)")
+    else:
+        kiem("  ... và địa chỉ gốc đến từ CẤU HÌNH, không suy từ request", True, True)
 
     # Mở bằng link, KHÔNG gửi khoá API — chính token là giấy thông hành.
     s, b = goi("GET", f"/xem/{token}", khoa=None)
@@ -422,8 +464,9 @@ def link_xem(rid: str | None) -> None:
     s, _ = goi("GET", "/xem/kpl_khongcothat_khongcothat", khoa=None)
     kiem("token bịa -> 404 (giống hệt hết hạn / đã thu hồi)", s, 404)
 
-    s, _ = goi("POST", f"/knowledge/{rid}/link", {"hanNgay": 7}, khoa=None)
-    kiem("phát link mà không có khoá API -> 401", s, 401)
+    if app_doi_khoa():
+        s, _ = goi("POST", f"/knowledge/{rid}/link", {"hanNgay": 7}, khoa=None)
+        kiem("phát link mà không có khoá API -> 401", s, 401)
 
 
 def duong_gui_ve() -> None:
@@ -452,8 +495,51 @@ def duong_gui_ve() -> None:
     kiem("GET /internal/webhook -> 200", s, 200)
     kiem("  ... đọc lại KHÔNG trả bí mật ký", (b or {}).get("biMatKy"), None)
 
-    s, _ = goi("GET", "/internal/webhook", khoa=None)
-    kiem("đọc cấu hình mà không có khoá API -> 401", s, 401)
+    if app_doi_khoa():
+        s, _ = goi("GET", "/internal/webhook", khoa=None)
+        kiem("đọc cấu hình mà không có khoá API -> 401", s, 401)
+
+
+def phu_hop_dong() -> None:
+    """
+    🛑 **Phép kiểm tự soi chính nó.** Đối chiếu những đường file này ĐÃ GỌI với hợp đồng
+    `GET /openapi/v1.json` — thứ sinh thẳng từ code nên không lỗi thời được.
+
+    Vì sao cần: `IM-38` đã ĐO được rằng một bộ kiểm tự nó lỗi thời trong im lặng (bộ Postman
+    đứng ở 5/13 endpoint hơn hai tuần). Thêm một endpoint mà quên gọi nó ở đây thì mục này
+    ĐỎ ngay — không còn phải trông vào việc ai đó nhớ ra.
+
+    ⚠ Phải chạy CUỐI CÙNG: nó đọc những gì các mục trước đã gọi.
+    """
+    muc("J · Bộ kiểm này có còn phủ hết hợp đồng không")
+
+    s, doc = goi("GET", "/openapi/v1.json", khoa=None)
+    if not kiem("GET /openapi/v1.json -> 200", s, 200):
+        return
+
+    hop_dong = {
+        (kieu.upper(), duong)
+        for duong, muc_duong in (doc or {}).get("paths", {}).items()
+        for kieu in muc_duong
+    }
+
+    kiem("hợp đồng liệt kê ít nhất 15 thao tác", len(hop_dong) >= 15, True)
+
+    thieu = sorted(hop_dong - _da_goi)
+    if thieu:
+        for kieu, duong in thieu:
+            print(f"       chưa gọi: {kieu} {duong}")
+
+    kiem("mọi thao tác trong hợp đồng đều được file này gọi", len(thieu), 0)
+
+    # Chiều ngược lại cũng đáng biết: gọi một đường KHÔNG có trong hợp đồng nghĩa là hợp
+    # đồng thiếu, hoặc đường đó đã bị bỏ mà bộ kiểm chưa hay.
+    thua = sorted(x for x in _da_goi - hop_dong if not x[1].startswith("/openapi"))
+    if thua:
+        for kieu, duong in thua:
+            print(f"       gọi nhưng KHÔNG có trong hợp đồng: {kieu} {duong}")
+
+    kiem("không gọi đường nào nằm ngoài hợp đồng", len(thua), 0)
 
 
 def xac_thuc() -> None:
@@ -466,10 +552,22 @@ def xac_thuc() -> None:
     muc("G · Xác thực người gọi  (AR-e)")
 
     if not KHOA_API:
-        print("  ⚠ BỎ QUA — chưa đặt KP_API_KEY, nên app đang ở chế độ thừa nhận không khoá.")
+        print("  ⚠ BỎ QUA — chưa đặt KP_API_KEY.")
         print("    Mục này chỉ có nghĩa khi chạy:")
         print("      Auth__AcknowledgeUnauthenticatedApi=false  +  KP_API_KEY=kp_...")
         print("    ⚠ Đừng đọc phần còn lại của file này thành 'xác thực đã được kiểm'.")
+        return
+
+    # 🛑 HỎI APP, ĐỪNG SUY TỪ BIẾN MÔI TRƯỜNG.
+    #
+    # Bản đầu coi "có KP_API_KEY" là "app đang đòi khoá" — hai chuyện khác nhau. Máy dev bật
+    # Auth:AcknowledgeUnauthenticatedApi thì mọi endpoint mở toang, và cả mục này ĐỎ HÀNG LOẠT
+    # vì lý do không liên quan gì tới xác thực. Cùng hình dạng lỗi với phép kiểm chế độ shared
+    # ở `kiem_hai_khach.py`: suy ra một trạng thái thay vì hỏi thẳng nó.
+    if not app_doi_khoa():
+        print("  ⚠ BỎ QUA — app đang bật cờ Auth:AcknowledgeUnauthenticatedApi (chạy KHÔNG cần khoá).")
+        print("    Gọi không khoá vẫn ra 200, nên mọi phép kiểm ở mục này vô nghĩa.")
+        print("    Chạy lại app với Auth__AcknowledgeUnauthenticatedApi=false thì mục này mới đo được.")
         return
 
     s, _ = goi("GET", "/internal/tenant-boundary", khoa=None)
@@ -507,6 +605,7 @@ def main() -> int:
     xac_thuc()
     link_xem(rid)
     duong_gui_ve()
+    phu_hop_dong()
 
     print("\n" + "=" * 68)
     print(f"{_da_chay} phép kiểm  ·  {len(_sai)} sai")

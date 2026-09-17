@@ -432,6 +432,62 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-42` · Hợp đồng tích hợp sinh từ code — và cái cổng canh tôi vừa viết ra là ĐỒ TRANG TRÍ
+
+**Ngày 2026-09-17, bước 7 của lộ trình mức 3.** Trước hôm nay sản phẩm có 17 endpoint cộng
+một hợp đồng webhook có chữ ký, mà **bên thứ ba không có gì để đọc ngoài code**.
+
+```text
+GET /openapi/v1.json          sinh từ chính các endpoint — không lỗi thời được
+docs/19_HOP_DONG_TICH_HOP.md  phần OpenAPI KHÔNG tả được: webhook gửi ra, cách kiểm chữ ký
+OpenApiMoTa.Bang              toàn bộ chữ bên ngoài đọc, ở MỘT chỗ, đối chiếu được
+kiem_dau_cuoi.py mục J        tự đối chiếu CHÍNH NÓ với hợp đồng
+✅ 374/374 test xanh (212 + 19 + 143), trước 363 · 0 warning
+✅ chạy THẬT: 47 phép kiểm · 0 sai · 17/17 thao tác trong hợp đồng đều được gọi
+```
+
+**🛑 CỔNG CANH TÔI VỪA VIẾT RA LÀ ĐỒ TRANG TRÍ, và test của nó VẪN XANH.**
+
+Ý định: thêm endpoint mà quên viết mô tả thì **không khởi động được** — cùng cơ chế `RlsGuard`
+dùng cho bảng thiếu RLS. Viết xong, test xanh, chạy thật cũng xanh.
+
+Rồi làm phép **đột biến**: xoá mô tả của `POST /hoi` rồi chạy. **App khởi động bình thường.**
+
+```text
+nguyên nhân   lấy EndpointDataSource từ DI thì lúc gọi nó còn RỖNG. Lệnh Map* của minimal
+              API đi vào WebApplication.DataSources, chỉ được nối vào nguồn toàn cục khi
+              pipeline dựng xong — tức SAU lệnh gọi này.
+hậu quả       cổng duyệt một danh sách rỗng, không bao giờ ném, và TRÔNG HỆT NHƯ ĐANG CANH.
+vì sao test không thấy   test gọi thẳng ThieuMoTa(), không đi qua đường nối.
+```
+
+⚠ **Đây là kiểu hỏng tệ nhất của một cơ chế canh gác: nó không chỉ mất tác dụng, nó còn lấy
+mất cả sự cảnh giác của người đọc.** Ai nhìn thấy dòng `RequireMoTaEndpoint(...)` trong
+`Program.cs` sẽ tin rằng chuyện đó đã được canh.
+
+**✅ Sửa xong rồi làm thêm một bước: cho cổng TỰ TỐ CÁO ĐƯỢC KHI NÓ BỊ NGẮT.**
+Phép kiểm giờ đi **cả hai chiều** — mô tả thiếu thì ném, và **mô tả THỪA cũng ném**. Danh
+sách route rỗng (đúng ca của bug) làm cả 17 mô tả thành thừa → ném ngay. Chiều thứ hai còn
+bắt được một thứ thật khác: mô tả cho endpoint đã bị xoá.
+
+**🎯 Và một quyết định về BỘ POSTMAN, ghi ra vì nó là "bớt đi" chứ không phải "thêm vào".**
+`kiem_dau_cuoi.py` giờ gọi thật cả 17 endpoint và tự đối chiếu với OpenAPI. Bộ Postman vì thế
+**thừa** ở vai trò bản kiểm kê — mà một bản kiểm kê thừa và lỗi thời thì tệ hơn không có, vì
+người ta tin vào nó. Đã ghi thẳng vào phần mô tả của collection rằng nó **không còn là nơi
+giữ hợp đồng**, chỉ là đồ dùng tay.
+
+**⚠ Ba chỗ cố ý, đề phòng người sau đọc thành sơ suất:**
+```text
+· /openapi/v1.json KHÔNG đòi khoá. Nó tả HÌNH DẠNG, không chứa dữ liệu khách hàng, và mọi
+  endpoint nó liệt kê vẫn trả 401. Giấu tài liệu đi không làm hệ thống an toàn hơn.
+· Mô tả gom vào MỘT bảng thay vì rắc .WithSummary() khắp nơi — để đối chiếu được với danh
+  sách route thật. Rắc rải rác thì không có gì để so.
+· docs/19 viết cho NGƯỜI NGOÀI đọc, nên nó nói thẳng cả những gì sản phẩm KHÔNG hứa:
+  không hứa có câu trả lời, không hứa thứ tự gói, không hứa đúng-một-lần.
+```
+
+---
+
 ## `IM-41` · Phép kiểm nghiệm thu HAI KHÁCH HÀNG — và nó tìm ra BA thứ mà 344 test không thấy
 
 **Ngày 2026-09-16, bước 10 của lộ trình mức 3.** `I2-1` chốt nghiệm thu mức 3 là *"onboard

@@ -38,6 +38,75 @@ public static class StartupChecks
         await RlsGuard.VerifyAsync(db, ct);
     }
 
+    /// <summary>
+    /// Mọi endpoint phải có mô tả trong <see cref="OpenApiMoTa.Bang"/>. Thiếu là **không khởi
+    /// động được**.
+    ///
+    /// 🛑 Vì sao đây là một cổng cứng chứ không phải một lời dặn: `IM-38` đã ĐO được cái giá
+    /// của việc không có nó — bộ Postman đứng ở 5/13 endpoint suốt hơn hai tuần mà không ai
+    /// nhận ra, vì không có gì đối chiếu nó với thực tế. Một hợp đồng tích hợp thiếu ba
+    /// endpoint thì tệ hơn không có hợp đồng: bên tích hợp tin vào nó.
+    ///
+    /// ⚠ Phải gọi SAU mọi lệnh <c>Map*</c>, và phải nhận <c>IEndpointRouteBuilder</c> chứ
+    /// KHÔNG phải <c>IServiceProvider</c> — **bản đầu đã sai đúng chỗ đó**. Lấy
+    /// <c>EndpointDataSource</c> từ DI thì lúc này nó còn RỖNG: lệnh <c>Map*</c> của minimal
+    /// API đi vào <c>WebApplication.DataSources</c>, và chỉ được nối vào nguồn toàn cục khi
+    /// pipeline dựng xong — tức SAU lệnh gọi này. Hậu quả: cổng duyệt một danh sách rỗng,
+    /// không bao giờ ném, và **trông hệt như đang canh**. Test của nó vẫn xanh vì test gọi
+    /// thẳng <see cref="OpenApiMoTa.ThieuMoTa"/>, không đi qua đường nối. Tìm ra bằng một
+    /// phép ĐỘT BIẾN chạy thật, không bằng đọc lại code.
+    ///
+    /// → Vì thế phép kiểm này đi CẢ HAI CHIỀU: danh sách route rỗng làm mọi mô tả thành
+    ///   thừa, nên cổng tự tố cáo khi nó bị ngắt lần nữa.
+    /// </summary>
+    public static void RequireMoTaEndpoint(IEndpointRouteBuilder app)
+    {
+        var routes = app.DataSources.SelectMany(d => d.Endpoints)
+            .OfType<RouteEndpoint>()
+            .SelectMany(e =>
+                (e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? ["GET"])
+                .Select(m => (Method: m, Route: e.RoutePattern.RawText ?? string.Empty)))
+            // Tài liệu OpenAPI tự nó không nằm trong hợp đồng của sản phẩm.
+            .Where(r => !r.Route.StartsWith("/openapi", StringComparison.OrdinalIgnoreCase));
+
+        var danhSach = routes.ToList();
+        var thieu = OpenApiMoTa.ThieuMoTa(danhSach);
+        var thua = OpenApiMoTa.MoTaThua(danhSach);
+
+        if (thieu.Count == 0 && thua.Count == 0) return;
+
+        var phan = new List<string>();
+
+        if (thieu.Count > 0)
+        {
+            phan.Add(
+                $"{thieu.Count} endpoint CHƯA CÓ mô tả:{Environment.NewLine}    " +
+                string.Join($"{Environment.NewLine}    ", thieu));
+        }
+
+        if (thua.Count > 0)
+        {
+            phan.Add(
+                $"{thua.Count} mô tả KHÔNG ỨNG với endpoint nào:{Environment.NewLine}    " +
+                string.Join($"{Environment.NewLine}    ", thua));
+        }
+
+        throw new InvalidOperationException(
+            $"""
+             Hợp đồng tích hợp lệch với thực tế.
+
+             {string.Join($"{Environment.NewLine}{Environment.NewLine}", phan)}
+
+             Sửa OpenApiMoTa.Bang. Mỗi dòng ở đó là thứ BÊN NGOÀI đọc để cắm vào sản phẩm này —
+             thiếu một dòng nghĩa là bên tích hợp phải đoán, hoặc phải đọc code.
+
+             ⚠ Đây là cổng cứng vì IM-38 đã đo được cái giá của việc không có nó: bộ Postman
+               đứng ở 5/13 endpoint suốt hơn hai tuần mà không ai nhận ra.
+             ⚠ Nếu MỌI mô tả đều báo thừa thì danh sách route đang rỗng — cổng này vừa bị
+               ngắt khỏi chỗ nó phải canh. Xem phần tóm tắt của hàm.
+             """);
+    }
+
     private static void RequireConnectionString(IConfiguration config)
     {
         if (!string.IsNullOrWhiteSpace(config.GetConnectionString("Default"))) return;

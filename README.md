@@ -223,6 +223,7 @@ Và một phép kiểm **thứ hai**, kiểm thứ khác hẳn — `dotnet test`
 dotnet run --project src/KnowledgePlatform.Api    # cửa sổ khác
 python scripts/kiem_dau_cuoi.py                   # gọi THẬT cả 17 endpoint
 python scripts/kiem_hai_khach.py                 # NGHIỆM THU I2-1: dựng 2 khách từ 0
+curl http://localhost:5119/openapi/v1.json       # hợp đồng tích hợp, sinh từ code
                                                  # (app phải chạy Tenancy__Mode=SharedMultiTenant)
 ```
 
@@ -616,6 +617,11 @@ trong đó có **đường nhận tín hiệu** tạo Case.
 13 docs/18_QUYET_DINH_MUC_3.md         20 quyết định để đi hết mức 3 (bán được cho
                                        khách thứ hai). ĐÃ ĐIỀN ĐỦ 2026-09-16, và nó
                                        chứa lộ trình 10 bước còn lại.
+14 docs/19_HOP_DONG_TICH_HOP.md        ⭐ TÀI LIỆU CHO NGƯỜI NGOÀI. Viết cho người
+                                       viết code ở phía bên kia, không phải cho nội bộ.
+                                       Phần gọi VÀO: GET /openapi/v1.json (sinh từ code).
+                                       File này chứa thứ OpenAPI không tả được — webhook
+                                       GỬI RA, và cách kiểm chữ ký.
 ```
 
 **Bốn file để ĐIỀN, không phải để đọc** (sinh 2026-09-15):
