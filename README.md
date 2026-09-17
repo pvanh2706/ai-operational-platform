@@ -221,7 +221,7 @@ Và một phép kiểm **thứ hai**, kiểm thứ khác hẳn — `dotnet test`
 
 ```bash
 dotnet run --project src/KnowledgePlatform.Api    # cửa sổ khác
-python scripts/kiem_dau_cuoi.py                   # gọi THẬT cả 17 endpoint
+python scripts/kiem_dau_cuoi.py                   # gọi THẬT cả 18 endpoint
 python scripts/kiem_hai_khach.py                 # NGHIỆM THU I2-1: dựng 2 khách từ 0
 curl http://localhost:5119/openapi/v1.json       # hợp đồng tích hợp, sinh từ code
                                                  # (app phải chạy Tenancy__Mode=SharedMultiTenant)

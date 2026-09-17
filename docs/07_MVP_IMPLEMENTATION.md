@@ -432,6 +432,57 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-43` · Kênh 1 đóng đủ ba loại tín hiệu — và loại thứ ba KHÔNG cần endpoint nào
+
+**Ngày 2026-09-17, bước 5.** `06` §1 liệt kê ba loại tín hiệu thật; từ 2026-08-25 tới nay
+mới có loại thứ nhất.
+
+```text
+loại 1  có việc mới ở nguồn        POST /signals/case-observed    (đã có từ 08-25)
+loại 2  người dùng đổi trạng thái  POST /signals/case-status      MỚI
+loại 3  người dùng hỏi tài liệu    POST /hoi                      KHÔNG endpoint mới (F2-1)
+✅ 382/382 test xanh (212 + 19 + 151), trước 374 · 0 warning
+✅ kiem_dau_cuoi.py 52 phép kiểm · 0 sai
+```
+
+**🎯 Quyết định đáng nhất nằm ở chỗ endpoint mới KHÔNG làm gì, và nó NGƯỢC với trực giác.**
+`F1-1` chốt *"cập nhật Case, không làm gì thêm"* — không kích hoạt gom tri thức, không xếp
+hàng trả kết quả về. Trực giác nói ngược lại: case đóng rồi thì gom tri thức từ nó. Số đo
+nói:
+
+```text
+corpus 12 tháng   100% case đã đóng  ->  1,6 mẩu dùng được / case
+corpus  4 ngày     22% case đã đóng  ->  2,5 mẩu dùng được / case
+```
+
+Case **đã đóng mỏng hơn** case còn mở, vì bước kết luận xảy ra ở nơi khác (phiên remote, cuộc
+gọi) và chỉ để lại một dòng *"Done nhé"*. Kích hoạt gom lúc đóng case là build đúng bộ lọc mà
+dự án đã đo được là vứt đi phần có giá trị — **lần thứ ba cùng một hình dạng**, sau *"chỉ lấy
+case đã đóng"* và *"chỉ lấy phần khách đọc được"*.
+→ Có một test giữ riêng điều này (`Doi_trang_thai_KHONG_kich_hoat_gui_ket_qua_ve`), vì nếu
+  không thì ai đó sẽ "sửa cho nhất quán" với đường tín hiệu loại một.
+
+**⚠ `daXongONguon` là trường BẮT BUỘC, không suy từ `sourceResolvedAt`.** Cùng luật với
+`subTenantCode` của `AR-l`: bỏ trống thì *"bên gửi chưa gửi trạng thái"* và *"việc ở nguồn đã
+mở lại"* đều cho ra một ô trống, mà hai điều đó khác hẳn nhau và **về sau không dựng lại được
+từ dữ liệu**.
+
+**⚠ Case chưa tồn tại thì NÓI RA, không tự tạo.** Một case dựng từ tín hiệu đổi trạng thái sẽ
+không có `Subject` — tức một dòng rỗng nghĩa nằm trong kho gom của Path A. Trả
+`khong-thay-case` cho riêng phần tử đó, không hỏng cả lô.
+
+**✅ Và cổng của bước 7 vừa tự chứng minh trên VIỆC THẬT, không phải trên đột biến giả.** Sau
+khi thêm endpoint mà chưa cập nhật bộ kiểm, mục `J` của `kiem_dau_cuoi.py` đỏ ngay và gọi
+đúng tên:
+```text
+chưa gọi: POST /signals/case-status
+SAI  mọi thao tác trong hợp đồng đều được file này gọi: nhận 1, mong 0
+```
+Đây là lần đầu một cơ chế chống-lỗi-thời của dự án bắt được một thiếu sót **do chính công
+việc kế tiếp tạo ra**, thay vì phải chờ ai đó nhớ ra.
+
+---
+
 ## `IM-42` · Hợp đồng tích hợp sinh từ code — và cái cổng canh tôi vừa viết ra là ĐỒ TRANG TRÍ
 
 **Ngày 2026-09-17, bước 7 của lộ trình mức 3.** Trước hôm nay sản phẩm có 17 endpoint cộng

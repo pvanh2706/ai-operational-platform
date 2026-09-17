@@ -292,6 +292,24 @@ def duong_nap() -> tuple[str, str]:
     kiem("  ... AR-l đếm 1 mã phân biệt", b["distinctSubTenantCodes"], 1)
     kiem("  ... AR-l có cảnh báo", isinstance(b["subTenantWarning"], str), True)
 
+    # --- Tín hiệu loại THỨ HAI: đổi trạng thái (F1-1) ---
+    s, b = goi("POST", "/signals/case-status",
+               [{"sourceReference": ma_case, "daXongONguon": True}])
+    kiem("POST /signals/case-status  báo đã xong", (s, b["daCapNhat"]), (200, 1))
+
+    s, b = goi("POST", "/signals/case-status",
+               [{"sourceReference": ma_case, "daXongONguon": True}])
+    kiem("  ... gửi lại đúng trạng thái đang có -> khong-doi", b["results"][0]["trangThai"], "khong-doi")
+
+    s, b = goi("POST", "/signals/case-status",
+               [{"sourceReference": f"{DAU}:khong-bao-gio-ton-tai", "daXongONguon": False}])
+    kiem("  ... case chưa tồn tại -> khong-thay-case, KHÔNG tự tạo",
+         (b["khongThayCase"], b["daCapNhat"]), (1, 0))
+
+    # Bỏ trống `daXongONguon` là 400: "chưa gửi" và "đã mở lại" phải phân biệt được.
+    s, _ = goi("POST", "/signals/case-status", [{"sourceReference": ma_case}])
+    kiem("  ... thiếu daXongONguon -> 400", s, 400)
+
     return ma_case, ma_ev
 
 
@@ -619,7 +637,7 @@ def main() -> int:
         print("  đúng chỗ này là chỗ đã hỏng hai lần mà 302 test vẫn xanh (IM-36, IM-37).")
         return 1
 
-    print("\n✅ Cả 17 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
+    print("\n✅ Cả 18 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
     return 0
 
 

@@ -65,6 +65,15 @@ public static partial class OpenApiMoTa
                 "không cắt bớt im lặng. Nếu khách đã khai báo webhook, mỗi Case MỚI sẽ xếp " +
                 "một lượt trả kết quả về."),
 
+            ["POST /signals/case-status"] = new(NhomTinHieu,
+                "Báo việc ở nguồn đổi trạng thái",
+                "`daXongONguon` là BẮT BUỘC (true/false) — cố ý không suy từ việc có hay không " +
+                "có `sourceResolvedAt`, vì \"chưa gửi\" và \"đã mở lại\" đều cho ra một ô trống. " +
+                "Case chưa từng được tạo thì trả `khong-thay-case` cho riêng phần tử đó, KHÔNG " +
+                "tự tạo — một case dựng từ tín hiệu này sẽ không có tiêu đề. " +
+                "🛑 Endpoint này CỐ Ý không kích hoạt gì thêm: case đã đóng đo được là MỎNG HƠN " +
+                "case còn mở, nên gom tri thức lúc đóng case là vứt đúng phần có giá trị."),
+
             ["POST /signals/case-evidence"] = new(NhomTinHieu,
                 "Nạp mẩu dẫn chứng của một case",
                 "`subTenantCode` là BẮT BUỘC (AR-l): chưa biết thì khai `khong-xac-dinh`, " +
@@ -122,7 +131,10 @@ public static partial class OpenApiMoTa
                 "Hỏi một câu, nhận hướng dẫn hoặc KHÔNG BIẾT",
                 "`bietTraLoi: false` là một câu trả lời HỢP LỆ, không phải lỗi — đọc `lyDoKhongBiet` " +
                 "để biết cửa nào đã chặn. Chỉ trả về tri thức ĐÃ DUYỆT. Mỗi phát biểu mang mức " +
-                "kiểm chứng riêng; `MÂU THUẪN` là một giá trị hạng nhất, không phải lỗi."),
+                "kiểm chứng riêng; `MÂU THUẪN` là một giá trị hạng nhất, không phải lỗi. " +
+                "⚠ Đây CŨNG là cửa cho loại tín hiệu THỨ BA của Kênh 1 — *người dùng hỏi về tài " +
+                "liệu* (`F2-1`). Cố ý không có endpoint riêng: một cửa cho mọi câu hỏi nghĩa là " +
+                "một cổng KHÔNG BIẾT, và cổng che ở khâu gửi ra chỉ phải canh một đường."),
 
             ["PUT /internal/webhook"] = new(NhomTichHop,
                 "Khai báo nơi nhận kết quả trả về",

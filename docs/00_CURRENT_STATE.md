@@ -317,7 +317,7 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > ✅ 2  Webhook ra + link token có hạn     XONG 2026-09-16 — IM-40
 >    3  Định tuyến: ngưỡng thành cấu hình, impl thật chờ credit
 >    4  Nối ISopDrafter vào host + trần chi tiêu
->    5  Hai loại tín hiệu còn lại (F1-1 · F2-1)
+> ✅ 5  Hai loại tín hiệu còn lại           XONG 2026-09-17 — IM-43
 >    6  Hồ sơ chạy local Windows: PublicBaseUrl + biến môi trường
 > ✅ 7  Hợp đồng tích hợp: OpenAPI + docs/19   XONG 2026-09-17 — IM-42
 >    8  Kênh 2 + entity Document + MinIO

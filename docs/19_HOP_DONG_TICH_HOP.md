@@ -83,6 +83,35 @@ Chưa biết thì khai `khong-xac-dinh`; việc nội bộ không thuộc khách
 `khong-thuoc-khach-san`. Bỏ trống là `400` — sản phẩm cố ý **không tự điền hộ**, vì *"chưa
 biết"* và *"chưa ai hỏi"* là hai chuyện khác nhau và về sau không dựng lại được.
 
+### 2.1 Báo việc ở nguồn đổi trạng thái
+
+```bash
+curl -X POST https://<host>/signals/case-status \
+  -H "Authorization: Bearer kp_..." \
+  -H "Content-Type: application/json" \
+  -d '[{"sourceReference":"jira:ES-12345","daXongONguon":true,"sourceResolvedAt":"2026-09-17T09:00:00+07:00"}]'
+```
+
+```text
+daXongONguon        BẮT BUỘC, true/false. Cố ý KHÔNG suy từ việc có hay không có
+                    `sourceResolvedAt`: "chưa gửi" và "đã mở lại" đều cho ra một ô trống,
+                    mà hai điều đó khác hẳn nhau.
+case chưa tồn tại   trả `khong-thay-case` cho riêng phần tử đó — KHÔNG tự tạo. Một case
+                    dựng từ tín hiệu này sẽ không có tiêu đề. Gửi case-observed trước.
+gửi lại cùng trạng thái  trả `khong-doi`. Không phải lỗi.
+```
+
+🛑 **Endpoint này cố ý KHÔNG kích hoạt gì thêm** — nó không sinh ra một lượt trả kết quả về.
+Lý do là một số đo, không phải trực giác: trên corpus 12 tháng, case **đã đóng** chỉ có 1,6
+mẩu dùng được mỗi case, **mỏng hơn** corpus 4 ngày (2,5) vốn phần lớn còn mở. Bước kết luận
+thường xảy ra ở nơi khác (phiên remote, cuộc gọi) và chỉ để lại trong ticket một dòng *"Done
+nhé"*. Nếu bạn mong nhận được hướng dẫn lúc đóng case, **bạn sẽ không nhận được** — và đó là
+thiết kế.
+
+### 2.2 Người dùng hỏi về tài liệu
+
+Không có endpoint riêng. Dùng `POST /hoi` — một cửa cho mọi câu hỏi, một cổng KHÔNG BIẾT.
+
 ---
 
 ## 3. Sản phẩm gửi kết quả về — phần OpenAPI không tả được

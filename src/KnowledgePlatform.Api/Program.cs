@@ -68,6 +68,7 @@ builder.Services.AddScoped<CallerIdentity>();
 builder.Services.AddScoped<TenantEndpointFilter>();
 builder.Services.AddScoped<ApiKeyEndpointFilter>();
 builder.Services.AddScoped<CaseSignalHandler>();
+builder.Services.AddScoped<CaseStatusHandler>();
 builder.Services.AddScoped<CaseEvidenceHandler>();
 builder.Services.AddScoped<CaseEvidenceReadHandler>();
 builder.Services.AddScoped<EvidenceRetractionHandler>();
@@ -269,6 +270,54 @@ app.MapPost("/signals/case-observed", async (
     })
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
+
+// --- KÊNH 1, tín hiệu loại THỨ HAI: việc ở nguồn đổi trạng thái (F1-1) ---
+//
+// 🛑 Nó CỐ Ý không làm gì ngoài cập nhật Case, và lý do là một SỐ ĐO chứ không phải trực
+//   giác: corpus 12 tháng có 100% case đã đóng mà chỉ 1,6 mẩu dùng được mỗi case, mỏng hơn
+//   corpus 4 ngày (2,5) vốn chỉ 22% đã đóng. Kích hoạt gom tri thức lúc đóng case là build
+//   đúng bộ lọc mà dự án đã ĐO được là vứt đi phần có giá trị. Xem CaseStatusSignal.
+app.MapPost("/signals/case-status", async (
+        List<CaseStatusSignal> signals,
+        CaseStatusHandler handler,
+        IOptions<IngestOptions> ingest,
+        CancellationToken ct) =>
+    {
+        if (signals.Count == 0)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Khong co tin hieu nao",
+                detail: "Body phai la mot mang co it nhat mot tin hieu.");
+        }
+
+        var max = ingest.Value.MaxSignalsPerRequest;
+        if (signals.Count > max)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Lo tin hieu qua lon",
+                detail: $"Nhan {signals.Count} tin hieu, tran la {max}. Chia nho roi gui lai.");
+        }
+
+        var invalid = signals
+            .Select((s, i) => (Index: i, Error: ValidateStatus(s)))
+            .Where(x => x.Error is not null)
+            .ToList();
+
+        if (invalid.Count > 0)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Co tin hieu khong hop le",
+                detail: string.Join("; ", invalid.Select(x => $"[{x.Index}] {x.Error}")));
+        }
+
+        return Results.Ok(await handler.HandleAsync(signals, ct));
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
 
 // --- KÊNH 1, cửa thứ hai: NỘI DUNG của case (AR-f, chốt 2026-08-30) ---
 //
@@ -848,6 +897,20 @@ static string? ValidateEvidence(CaseEvidenceSignal s) => s switch
            "Cố ý không tự điền hộ: \"chưa biết\" khác \"chưa ai hỏi\".",
     _ when !SubTenantCodes.TryChuanHoa(s.SubTenantCode, out _)
         => $"subTenantCode dài quá {SubTenantCodes.MaxLength} ký tự.",
+    _ => null,
+};
+
+// ⚠ `daXongONguon` BẮT BUỘC, và cố ý không suy từ việc có hay không có `sourceResolvedAt`.
+// Cùng luật với `subTenantCode` của `AR-l`: "chưa gửi" và "đã mở lại" đều cho ra một ô trống,
+// mà hai điều đó khác hẳn nhau và về sau không dựng lại được từ dữ liệu.
+static string? ValidateStatus(CaseStatusSignal s) => s switch
+{
+    { SourceReference: null or "" } => "sourceReference không được để trống.",
+    _ when s.SourceReference.Length > 512 => "sourceReference dài quá 512 ký tự.",
+    { DaXongONguon: null }
+        => "daXongONguon không được để trống — phải khai tường minh true hoặc false. " +
+           "Bỏ trống thì hai chuyện khác hẳn nhau trông giống hệt: bên gửi CHƯA GỬI trạng " +
+           "thái, và việc ở nguồn ĐÃ MỞ LẠI.",
     _ => null,
 };
 
