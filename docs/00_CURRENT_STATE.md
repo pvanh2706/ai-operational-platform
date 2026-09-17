@@ -323,10 +323,19 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > ✅ 7  Hợp đồng tích hợp: OpenAPI + docs/19   XONG 2026-09-17 — IM-42
 > 🔶 8  Kênh 2 + entity Document           XONG 2026-09-17 — IM-47.
 >       ⚠ Kho file chạy trên ĐĨA; bản MinIO (H3-2) chờ có MinIO để chạy thật.
->    9  FTS: tìm N case cũ TRONG nhóm      ← CHƯA LÀM. Bước DUY NHẤT của lộ trình 10
->       bước còn nguyên. ⚠ Đã ĐO được là yếu trên nguồn này: FTS 34% so với đoán mù
->       31% (`docs/09` §5), nên nó KHÔNG phải việc đáng làm tiếp theo — ghi ra để
->       không ai tưởng nó bị bỏ quên.
+>    9  FTS: tìm N case cũ TRONG nhóm      ← CHƯA LÀM, và ĐO ĐƯỢC là hôm nay nó
+>       KHÔNG ĐỔI ĐƯỢC GÌ. Hai số, đo 2026-09-17:
+>       ```text
+>       nhóm dày nhất      10 case      trần đang đặt   30 case/lượt
+>       số nhóm VƯỢT trần   0 / 19
+>       ```
+>       Bước 9 là "chọn N case TỐT NHẤT trong nhóm" — nhưng không nhóm nào có nhiều
+>       hơn trần, nên nó luôn lấy hết. Viết nó bây giờ là viết code chứng minh được
+>       là không làm gì.
+>       ⚠ Cộng với số đo cũ: FTS 34% so với đoán mù 31% (`docs/09` §5) — cơ chế này
+>       vốn đã yếu trên nguồn dữ liệu này.
+>       → Mở lại khi ĐO ĐƯỢC một nhóm vượt trần, hoặc khi trần bị hạ vì lý do chi phí.
+>       Ghi ra để phân biệt "chưa tới lượt" với "bị bỏ quên".
 > ✅ 10 Phép kiểm nghiệm thu HAI TENANT     XONG 2026-09-16 — IM-41
 > ```
 >
