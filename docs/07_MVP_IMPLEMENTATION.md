@@ -432,6 +432,58 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-47` · Kênh 2 mở — và nó KHÔNG làm kho tri thức tăng một dòng nào
+
+**Ngày 2026-09-17, bước 8 — bước cuối của lộ trình mức 3.**
+
+```text
+kp.document                  siêu dữ liệu, tenant-scoped, CÓ RLS. Nội dung ở kho file (AR5)
+IKhoFile + KhoFileDia        interface MỎNG theo khuôn AR3, bản đang cắm chạy trên ĐĨA
+POST /documents              multipart; nạp lại cùng nội dung KHÔNG sinh bản thứ hai
+GET  /documents              siêu dữ liệu
+GET  /documents/{id}/tai     tải nội dung
+✅ 418/418 test xanh (212 + 19 + 187), trước 407 · 0 warning
+✅ kiem_dau_cuoi.py 60 phép kiểm · 0 sai · 22 endpoint
+```
+
+**🛑 TEST QUAN TRỌNG NHẤT KHẲNG ĐỊNH MỘT SỐ KHÔNG.** `S6` chốt từ Workstream 04: *nạp tài
+liệu KHÔNG sinh KnowledgeRecord*. Đó là lý do Kênh 2 bị hoãn suốt — build xong đường này thì
+kho tri thức **vẫn là 0**, vì tri thức chỉ ra đời khi có **hành vi khẳng định của một người**.
+Một file .docx trong kho là một **VẬT CHỨA**, không phải một phát biểu ai chịu trách nhiệm.
+→ `Nap_tai_lieu_KHONG_sinh_ra_tri_thuc` giữ chính quyết định đó. Ngày nào nó đỏ là ngày cả
+  `D4` lẫn hai cổng của `/hoi` bị đi vòng qua.
+
+**🛑 `H3-2` CHỐT MinIO, NHƯNG BẢN ĐANG CẮM LÀ ĐĨA CỤC BỘ — và lý do phải nói thẳng ra:** máy
+dựng bản này **không có container runtime**, nên một bản hiện thực MinIO viết ở đây sẽ là
+**code chưa từng chạy một lần nào**. Dự án đã đo cái giá của thứ đó hai lần trong hai ngày
+(`IM-42`: một cổng canh trông như đang canh; `IM-38`: một bộ kiểm trông như đang phủ).
+→ Đĩa cục bộ **không phải lựa chọn thay thế `H3-2`**; nó là chỗ đứng cho tới ngày có MinIO
+  chạy thật. Bản MinIO là MỘT class cài `IKhoFile`, cắm bằng một dòng DI.
+
+**🛑 TẦNG KHO FILE KHÔNG CÓ RLS CHE LƯNG, nên nó phải tự đứng vững.** Hai chốt, và test
+`Khach_A_khong_tai_duoc_tai_lieu_cua_khach_B` cố ý cho cả hai khách dùng **CHUNG một thư mục
+kho** — ca xấu nhất, không phải ca dễ:
+```text
+thư mục theo tenant     một lỗi ghép đường dẫn không đủ để khách A đọc file khách B
+mã kho do SẢN PHẨM sinh tên người nạp khai KHÔNG BAO GIỜ chạm tới đường dẫn. Dùng nó là mở
+                        thẳng đường đi ngang thư mục (`../../`) và đường ghi đè file khách khác
+```
+Có test riêng cho tên file mang `../../../`.
+
+**⚠ Nạp trùng so bằng SHA-256 của NỘI DUNG, không bằng tên** — job đồng bộ chạy lại là chuyện
+thường (cùng lý do `IM-20`), và cùng một file thường được đặt hai tên khác nhau.
+
+**🛑 CÒN LẠI, và đây là chỗ dễ đọc nhầm nhất của cả bước này:**
+```text
+· Tài liệu CHƯA đi qua cổng che nào. Hôm nay nó không đi đâu cả nên chưa cần — nhưng ngày
+  nội dung tài liệu được đưa vào bản nháp SOP thì nó PHẢI qua `AR-o`, y hệt evidence.
+· Chưa quét credential lúc nạp. `AR-j` quét evidence; tài liệu thì chưa. Một file .txt chứa
+  mật khẩu nạp lên hôm nay sẽ nằm nguyên trong kho.
+· Chưa có OCR, chưa trích văn bản. Kênh 2 mới mang FILE vào, chưa mang CHỮ vào.
+```
+
+---
+
 ## `IM-46` · Soạn nháp vào host — và hai vòng không-credit nối vào nhau
 
 **Ngày 2026-09-17, bước 4.** `ISopDrafter` trước nay chỉ sống trong `SoanNhapRunner`, một công

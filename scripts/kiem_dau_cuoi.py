@@ -116,8 +116,16 @@ def goi(method: str, duong: str, body=None, khoa=_MAC_DINH, them=None) -> tuple[
         req.add_header(k, v)
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
-            raw = r.read().decode("utf-8")
-            return r.status, (json.loads(raw) if raw else None)
+            raw = r.read().decode("utf-8", errors="replace")
+            if not raw:
+                return r.status, None
+            try:
+                return r.status, json.loads(raw)
+            except ValueError:
+                # KHÔNG phải mọi endpoint đều trả JSON — /documents/{id}/tai trả nội dung file.
+                # Trả chuỗi thô thay vì chết: một helper gục vì đoán sai kiểu dữ liệu sẽ giấu
+                # mất kết quả của MỌI mục chạy sau nó.
+                return r.status, raw
     except urllib.error.HTTPError as e:
         raw = e.read().decode("utf-8")
         try:
@@ -537,6 +545,54 @@ def soan_nhap() -> None:
     kiem("  ... và nói rõ lý do", (b or {}).get("lyDo"), "nhom-khong-co-case")
 
 
+def kenh_hai() -> None:
+    """Kênh 2 — nạp tài liệu (`AR5`, bước 8). S6: nạp tài liệu KHÔNG sinh ra tri thức."""
+    muc("L · Kênh 2 — nạp tài liệu  (AR5)")
+
+    crlf = chr(13) + chr(10)
+    ranh = "----------kiem" + DAU.replace(":", "")
+    ten = DAU + "-tai-lieu.txt"
+    noi = "Noi dung thu " + LAN
+
+    def truong(khoa: str, gt: str) -> str:
+        return ("--" + ranh + crlf
+                + 'Content-Disposition: form-data; name="' + khoa + '"' + crlf + crlf
+                + gt + crlf)
+
+    phan = [truong("subTenantCode", "khong-xac-dinh"), truong("nguoiNap", "kiem-dau-cuoi")]
+    phan.append("--" + ranh + crlf
+                + 'Content-Disposition: form-data; name="file"; filename="' + ten + '"' + crlf
+                + "Content-Type: text/plain" + crlf + crlf
+                + noi + crlf)
+    phan.append("--" + ranh + "--" + crlf)
+
+    req = urllib.request.Request(GOC + "/documents", data="".join(phan).encode("utf-8"), method="POST")
+    req.add_header("Content-Type", "multipart/form-data; boundary=" + ranh)
+    if KHOA_API:
+        req.add_header("Authorization", "Bearer " + KHOA_API)
+    _da_goi.add(("POST", "/documents"))
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            b = json.loads(r.read().decode("utf-8"))
+            ma = r.status
+    except urllib.error.HTTPError as e:
+        print("  SAI  POST /documents: %d %s" % (e.code, e.read().decode("utf-8")[:200]))
+        _sai.append("POST /documents")
+        return
+
+    kiem("POST /documents -> 200", ma, 200)
+    kiem("  ... nạp lần đầu, không phải bản trùng", b.get("daCoTuTruoc"), False)
+
+    s, ds = goi("GET", "/documents")
+    kiem("GET /documents -> 200", s, 200)
+    kiem("  ... thấy tài liệu vừa nạp",
+         any(x.get("tenKhaiBao") == ten for x in (ds or [])), True)
+
+    s, _ = goi("GET", "/documents/%s/tai" % b["id"])
+    kiem("GET /documents/{id}/tai -> 200", s, 200)
+
+
 def phu_hop_dong() -> None:
     """
     🛑 **Phép kiểm tự soi chính nó.** Đối chiếu những đường file này ĐÃ GỌI với hợp đồng
@@ -643,6 +699,7 @@ def main() -> int:
     link_xem(rid)
     duong_gui_ve()
     soan_nhap()
+    kenh_hai()
     phu_hop_dong()
 
     print("\n" + "=" * 68)
@@ -657,7 +714,7 @@ def main() -> int:
         print("  đúng chỗ này là chỗ đã hỏng hai lần mà 302 test vẫn xanh (IM-36, IM-37).")
         return 1
 
-    print("\n✅ Cả 19 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
+    print("\n✅ Cả 22 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
     return 0
 
 

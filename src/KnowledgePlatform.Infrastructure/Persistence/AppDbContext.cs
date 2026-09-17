@@ -1,4 +1,5 @@
 using KnowledgePlatform.Domain.Cases;
+using KnowledgePlatform.Domain.Documents;
 using KnowledgePlatform.Domain.Evidence;
 using KnowledgePlatform.Domain.Knowledge;
 using KnowledgePlatform.Domain.Sop;
@@ -218,6 +219,22 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
             // Đường NÓNG: đếm lượt của tháng này để áp trần.
             e.HasIndex(x => new { x.TenantId, x.Luc });
+        });
+
+        // --- Kênh 2: siêu dữ liệu tài liệu. Nội dung nằm ở kho file (AR5) ---
+        b.Entity<Document>(e =>
+        {
+            e.ToTable("document");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.TenKhaiBao).HasMaxLength(512).IsRequired();
+            e.Property(x => x.LoaiNoiDung).HasMaxLength(256).IsRequired();
+            e.Property(x => x.MaKho).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Hash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.SubTenantCode).HasMaxLength(SubTenantCodes.MaxLength).IsRequired();
+            e.Property(x => x.NguoiNap).HasMaxLength(256).IsRequired();
+
+            // Nạp lại cùng một file KHÔNG sinh bản thứ hai — cùng luật `IM-20` ở đường tín hiệu.
+            e.HasIndex(x => new { x.TenantId, x.Hash }).IsUnique();
         });
 
         // --- Webhook: CÓ RLS (tenant-scoped) — khác hai bảng trên, xem WebhookEndpoint ---

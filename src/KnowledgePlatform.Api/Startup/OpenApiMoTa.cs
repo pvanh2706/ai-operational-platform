@@ -33,6 +33,7 @@ public static partial class OpenApiMoTa
     private const string NhomTriThuc = "Tri thức";
     private const string NhomHoi = "Hỏi & trả lời";
     private const string NhomTichHop = "Tích hợp";
+    private const string NhomKenh2 = "Kênh 2 — tài liệu";
 
     /// <summary>Khoá là <c>"METHOD /đường/dẫn"</c>, đúng dạng route pattern của ASP.NET.</summary>
     public static IReadOnlyDictionary<string, MoTaEndpoint> Bang { get; } =
@@ -91,6 +92,22 @@ public static partial class OpenApiMoTa
                 "Tra theo KHOÁ NGUỒN — thứ bên gửi đã biết về case của chính họ. ⚠ Khoá nguồn " +
                 "chứa dấu `/` phải mã hoá thành `%2F`: đó là ràng buộc của HTTP, không phải của " +
                 "sản phẩm."),
+
+            ["POST /documents"] = new(NhomKenh2,
+                "Nạp một tài liệu lên (multipart/form-data)",
+                "Trường `file` là nội dung; `subTenantCode` và `nguoiNap` là hai trường chữ bắt buộc. " +
+                "Nạp lại cùng một file KHÔNG sinh bản thứ hai — so bằng SHA-256 của nội dung. " +
+                "🛑 NẠP TÀI LIỆU KHÔNG SINH RA TRI THỨC (`S6`): file vào kho là một VẬT CHỨA, " +
+                "không phải một phát biểu ai chịu trách nhiệm. Tri thức chỉ ra đời khi có NGƯỜI duyệt."),
+
+            ["GET /documents"] = new(NhomKenh2,
+                "Liệt kê tài liệu của khách hàng này",
+                "Chỉ siêu dữ liệu. Nội dung tải qua `/documents/{id}/tai`."),
+
+            ["GET /documents/{id}/tai"] = new(NhomKenh2,
+                "Tải nội dung một tài liệu",
+                "404 cho cả hai ca: không có tài liệu đó trong phạm vi khách hàng này, VÀ có dòng " +
+                "trong kho dữ liệu nhưng nội dung không còn. Ca thứ hai nghĩa là kho và DB đã lệch nhau."),
 
             ["POST /knowledge/sop-draft"] = new(NhomTriThuc,
                 "Nạp một bản nháp quy trình",

@@ -321,7 +321,8 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > ✅ 5  Hai loại tín hiệu còn lại           XONG 2026-09-17 — IM-43
 > ✅ 6  Hồ sơ chạy local Windows            XONG 2026-09-17 — IM-44, docs/20
 > ✅ 7  Hợp đồng tích hợp: OpenAPI + docs/19   XONG 2026-09-17 — IM-42
->    8  Kênh 2 + entity Document + MinIO
+> 🔶 8  Kênh 2 + entity Document           XONG 2026-09-17 — IM-47.
+>       ⚠ Kho file chạy trên ĐĨA; bản MinIO (H3-2) chờ có MinIO để chạy thật.
 >    9  FTS: tìm N case cũ TRONG nhóm
 > ✅ 10 Phép kiểm nghiệm thu HAI TENANT     XONG 2026-09-16 — IM-41
 > ```

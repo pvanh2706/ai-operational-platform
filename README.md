@@ -221,7 +221,7 @@ Và một phép kiểm **thứ hai**, kiểm thứ khác hẳn — `dotnet test`
 
 ```bash
 dotnet run --project src/KnowledgePlatform.Api    # cửa sổ khác
-python scripts/kiem_dau_cuoi.py                   # gọi THẬT cả 18 endpoint
+python scripts/kiem_dau_cuoi.py                   # gọi THẬT cả 22 endpoint
 python scripts/kiem_hai_khach.py                 # NGHIỆM THU I2-1: dựng 2 khách từ 0
 
 # VÒNG KHÔNG-CREDIT cho định tuyến: xuất -> dán cho một ngữ cảnh AI -> nạp về

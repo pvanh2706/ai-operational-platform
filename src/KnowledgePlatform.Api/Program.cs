@@ -1,12 +1,15 @@
+using KnowledgePlatform.Api.Documents;
 using KnowledgePlatform.Api.Knowledge;
 using KnowledgePlatform.Api.Signals;
 using KnowledgePlatform.Api.Startup;
 using KnowledgePlatform.Api.Tenancy;
 using KnowledgePlatform.Api.Webhooks;
+using KnowledgePlatform.Domain.Documents;
 using KnowledgePlatform.Domain.Evidence;
 using KnowledgePlatform.Domain.Knowledge;
 using KnowledgePlatform.Domain.Sop;
 using KnowledgePlatform.Domain.Tenancy;
+using KnowledgePlatform.Infrastructure.Documents;
 using KnowledgePlatform.Infrastructure.Persistence;
 using KnowledgePlatform.Infrastructure.Sop;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +44,8 @@ builder.Services.Configure<WebhookOptions>(
     builder.Configuration.GetSection(WebhookOptions.SectionName));
 builder.Services.Configure<SoanNhapOptions>(
     builder.Configuration.GetSection(SoanNhapOptions.SectionName));
+builder.Services.Configure<KhoFileOptions>(
+    builder.Configuration.GetSection(KhoFileOptions.SectionName));
 
 // Danh bạ tenant nằm NGOÀI ranh giới tenant — xem TenantDirectory.
 builder.Services.AddSingleton(sp => new TenantDirectory(
@@ -84,6 +89,19 @@ builder.Services.AddScoped<PhatLinkHandler>();
 builder.Services.AddScoped<XemLinkHandler>();
 builder.Services.AddScoped<VongKhongCredit>();
 builder.Services.AddScoped<SoanNhapHandler>();
+builder.Services.AddScoped<DocumentHandler>();
+
+// `AR5` — file gốc ở kho, DB chỉ giữ metadata. Interface MỎNG theo khuôn `AR3`.
+//
+// ⚠ `H3-2` chốt MinIO; bản đang cắm là ĐĨA CỤC BỘ, và lý do nói thẳng ở IKhoFile: máy dựng
+//   bản này không có container runtime, nên một bản MinIO viết ra sẽ là code CHƯA TỪNG CHẠY.
+builder.Services.AddSingleton<IKhoFile>(sp =>
+{
+    var cfg = sp.GetRequiredService<IOptions<KhoFileOptions>>().Value;
+
+    return new KhoFileDia(cfg.ThuMucGoc
+        ?? Path.Combine(Path.GetTempPath(), "kp-kho-file"));
+});
 
 // `AR3` — MỘT DÒNG để đổi bản hiện thực, và đây là dòng đó.
 //
@@ -756,6 +774,79 @@ app.MapGet("/xem/{token}", async (XemLinkHandler handler, CancellationToken ct) 
                 detail: kq.LyDo);
     })
     .AddEndpointFilter<LinkTokenEndpointFilter>();
+
+
+// --- KÊNH 2: nạp tài liệu (AR5) ---
+//
+// 🛑 NẠP TÀI LIỆU KHÔNG SINH RA TRI THỨC (`S6`). Đây là lý do Kênh 2 hoãn suốt: build xong
+//   đường này thì kho tri thức VẪN LÀ 0. Tri thức chỉ ra đời khi có hành vi khẳng định của
+//   một NGƯỜI — đường đó là /knowledge/{id}/approve. Có test giữ riêng điều này.
+app.MapPost("/documents", async (
+        HttpRequest req,
+        DocumentHandler handler,
+        IOptions<KhoFileOptions> kho,
+        CancellationToken ct) =>
+    {
+        if (!req.HasFormContentType)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Phải gửi dạng multipart/form-data",
+                detail: "Trường `file` là nội dung; `subTenantCode` và `nguoiNap` là hai trường chữ.");
+        }
+
+        var form = await req.ReadFormAsync(ct);
+        var file = form.Files["file"];
+
+        if (file is null)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Thiếu trường `file`",
+                detail: "Một request nạp tài liệu phải mang đúng một file ở trường tên `file`.");
+        }
+
+        var subTenantCode = form["subTenantCode"].ToString();
+        var nguoiNap = form["nguoiNap"].ToString();
+
+        var sai = DocumentHandler.KiemTra(file.FileName, subTenantCode, nguoiNap, file.Length, kho.Value.TranMB);
+        if (sai is not null)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest, title: "Không nạp được", detail: sai);
+        }
+
+        await using var noi = file.OpenReadStream();
+
+        var kq = await handler.NapAsync(
+            file.FileName,
+            string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+            subTenantCode, nguoiNap, noi, ct);
+
+        return Results.Ok(kq);
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapGet("/documents", async (DocumentHandler handler, CancellationToken ct) =>
+        Results.Ok(await handler.LietKeAsync(ct)))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapGet("/documents/{id:guid}/tai", async (Guid id, DocumentHandler handler, CancellationToken ct) =>
+    {
+        var tl = await handler.TaiAsync(id, ct);
+
+        return tl is null
+            ? Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Không thấy tài liệu này",
+                detail: $"Không có tài liệu {id} trong phạm vi của khách hàng này, hoặc nội dung " +
+                        "của nó không còn trong kho.")
+            : Results.File(tl.Value.NoiDung, tl.Value.Meta.LoaiNoiDung, tl.Value.Meta.TenKhaiBao);
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
 
 
 // --- Khai báo ĐÍCH GỬI KẾT QUẢ VỀ (D1-1) ---

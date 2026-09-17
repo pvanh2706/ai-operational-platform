@@ -60,6 +60,58 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.ToTable("canonical_case", "kp");
                 });
 
+            modelBuilder.Entity("KnowledgePlatform.Domain.Documents.Document", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("KichThuoc")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("LoaiNoiDung")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("MaKho")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("NapLuc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NguoiNap")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("SubTenantCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TenKhaiBao")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Hash")
+                        .IsUnique();
+
+                    b.ToTable("document", "kp");
+                });
+
             modelBuilder.Entity("KnowledgePlatform.Domain.Evidence.EvidenceItem", b =>
                 {
                     b.Property<Guid>("Id")
