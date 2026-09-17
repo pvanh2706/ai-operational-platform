@@ -128,7 +128,7 @@ public static class LenhDinhTuyen
     }
 
     /// <summary>Mở một scope với tenant đặt tường minh — không có middleware trong lệnh CLI.</summary>
-    private static async Task TrongScopeAsync(
+    internal static async Task TrongScopeAsync(
         string maKhach, IServiceProvider services, CancellationToken ct, Func<IServiceProvider, Task> viec)
     {
         var id = await services.GetRequiredService<TenantDirectory>().FindIdByExternalKeyAsync(maKhach, ct);
@@ -205,7 +205,7 @@ public static class LenhDinhTuyen
     /// ⚠ Hỏi git chứ không so tên thư mục — so tên là đoán. Repo đã rò một lần theo đúng hình
     /// dạng này: một file dump mà `.gitignore` không chặn (commit `888c8e7`).
     /// </summary>
-    private static bool KiemChoGhi(string duong)
+    internal static bool KiemChoGhi(string duong)
     {
         var thuMuc = Path.GetDirectoryName(duong);
         if (!string.IsNullOrEmpty(thuMuc) && !Directory.Exists(thuMuc))

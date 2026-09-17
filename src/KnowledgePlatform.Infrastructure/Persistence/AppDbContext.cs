@@ -207,6 +207,19 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.HasIndex(x => new { x.TenantId, x.KhoaNguon }).IsUnique();
         });
 
+        // --- Biên lai mỗi lượt gọi model (E3-1) — tenant-scoped, CÓ RLS ---
+        b.Entity<LuotSoanNhap>(e =>
+        {
+            e.ToTable("luot_soan_nhap");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Nhom).HasMaxLength(512).IsRequired();
+            e.Property(x => x.NguoiYeuCau).HasMaxLength(256).IsRequired();
+            e.Property(x => x.Loi).HasMaxLength(1000);
+
+            // Đường NÓNG: đếm lượt của tháng này để áp trần.
+            e.HasIndex(x => new { x.TenantId, x.Luc });
+        });
+
         // --- Webhook: CÓ RLS (tenant-scoped) — khác hai bảng trên, xem WebhookEndpoint ---
         b.Entity<WebhookEndpoint>(e =>
         {

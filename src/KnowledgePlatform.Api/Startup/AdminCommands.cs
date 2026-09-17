@@ -31,6 +31,10 @@ public static class AdminCommands
                 await LenhDinhTuyen.XuatAsync(args, services, ct);
                 return true;
 
+            case "--xuat-soan-nhap":
+                await LenhSoanNhap.XuatAsync(args, services, ct);
+                return true;
+
             case "--nap-dinh-tuyen":
                 await LenhDinhTuyen.NapAsync(args, services, ct);
                 return true;

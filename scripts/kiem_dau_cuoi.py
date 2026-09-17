@@ -518,6 +518,25 @@ def duong_gui_ve() -> None:
         kiem("đọc cấu hình mà không có khoá API -> 401", s, 401)
 
 
+def soan_nhap() -> None:
+    """
+    Bước 4 — soạn nháp từ trong host. Trên máy dev KHÔNG có khoá model, nên đường đúng phải
+    trả 409 kèm `chua-co-credit` và chỉ ra vòng thay thế.
+
+    ⚠ Đây là phép kiểm cho HÀNH VI LÚC THIẾU, không phải cho lượt gọi thật. Lượt gọi thật
+    chỉ chứng minh được khi có credit — nói ra thay vì để người đọc tưởng là đã kiểm.
+    """
+    muc("K · Soạn nháp từ trong host  (bước 4)")
+
+    s, _ = goi("POST", "/knowledge/soan-nhap", {"nhom": "x"})
+    kiem("thiếu nguoiYeuCau -> 400", s, 400)
+
+    s, b = goi("POST", "/knowledge/soan-nhap",
+               {"nhom": f"nhom-khong-ai-dinh-tuyen-{DAU}", "nguoiYeuCau": "kiem-dau-cuoi"})
+    kiem("nhóm chưa có case -> 409", s, 409)
+    kiem("  ... và nói rõ lý do", (b or {}).get("lyDo"), "nhom-khong-co-case")
+
+
 def phu_hop_dong() -> None:
     """
     🛑 **Phép kiểm tự soi chính nó.** Đối chiếu những đường file này ĐÃ GỌI với hợp đồng
@@ -623,6 +642,7 @@ def main() -> int:
     xac_thuc()
     link_xem(rid)
     duong_gui_ve()
+    soan_nhap()
     phu_hop_dong()
 
     print("\n" + "=" * 68)
@@ -637,7 +657,7 @@ def main() -> int:
         print("  đúng chỗ này là chỗ đã hỏng hai lần mà 302 test vẫn xanh (IM-36, IM-37).")
         return 1
 
-    print("\n✅ Cả 18 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
+    print("\n✅ Cả 19 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
     return 0
 
 

@@ -261,7 +261,8 @@ public sealed class TenantIsolationTests : IClassFixture<TestDatabaseFixture>
         //   nó rơi nhầm chỗ.
         Assert.Equal(
             ["assertion", "assertion_evidence", "canonical_case", "dinh_tuyen_da_nap",
-             "evidence_item", "knowledge_record", "webhook_delivery", "webhook_endpoint"],
+             "evidence_item", "knowledge_record", "luot_soan_nhap",
+             "webhook_delivery", "webhook_endpoint"],
             db.TenantScopedTables);
 
         await RlsGuard.VerifyAsync(db);

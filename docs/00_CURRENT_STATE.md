@@ -317,7 +317,7 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > ✅ 2  Webhook ra + link token có hạn     XONG 2026-09-16 — IM-40
 > 🔶 3  Định tuyến — VÒNG KHÔNG-CREDIT xong 2026-09-17 (IM-45): xuất -> AI -> nạp.
 >       ⚠ Là CÁI NẠNG, không phải định tuyến tự động. Bản gọi model thật vẫn chờ credit.
->    4  Nối ISopDrafter vào host + trần chi tiêu
+> ✅ 4  Nối ISopDrafter vào host             XONG 2026-09-17 — IM-46 (vòng không-credit)
 > ✅ 5  Hai loại tín hiệu còn lại           XONG 2026-09-17 — IM-43
 > ✅ 6  Hồ sơ chạy local Windows            XONG 2026-09-17 — IM-44, docs/20
 > ✅ 7  Hợp đồng tích hợp: OpenAPI + docs/19   XONG 2026-09-17 — IM-42

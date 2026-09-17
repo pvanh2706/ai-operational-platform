@@ -97,6 +97,16 @@ public static partial class OpenApiMoTa
                 "Nạp KHÔNG phải duyệt: record vào kho ở trạng thái `DRAFT` và KHÔNG ra khỏi " +
                 "`/hoi` cho tới khi có người duyệt. Idempotent theo cặp (nhóm, tên nguyên nhân)."),
 
+            ["POST /knowledge/soan-nhap"] = new(NhomTriThuc,
+                "Nhờ model soạn một bản nháp quy trình cho một nhóm",
+                "Gom case đã được định tuyến vào nhóm đó, gọi model, rồi nạp kết quả vào kho ở " +
+                "trạng thái `DRAFT`. **Lượt này TỐN TIỀN** — có trần tháng (`E3-1`), và mỗi lượt " +
+                "được ghi biên lai kể cả khi hỏng. " +
+                "⚠ `nguoiYeuCau` là LỜI KHAI, không phải phép xác thực: sản phẩm biết request " +
+                "thuộc công ty nào, chưa biết người nào. " +
+                "🛑 Chưa cấu hình khoá model thì trả 409 kèm `lyDo: chua-co-credit` và ba bước " +
+                "của vòng thay thế — KHÔNG hỏng im lặng, KHÔNG trả bản nháp rỗng."),
+
             ["POST /knowledge/{id}/approve"] = new(NhomTriThuc,
                 "Duyệt — nội dung và quyền xem trong MỘT hành động",
                 "`xacNhanDuLieuThuongMai` là LỜI KHAI của người duyệt rằng đã soát dữ liệu " +

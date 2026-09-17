@@ -39,6 +39,8 @@ builder.Services.Configure<LinkXemOptions>(
     builder.Configuration.GetSection(LinkXemOptions.SectionName));
 builder.Services.Configure<WebhookOptions>(
     builder.Configuration.GetSection(WebhookOptions.SectionName));
+builder.Services.Configure<SoanNhapOptions>(
+    builder.Configuration.GetSection(SoanNhapOptions.SectionName));
 
 // Danh bạ tenant nằm NGOÀI ranh giới tenant — xem TenantDirectory.
 builder.Services.AddSingleton(sp => new TenantDirectory(
@@ -81,6 +83,16 @@ builder.Services.AddScoped<LinkTokenEndpointFilter>();
 builder.Services.AddScoped<PhatLinkHandler>();
 builder.Services.AddScoped<XemLinkHandler>();
 builder.Services.AddScoped<VongKhongCredit>();
+builder.Services.AddScoped<SoanNhapHandler>();
+
+// `AR3` — MỘT DÒNG để đổi bản hiện thực, và đây là dòng đó.
+//
+// 🛑 Không có khoá thì cắm bản NÉM kèm hướng dẫn, KHÔNG để trống DI (host chết vì một tính
+//   năng chưa dùng tới) và KHÔNG trả bản nháp rỗng (nó đi thẳng vào kho, trông như thật).
+builder.Services.AddScoped<ISopDrafter>(sp =>
+    string.IsNullOrWhiteSpace(sp.GetRequiredService<IConfiguration>()["Anthropic:ApiKey"])
+        ? new SopDrafterChuaCoCredit()
+        : new AnthropicSopDrafter(new Anthropic.AnthropicClient()));
 builder.Services.AddScoped<WebhookConfigHandler>();
 builder.Services.AddScoped<WebhookSender>();
 
@@ -454,6 +466,46 @@ app.MapPost("/knowledge/sop-draft", async (
     })
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
+
+// --- SOẠN NHÁP từ trong host: gom case của một nhóm -> gọi model -> nạp (bước 4) ---
+//
+// 🎯 Nhóm lấy từ KHO ĐỊNH TUYẾN (`IM-45`), không từ file taxonomy: vòng không-credit của
+//   bước 3 nạp "ticket nào thuộc nhóm nào", vòng này đọc chính nó ra. Hai vòng nối vào nhau.
+//
+// 🛑 Chưa có credit thì nó KHÔNG hỏng im lặng — trả 409 kèm đúng ba bước của vòng thay thế.
+app.MapPost("/knowledge/soan-nhap", async (
+        YeuCauSoanNhap body,
+        SoanNhapHandler handler,
+        CancellationToken ct) =>
+    {
+        if (string.IsNullOrWhiteSpace(body?.Nhom) || string.IsNullOrWhiteSpace(body.NguoiYeuCau))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Thiếu nhom hoặc nguoiYeuCau",
+                detail: "`nguoiYeuCau` là LỜI KHAI của người bấm nút tốn tiền (E3-1) — sản phẩm " +
+                        "hôm nay biết request thuộc công ty nào, chưa biết người nào.");
+        }
+
+        var kq = await handler.SoanAsync(body.Nhom, body.NguoiYeuCau, ct);
+
+        return kq.Thanh
+            ? Results.Ok(kq)
+            : Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: kq.LyDo switch
+                {
+                    "chua-co-credit" => "Chưa gọi model được",
+                    "vuot-tran-thang" => "Đã chạm trần tháng",
+                    "nhom-khong-co-case" => "Nhóm chưa có case nào",
+                    _ => "Không soạn nháp được",
+                },
+                detail: kq.GiaiThich,
+                extensions: new Dictionary<string, object?> { ["lyDo"] = kq.LyDo });
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
 
 // --- (b) Duyệt: nội dung + quyền xem trong MỘT hành động (S7) ---
 //
@@ -920,6 +972,10 @@ static string? ValidateStatus(CaseStatusSignal s) => s switch
            "thái, và việc ở nguồn ĐÃ MỞ LẠI.",
     _ => null,
 };
+
+/// <summary>Thân của <c>POST /knowledge/soan-nhap</c>.</summary>
+/// <param name="NguoiYeuCau">LỜI KHAI của người bấm nút tốn tiền — KHÔNG phải một phép xác thực.</param>
+internal sealed record YeuCauSoanNhap(string? Nhom, string? NguoiYeuCau);
 
 /// <summary>Thân của <c>POST /knowledge/{id}/link</c>.</summary>
 /// <param name="NguoiPhat">Ai phát link này. BẮT BUỘC — xem chỗ gọi.</param>

@@ -432,6 +432,52 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-46` · Soạn nháp vào host — và hai vòng không-credit nối vào nhau
+
+**Ngày 2026-09-17, bước 4.** `ISopDrafter` trước nay chỉ sống trong `SoanNhapRunner`, một công
+cụ rời đọc corpus trên đĩa và **không biết gì về tenant**.
+
+```text
+POST /knowledge/soan-nhap        gom case của một nhóm -> gọi model -> nạp (DRAFT)
+--xuat-soan-nhap                 nửa XUẤT của vòng không-credit, đọc từ DB của khách
+kp.luot_soan_nhap                biên lai mỗi lượt TỐN TIỀN + chỗ đếm cho trần tháng (E3-1)
+SopDrafterChuaCoCredit           bản cắm khi chưa có khoá — NÉM kèm hướng dẫn
+✅ 407/407 test xanh (212 + 19 + 176), trước 400 · 0 warning
+✅ kiem_dau_cuoi.py 55 phép kiểm · 0 sai · 19 endpoint
+```
+
+**🎯 CHỖ NỐI ĐÁNG NHẤT: nhóm lấy từ KHO ĐỊNH TUYẾN, không từ file taxonomy.** Vòng
+không-credit của bước 3 (`IM-45`) nạp *ticket nào thuộc nhóm nào*; vòng này đọc chính nó ra để
+biết gom case nào. **Hai vòng nối vào nhau, và cả hai chạy được khi chưa có credit** — đó là
+toàn bộ giá trị của hôm nay.
+
+**🛑 CHƯA CÓ CREDIT THÌ KHÔNG HỎNG IM LẶNG.** Ba nhánh đã cân nhắc, và hai nhánh đầu đều tệ:
+
+```text
+để trống DI              -> host KHÔNG KHỞI ĐỘNG vì một tính năng chưa dùng tới
+trả bản nháp rỗng        -> nó đi thẳng vào kho ở trạng thái Draft và TRÔNG NHƯ THẬT
+bản NÉM kèm hướng dẫn    <- chọn cái này: 409 + `lyDo: chua-co-credit` + ba bước thay thế
+```
+Có test giữ cả hai vế: trả đúng lý do, **và** không record nào lọt vào kho.
+
+**🛑 TRẦN THÁNG CHẶN *TRƯỚC* LƯỢT GỌI, và test khẳng định đúng điều đó** bằng cách đếm số lần
+bản giả bị gọi. Chặn sau thì tiền đã tiêu rồi — một cái trần như vậy chỉ là một dòng chữ.
+
+**⚠ Biên lai ghi CẢ lượt hỏng.** Gọi model mà đứt giữa chừng vẫn có thể đã tính tiền; không
+ghi thì trần đếm thiếu, và nó đếm thiếu **đúng vào lúc có sự cố lặp đi lặp lại**.
+
+**⚠ `nguoiYeuCau` là LỜI KHAI, không phải phép xác thực** — và điều đó nằm trong tên biến lẫn
+trong mô tả OpenAPI. Sản phẩm hôm nay biết *request thuộc công ty nào*, chưa biết *người nào*
+(`docs/18` §D5). `E3-1` nói *"chỉ người có quyền duyệt"*; phần "người" của câu đó vẫn chưa
+thực thi được, nên đừng đọc ô này thành một chuỗi uỷ quyền.
+
+**✅ Và bài học tenant-dùng-chung nhận ra sớm hơn một nhịp.** Biên lai `LuotSoanNhap` là dữ
+liệu *"đếm được bao nhiêu"* của cả tenant, nên test trần tháng dùng chung tenant A sẽ đỏ theo
+THỨ TỰ CHẠY. Lần này sửa ngay bằng một khách hàng riêng cho mỗi test — cùng hình dạng đã trả
+giá ở `IM-31` và `IM-40`.
+
+---
+
 ## `IM-45` · Vòng KHÔNG-CREDIT cho định tuyến — cái nạng, và vì sao phải gọi nó là cái nạng
 
 **Ngày 2026-09-17.** Bước 3 và 4 đều chặn ở credit Anthropic. Chủ dự án hỏi: *xuất dữ liệu ra,
