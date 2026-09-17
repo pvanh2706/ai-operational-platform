@@ -1,4 +1,5 @@
 using KnowledgePlatform.Api.Signals;
+using KnowledgePlatform.Api.Knowledge;
 using KnowledgePlatform.Api.Tenancy;
 using KnowledgePlatform.Infrastructure.Persistence;
 using Microsoft.Extensions.Options;
@@ -30,6 +31,7 @@ public static class StartupChecks
 
         RequireConnectionString(config);
         RequireApiAuthDecision(tenancy, auth);
+        CanhBaoDiaChiLink(sp.GetRequiredService<IOptions<LinkXemOptions>>().Value);
         await ResolveTenancyAsync(sp, tenancy, ct);
 
         // Kiểm RLS trên database THẬT. Danh sách bảng suy ra từ model (`IM-7`),
@@ -105,6 +107,29 @@ public static class StartupChecks
              ⚠ Nếu MỌI mô tả đều báo thừa thì danh sách route đang rỗng — cổng này vừa bị
                ngắt khỏi chỗ nó phải canh. Xem phần tóm tắt của hàm.
              """);
+    }
+
+    /// <summary>
+    /// Cảnh báo — KHÔNG ném — khi địa chỉ gốc của link trỏ vào chính máy này.
+    ///
+    /// 🛑 Đây là một thất bại IM LẶNG có hình dạng rất đặc biệt: **nó chạy đúng với đúng
+    /// người đi kiểm nó.** Người deploy tự bấm link trên máy chủ thì mở được; người support
+    /// bấm từ máy của họ thì chết. Không có phép kiểm tự động nào bắt được, vì máy chạy phép
+    /// kiểm cũng chính là máy đó.
+    ///
+    /// ⚠ Cảnh báo chứ không ném, vì trên máy dev thì `localhost` LÀ đúng. Cái ném được là
+    /// việc thiếu hẳn cấu hình (đã chặn ở <see cref="Knowledge.PhatLinkHandler"/>).
+    /// Muốn soi kỹ trước khi deploy: `--kiem-cau-hinh`.
+    /// </summary>
+    private static void CanhBaoDiaChiLink(LinkXemOptions link)
+    {
+        if (string.IsNullOrWhiteSpace(link.PublicBaseUrl)) return;
+        if (!SoiCauHinh.LaLoopback(link.PublicBaseUrl)) return;
+
+        Console.Error.WriteLine(
+            $"⚠ Link:PublicBaseUrl = {link.PublicBaseUrl} — trỏ vào CHÍNH MÁY NÀY. " +
+            "Link phát ra sẽ mở được khi bạn tự bấm, và CHẾT khi gửi cho người khác. " +
+            "Deploy thật: đặt bằng tên máy trong LAN/VPN.");
     }
 
     private static void RequireConnectionString(IConfiguration config)

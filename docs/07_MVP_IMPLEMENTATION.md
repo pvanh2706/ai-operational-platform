@@ -432,6 +432,60 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-44` · Hồ sơ deploy là một LỆNH CHẠY ĐƯỢC, không phải một mục trong tài liệu
+
+**Ngày 2026-09-17, bước 6.** `H1-5` chốt *chạy local Windows trước*, `H1b-1` chốt *máy nằm
+trong LAN/VPN*. Ba thứ thêm ở bước 1-2 (`Auth`, `Link:PublicBaseUrl`, `Webhook`) chưa có
+hướng dẫn nào.
+
+```text
+--kiem-cau-hinh                       in cấu hình ĐANG CÓ HIỆU LỰC + gọi tên chỗ chưa xong
+docs/20_CHAY_TREN_WINDOWS.md          vì sao từng giá trị được đặt như vậy
+scripts/chay-windows.example.ps1      bản mẫu, chép ra rồi sửa (bản thật đã .gitignore)
+cảnh báo loopback lúc khởi động       cho cái bẫy mà không phép kiểm tự động nào bắt được
+✅ 391/391 test xanh (212 + 19 + 160), trước 382 · 0 warning
+```
+
+**🎯 QUYẾT ĐỊNH CHÍNH: hồ sơ deploy là một LỆNH, tài liệu chỉ giải thích VÌ SAO.**
+
+Dự án đã đo được **hai lần** rằng tài liệu tự lỗi thời trong im lặng: bộ Postman đứng ở 5/13
+endpoint hơn hai tuần (`IM-38`), và `docs/10` ghi *"newman có sẵn"* trong khi máy mới không
+có. Một hồ sơ deploy viết ra giấy sẽ đi đúng đường đó — **nó mô tả cái máy mà người viết đang
+ngồi, không mô tả cái máy người đọc đang dựng.**
+
+`--kiem-cau-hinh` thì đọc chính cấu hình đang chạy, nên không lỗi thời được. `docs/20` vì thế
+cố ý **không** liệt kê giá trị; nó chỉ trả lời câu *"vì sao đặt như vậy"* — phần mà một lệnh
+không nói hộ được.
+
+**🛑 CÁI BẪY NGUY NHẤT CỦA BẢN DEPLOY LOCAL, và nó có hình dạng rất đặc biệt:**
+
+```text
+Link:PublicBaseUrl = localhost   ->  link mở được khi NGƯỜI DEPLOY tự bấm trên máy chủ
+                                 ->  CHẾT khi người support bấm từ máy của họ
+```
+
+**Nó chạy đúng với đúng người đi kiểm nó.** Không phép kiểm tự động nào bắt được, vì máy chạy
+phép kiểm cũng chính là máy đó. Sản phẩm làm được hai việc, và **cả hai đều không thay được
+mắt người**: thiếu hẳn cấu hình thì endpoint phát link trả 409 (không đoán), trỏ vào loopback
+thì cảnh báo ở stderr lúc khởi động và `--kiem-cau-hinh` gọi tên nó. Cách kiểm thật vẫn là:
+phát một link rồi **mở từ máy khác**.
+
+**⚠ Hai chi tiết nhỏ có lý do:**
+```text
+· CheMatKhau() che mật khẩu trong chuỗi kết nối trước khi in. Lệnh này in ra màn hình và
+  người ta SẼ dán kết quả vào chat để hỏi — đó đúng là đường mà sự cố `0e602c3` đi qua.
+  Có test riêng, vì hỏng ở đây là rò credential chứ không phải sai định dạng.
+· Lệnh trả mã thoát 0 kể cả khi có cảnh báo. Trả khác 0 thì người ta sẽ cắm nó vào CI rồi
+  TẮT NÓ ĐI ở đúng ngày nó bắt đầu nói điều khó nghe. Nó là lệnh SOI, không phải lệnh chặn.
+```
+
+**⚠ Và nó vừa phơi ra một thứ thật ngay lần chạy đầu:** `kp_dev` đã tích 10 tenant rác từ các
+lượt nghiệm thu, và `dev-tenant` thì **0 khoá còn hiệu lực** (tôi thu hồi sau mỗi lượt kiểm).
+Không phải lỗi — nhưng đó chính là loại chuyện mà không ai nhìn ra nếu không có lệnh nào chịu
+đếm.
+
+---
+
 ## `IM-43` · Kênh 1 đóng đủ ba loại tín hiệu — và loại thứ ba KHÔNG cần endpoint nào
 
 **Ngày 2026-09-17, bước 5.** `06` §1 liệt kê ba loại tín hiệu thật; từ 2026-08-25 tới nay

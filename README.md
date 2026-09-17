@@ -617,6 +617,8 @@ trong đó có **đường nhận tín hiệu** tạo Case.
 13 docs/18_QUYET_DINH_MUC_3.md         20 quyết định để đi hết mức 3 (bán được cho
                                        khách thứ hai). ĐÃ ĐIỀN ĐỦ 2026-09-16, và nó
                                        chứa lộ trình 10 bước còn lại.
+15 docs/20_CHAY_TREN_WINDOWS.md        hồ sơ deploy. ⚠ Nguồn sự thật là LỆNH
+                                       `--kiem-cau-hinh`, file này chỉ giải thích VÌ SAO.
 14 docs/19_HOP_DONG_TICH_HOP.md        ⭐ TÀI LIỆU CHO NGƯỜI NGOÀI. Viết cho người
                                        viết code ở phía bên kia, không phải cho nội bộ.
                                        Phần gọi VÀO: GET /openapi/v1.json (sinh từ code).

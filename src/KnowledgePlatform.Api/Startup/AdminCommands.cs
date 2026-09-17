@@ -6,6 +6,7 @@ namespace KnowledgePlatform.Api.Startup;
 /// Hai lệnh vận hành của `AR-e`, chạy bằng chính host rồi thoát — KHÔNG mở cổng nghe.
 ///
 /// <code>
+///   dotnet run --project src/KnowledgePlatform.Api -- --kiem-cau-hinh
 ///   dotnet run --project src/KnowledgePlatform.Api -- --tao-khoa dev-tenant "connector Jira"
 ///   dotnet run --project src/KnowledgePlatform.Api -- --thu-hoi-khoa a1b2c3d4e5f6
 /// </code>
@@ -26,6 +27,10 @@ public static class AdminCommands
 
         switch (args[0])
         {
+            case "--kiem-cau-hinh":
+                Environment.ExitCode = await SoiCauHinh.ChayAsync(services, ct);
+                return true;
+
             case "--tao-khach-hang":
                 await TaoKhachHangAsync(args, services, ct);
                 return true;

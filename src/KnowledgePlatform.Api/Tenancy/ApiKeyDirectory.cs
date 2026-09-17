@@ -86,6 +86,39 @@ public sealed class ApiKeyDirectory(string connectionString)
         return khoaDayDu;
     }
 
+    /// <summary>Đếm khoá của một khách: (còn hiệu lực, tổng). Dùng cho lệnh soi cấu hình.</summary>
+    public async Task<(int ConHieuLuc, int Tong)> DemAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        await using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync(ct);
+
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText =
+            "SELECT count(*) FILTER (WHERE \"RevokedAt\" IS NULL), count(*) " +
+            "FROM kp.api_key WHERE \"TenantId\" = @tenantId";
+        cmd.Parameters.AddWithValue("tenantId", tenantId);
+
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        return await reader.ReadAsync(ct) ? (reader.GetInt32(0), reader.GetInt32(1)) : (0, 0);
+    }
+
+    /// <summary>Tên hiển thị + khoá ngoài của mọi khách. Dùng cho lệnh soi cấu hình.</summary>
+    public async Task<IReadOnlyList<(Guid Id, string Ten, string ExternalKey)>> LietKeKhachAsync(
+        CancellationToken ct = default)
+    {
+        await using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync(ct);
+
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT \"Id\", \"Name\", \"ExternalKey\" FROM kp.tenant ORDER BY \"CreatedAt\"";
+
+        var ra = new List<(Guid, string, string)>();
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct)) ra.Add((reader.GetGuid(0), reader.GetString(1), reader.GetString(2)));
+
+        return ra;
+    }
+
     /// <summary>Thu hồi theo <c>KeyId</c> (phần công khai). Trả số dòng bị đổi.</summary>
     public async Task<int> ThuHoiAsync(string keyId, CancellationToken ct = default)
     {

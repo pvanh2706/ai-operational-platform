@@ -93,6 +93,52 @@ public sealed class HopDongTichHopTests(ApiDatabaseFixture db) : IClassFixture<A
     }
 
     // =========================================================================
+    //  Soi cấu hình (bước 6) — hai hàm nhỏ mà hỏng thì hỏng rất nặng
+    // =========================================================================
+
+    /// <summary>
+    /// 🛑 Lệnh `--kiem-cau-hinh` in ra màn hình, và người ta SẼ dán kết quả vào chat để hỏi.
+    /// Mật khẩu database lọt ra theo đường đó là đúng sự cố `0e602c3` lặp lại — lần ấy phải
+    /// gỡ credential thật khỏi 5 file đang được git theo dõi.
+    /// </summary>
+    [Theory]
+    [InlineData("Host=localhost;Database=kp;Username=kp_app;Password=bimatthat")]
+    [InlineData("Host=localhost;Database=kp;password=bimatthat;Username=kp_app")]
+    public void Chuoi_ket_noi_in_ra_KHONG_mang_mat_khau(string conn)
+    {
+        var che = SoiCauHinh.CheMatKhau(conn);
+
+        Assert.DoesNotContain("bimatthat", che);
+        Assert.Contains("Password=***", che);
+
+        // Phần còn lại phải NGUYÊN VẸN — che cả chuỗi thì lệnh mất hết giá trị chẩn đoán.
+        Assert.Contains("Database=kp", che);
+    }
+
+    /// <summary>Chuỗi chỉ có mỗi mật khẩu cũng phải được che — không có gì khác để bấu víu.</summary>
+    [Fact]
+    public void Chuoi_chi_co_mat_khau_van_bi_che()
+    {
+        Assert.Equal("Password=***", SoiCauHinh.CheMatKhau("Password=bimatthat"));
+    }
+
+    /// <summary>
+    /// Nhận ra địa chỉ trỏ vào chính máy này. Sai ở đây nghĩa là cảnh báo không bật, và cái
+    /// bẫy *"chạy đúng với đúng người đi kiểm nó"* đi thẳng vào bản deploy.
+    /// </summary>
+    [Theory]
+    [InlineData("http://localhost:5119", true)]
+    [InlineData("http://127.0.0.1:5119", true)]
+    [InlineData("http://[::1]:5119", true)]
+    [InlineData("http://LOCALHOST:5119", true)]
+    [InlineData("http://kp-noi-bo.ezcloud:5119", false)]
+    [InlineData("https://kp.ezcloud.vn", false)]
+    public void Nhan_ra_dia_chi_tro_vao_chinh_may_nay(string url, bool laLoopback)
+    {
+        Assert.Equal(laLoopback, SoiCauHinh.LaLoopback(url));
+    }
+
+    // =========================================================================
     //  Tài liệu thật, qua host thật
     // =========================================================================
 

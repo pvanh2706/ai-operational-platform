@@ -48,3 +48,6 @@ appsettings.Local.json
 **/appsettings.Local.json
 
 __pycache__/
+
+# Bản chép ra từ scripts/chay-windows.example.ps1 — chứa mật khẩu database thật.
+scripts/chay-windows.ps1
