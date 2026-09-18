@@ -49,6 +49,8 @@ import argparse
 import base64
 import json
 import os
+import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -479,11 +481,49 @@ def push(cfg: Config, path: str, items: list[dict], label: str) -> None:
           f"(chênh lệch = đã có từ trước, không phải lỗi — idempotent)")
 
 
+def chan_neu_git_khong_bo_qua(duong_dan: str) -> None:
+    """DỪNG nếu file sắp ghi không được `.gitignore` chặn.
+
+    🛑 Nội dung sắp ghi là hội thoại THẬT với khách. `git add -A` quét hết, và một lần
+      lọt vào lịch sử git là thứ không xoá lại được. Nên hỏi THẬT `git check-ignore`
+      chứ không so tên thư mục — cùng lý do `nhom_sop.py` đã làm vậy.
+    """
+    goc = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+    tuyet_doi = os.path.abspath(duong_dan)
+    try:
+        trong_repo = os.path.commonpath([tuyet_doi, goc]) == goc
+    except ValueError:
+        # Khác ổ đĩa (C: vs D:) thì commonpath NÉM chứ không trả False.
+        return
+    if not trong_repo:
+        return
+
+    try:
+        ma = subprocess.run(["git", "check-ignore", "-q", tuyet_doi], cwd=goc).returncode
+    except OSError:
+        die(f"không chạy được `git check-ignore` để kiểm {tuyet_doi}. Không ghi gì.")
+
+    if ma != 0:
+        die(f"{tuyet_doi} KHÔNG được .gitignore chặn, mà nội dung là hội thoại thật với "
+            f"khách. Không ghi. `.gitignore` chặn theo mẫu `dry-run-*.json`, nên --nhan "
+            f"phải chỉ gồm chữ thường/số/gạch ngang.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Xuất Jira Server/DC vào Kênh 1 (Path A bước b).")
     parser.add_argument("--dry-run", action="store_true",
                         help="chỉ đọc Jira và ghi JSON ra cạnh script, KHÔNG gửi vào app")
+    # ⚠ Corpus hoá đơn (150 case / 345 mẩu) là vật đối chiếu của check_corpus.py,
+    #   nhom_sop.py và thu_retrieval.py. Chạy một chủ đề khác mà ghi đè lên nó là mất
+    #   nền so sánh của mọi số đo đã công bố. Nhãn giữ hai corpus cùng tồn tại.
+    parser.add_argument("--nhan", default="", metavar="NHÃN",
+                        help="ghi ra dry-run-<NHÃN>-cases.json thay vì dry-run-cases.json, "
+                             "để corpus chủ đề mới không đè lên corpus đã đo")
     args = parser.parse_args()
+
+    if args.nhan and not re.fullmatch(r"[a-z0-9-]{1,40}", args.nhan):
+        die("--nhan chỉ nhận chữ thường, số và gạch ngang (tối đa 40 ký tự) — để tên "
+            "file luôn khớp mẫu `dry-run-*.json` mà .gitignore đang chặn.")
 
     cfg = read_config()
     print(f"Jira:  {cfg.jira_base}")
@@ -501,8 +541,10 @@ def main() -> None:
 
     if args.dry_run:
         here = os.path.dirname(os.path.abspath(__file__))
-        for name, data in (("dry-run-cases.json", cases), ("dry-run-evidence.json", evidence)):
+        tien_to = f"dry-run-{args.nhan}" if args.nhan else "dry-run"
+        for name, data in ((f"{tien_to}-cases.json", cases), (f"{tien_to}-evidence.json", evidence)):
             path = os.path.join(here, name)
+            chan_neu_git_khong_bo_qua(path)
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             print(f"  đã ghi {path}")
