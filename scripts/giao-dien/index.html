@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quét Jira → AI phân tích → nạp lại</title>
+<style>
+  :root {
+    --nen: #f6f7f9; --the: #fff; --vien: #dfe3e8; --chu: #1c2024; --mo: #667085;
+    --xanh: #1a7f5a; --do: #b42318; --vang: #b54708; --xanh-nhat: #eaf6f1;
+    --do-nhat: #fef3f2; --vang-nhat: #fffaeb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px; background: var(--nen); color: var(--chu);
+    font: 15px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .khung { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .phu { color: var(--mo); margin: 0 0 20px; font-size: 14px; }
+
+  .canh {
+    background: var(--vang-nhat); border: 1px solid #fedf89; border-left: 4px solid var(--vang);
+    border-radius: 6px; padding: 10px 14px; margin-bottom: 20px; font-size: 14px;
+  }
+
+  .the {
+    background: var(--the); border: 1px solid var(--vien); border-radius: 10px;
+    padding: 18px 20px; margin-bottom: 16px;
+  }
+  .the[data-khoa="1"] { opacity: .45; pointer-events: none; }
+  .the h2 { font-size: 16px; margin: 0 0 14px; display: flex; align-items: center; gap: 9px; }
+  .so {
+    background: var(--chu); color: #fff; width: 22px; height: 22px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex: none;
+  }
+
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
+  .hint { font-weight: 400; color: var(--mo); font-size: 12px; }
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--vien); border-radius: 6px;
+    font: inherit; background: #fff; color: inherit;
+  }
+  textarea { font-family: ui-monospace, Consolas, monospace; font-size: 13px; resize: vertical; }
+  .hang { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hang > * { flex: 1 1 200px; min-width: 0; }
+
+  button {
+    background: var(--chu); color: #fff; border: 0; border-radius: 6px; padding: 9px 16px;
+    font: inherit; font-weight: 600; cursor: pointer; margin: 14px 8px 0 0;
+  }
+  button.phu2 { background: #fff; color: var(--chu); border: 1px solid var(--vien); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+
+  .chon { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
+  .chon label { font-weight: 400; margin: 0; display: flex; align-items: center; gap: 5px; font-size: 13px; }
+  .chon input { width: auto; }
+
+  pre {
+    background: #0f1419; color: #d7dce2; padding: 12px 14px; border-radius: 6px;
+    overflow-x: auto; font-size: 12.5px; line-height: 1.5; max-height: 420px; margin: 12px 0 0;
+  }
+  .bao { border-radius: 6px; padding: 10px 14px; margin-top: 14px; font-size: 14px; }
+  .ok { background: var(--xanh-nhat); border: 1px solid #a6e0c8; color: #0b5c40; }
+  .loi { background: var(--do-nhat); border: 1px solid #fecdc9; color: var(--do); }
+  .chu-y { background: var(--vang-nhat); border: 1px solid #fedf89; color: var(--vang); }
+  .bao ul { margin: 6px 0 0; padding-left: 20px; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--vien); }
+  th { font-size: 12px; color: var(--mo); text-transform: uppercase; letter-spacing: .04em; }
+</style>
+</head>
+<body>
+<div class="khung">
+
+  <h1>Quét Jira → AI phân tích → nạp lại</h1>
+  <p class="phu">Chạy trên máy này, chỉ nghe ở 127.0.0.1. Tắt cửa sổ lệnh là hết.</p>
+
+  <div class="canh">
+    <b>Trang này hiển thị nội dung ticket thật của khách.</b> Token chỉ nằm trong bộ nhớ
+    của tiến trình, không ghi ra đĩa. Đừng chiếu màn hình này ra ngoài công ty.
+  </div>
+
+  <!-- 1 -->
+  <div class="the" id="the1">
+    <h2><span class="so">1</span> Kết nối Jira</h2>
+    <label>Địa chỉ Jira</label>
+    <input type="text" id="baseUrl" placeholder="https://jira.cua-cong-ty.vn">
+    <div class="hang">
+      <div>
+        <label>Personal Access Token <span class="hint">(Jira 8.14 trở lên)</span></label>
+        <input type="password" id="pat" placeholder="dán token vào đây">
+      </div>
+      <div>
+        <label>Hoặc tên đăng nhập <span class="hint">(bản Jira cũ)</span></label>
+        <input type="text" id="user" autocomplete="off">
+      </div>
+      <div>
+        <label>Mật khẩu</label>
+        <input type="password" id="matKhau" autocomplete="off">
+      </div>
+    </div>
+    <button id="btnNoi">Thử kết nối</button>
+    <div id="baoNoi"></div>
+  </div>
+
+  <!-- 2 -->
+  <div class="the" id="the2" data-khoa="1">
+    <h2><span class="so">2</span> Chọn dữ liệu cần lấy</h2>
+
+    <div class="hang">
+      <div>
+        <label>Dự án</label>
+        <select id="duAn" multiple size="6"></select>
+        <div class="hint">Giữ Ctrl để chọn nhiều.</div>
+      </div>
+      <div>
+        <label>Khoảng thời gian <span class="hint">(theo ngày đóng)</span></label>
+        <div class="chon" id="cuaSo">
+          <label><input type="radio" name="cs" value="13w" checked> 3 tháng</label>
+          <label><input type="radio" name="cs" value="26w"> 6 tháng</label>
+          <label><input type="radio" name="cs" value="52w"> 12 tháng</label>
+          <label><input type="radio" name="cs" value=""> Không giới hạn</label>
+        </div>
+        <div class="hint" style="margin-top:6px">
+          JQL không có đơn vị tháng, nên 3 tháng viết là <code>-13w</code>.
+        </div>
+
+        <label>Trần số case kéo về</label>
+        <input type="number" id="tran" value="150" min="1" max="5000">
+        <div class="hint">Mỗi case tốn ~2 lượt gọi Jira. 150 case ≈ 6 phút.</div>
+      </div>
+    </div>
+
+    <label>Bỏ qua các kết luận <span class="hint">(lấy thẳng từ Jira, không gõ tay)</span></label>
+    <div class="chon" id="resolution"></div>
+
+    <label>Lọc theo từ khoá tiêu đề <span class="hint">— để trống là lấy MỌI chủ đề</span></label>
+    <input type="text" id="tuKhoa" placeholder="hóa đơn, hoá đơn, invoice">
+    <div class="hint">
+      Ngăn cách bằng dấu phẩy. Viết <b>cả hai kiểu bỏ dấu</b>: trong Postgres “hoa” và
+      “hoá” là hai token khác nhau, đo thật hai tập không giao nhau.
+    </div>
+
+    <label>Câu JQL <span class="hint">— sinh từ lựa chọn ở trên, sửa trực tiếp được</span></label>
+    <textarea id="jql" rows="5"></textarea>
+
+    <button class="phu2" id="btnSinh">Sinh lại từ lựa chọn</button>
+    <button class="phu2" id="btnDem">Đếm thử</button>
+    <div id="baoDem"></div>
+  </div>
+
+  <!-- 3 -->
+  <div class="the" id="the3" data-khoa="1">
+    <h2><span class="so">3</span> Quét dữ liệu</h2>
+    <p class="phu" style="margin:0">
+      Kéo issue + mô tả + bình luận về máy này, ghi ra file, rồi chạy cổng credential.
+      Chưa gửi gì vào phần mềm ở bước này.
+    </p>
+    <button id="btnQuet">Bắt đầu quét</button>
+    <pre id="tienDo" hidden></pre>
+    <div id="baoQuet"></div>
+  </div>
+
+  <!-- 4 -->
+  <div class="the" id="the4" data-khoa="1">
+    <h2><span class="so">4</span> Xuất file kèm prompt cho AI</h2>
+    <p class="phu" style="margin:0">
+      Sinh một khối gồm dữ liệu vừa quét và câu lệnh phân tích. Dán cho AI, lấy JSON nó trả về.
+    </p>
+    <button id="btnPrompt">Tạo prompt</button>
+    <button class="phu2" id="btnChep" hidden>Sao chép toàn bộ</button>
+    <div id="baoPrompt"></div>
+    <textarea id="prompt" rows="14" hidden></textarea>
+  </div>
+
+  <!-- 5 -->
+  <div class="the" id="the5" data-khoa="1">
+    <h2><span class="so">5</span> Nạp kết quả AI trở lại</h2>
+    <label>Dán JSON AI trả về <span class="hint">(kèm hàng rào ``` cũng được)</span></label>
+    <textarea id="ketQua" rows="9" placeholder='{ "nhom": [...], "ganNhan": [...] }'></textarea>
+    <button id="btnNap">Kiểm và nạp</button>
+    <div id="baoNap"></div>
+  </div>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+async function api(duong, than) {
+  const r = await fetch('/api/' + duong, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(than || {})
+  });
+  return r.json();
+}
+function bao(o, loai, html) { $(o).innerHTML = `<div class="bao ${loai}">${html}</div>`; }
+function moKhoa(id) { $(id).dataset.khoa = '0'; }
+
+// ---------- 1. kết nối ----------
+$('#btnNoi').onclick = async () => {
+  const nut = $('#btnNoi');
+  nut.disabled = true; nut.textContent = 'Đang thử…';
+  try {
+    const kq = await api('ket-noi', {
+      baseUrl: $('#baseUrl').value, pat: $('#pat').value,
+      user: $('#user').value, matKhau: $('#matKhau').value
+    });
+    if (!kq.ok) { bao('#baoNoi', 'loi', esc(kq.loi)); return; }
+
+    bao('#baoNoi', 'ok', `Đã nối. Đăng nhập với tên <b>${esc(kq.ten)}</b> · ${kq.duAn.length} dự án.`);
+
+    $('#duAn').innerHTML = kq.duAn
+      .map(d => `<option value="${esc(d.key)}">${esc(d.key)} — ${esc(d.ten)}</option>`).join('');
+
+    // Mặc định tích sẵn những kết luận "đóng mà không mang nguyên nhân để học".
+    const macDinh = ['Duplicate', "Cannot Reproduce", "Won't Do", 'Rejected', 'Declined'];
+    $('#resolution').innerHTML = kq.resolution.map((r, i) =>
+      `<label><input type="checkbox" value="${esc(r)}" ${macDinh.includes(r) ? 'checked' : ''}>
+        ${esc(r.length > 44 ? r.slice(0, 44) + '…' : r)}</label>`).join('');
+
+    moKhoa('#the2'); sinhJql();
+  } finally { nut.disabled = false; nut.textContent = 'Thử kết nối'; }
+};
+
+// ---------- 2. sinh JQL ----------
+function sinhJql() {
+  const ve = [];
+
+  const cs = document.querySelector('input[name=cs]:checked').value;
+  if (cs) ve.push(`resolved >= -${cs}`);
+
+  const da = [...$('#duAn').selectedOptions].map(o => o.value);
+  if (da.length === 1) ve.push(`project = ${da[0]}`);
+  else if (da.length > 1) ve.push(`project in (${da.join(', ')})`);
+
+  const bo = [...$('#resolution').querySelectorAll('input:checked')].map(i => `"${i.value}"`);
+  if (bo.length) ve.push(`resolution not in (${bo.join(', ')})`);
+
+  ve.push('summary !~ "CLONE"');
+
+  const tk = $('#tuKhoa').value.split(',').map(s => s.trim()).filter(Boolean);
+  if (tk.length) ve.push(`(${tk.map(k => `summary ~ "${k}"`).join(' OR ')})`);
+
+  $('#jql').value = ve.join(' AND ') + ' ORDER BY resolved DESC';
+}
+$('#btnSinh').onclick = sinhJql;
+['#duAn', '#tuKhoa'].forEach(s => $(s).addEventListener('change', sinhJql));
+$('#cuaSo').addEventListener('change', sinhJql);
+$('#resolution').addEventListener('change', sinhJql);
+
+$('#btnDem').onclick = async () => {
+  const nut = $('#btnDem'); nut.disabled = true;
+  try {
+    const kq = await api('dem', {jql: $('#jql').value});
+    if (!kq.ok) { bao('#baoDem', 'loi', 'JQL không chạy: ' + esc(kq.loi)); return; }
+
+    const tran = +$('#tran').value;
+    const them = kq.tong > tran
+      ? ` — trần ${tran} đang chặn, chỉ lấy ${tran} case đóng gần nhất`
+      : ' — dưới trần, lấy hết';
+    bao('#baoDem', kq.tong ? 'ok' : 'chu-y',
+        `Khớp <b>${kq.tong.toLocaleString('vi')}</b> issue${esc(them)}.`);
+    if (kq.tong) moKhoa('#the3');
+  } finally { nut.disabled = false; }
+};
+
+// ---------- 3. quét ----------
+let dongHo = null;
+$('#btnQuet').onclick = async () => {
+  const kq = await api('quet', {
+    jql: $('#jql').value, maxIssues: +$('#tran').value,
+    nhan: 'ui-' + new Date().toISOString().slice(0, 10)
+  });
+  if (kq.loi) { bao('#baoQuet', 'loi', esc(kq.loi)); return; }
+
+  $('#btnQuet').disabled = true;
+  $('#tienDo').hidden = false;
+  $('#baoQuet').innerHTML = '';
+  dongHo = setInterval(theoDoi, 900);
+};
+
+async function theoDoi() {
+  const r = await (await fetch('/api/tien-do')).json();
+  $('#tienDo').textContent = r.dong.join('\n');
+  $('#tienDo').scrollTop = $('#tienDo').scrollHeight;
+  if (!r.xong) return;
+
+  clearInterval(dongHo);
+  $('#btnQuet').disabled = false;
+
+  if (r.loi) { bao('#baoQuet', 'loi', esc(r.loi)); return; }
+
+  if (r.viec === 'gui-kho') {
+    bao('#baoQuet', 'ok', 'Đã gửi vào phần mềm. Cả hai đường đều idempotent — gửi lại vô hại.');
+    return;
+  }
+
+  let h = `Quét xong: <b>${r.soCase}</b> case, <b>${r.soEvidence}</b> mẩu nội dung.`;
+  if (r.corpusChan) {
+    h += `<br><br><b>Cổng credential CHẶN.</b> Trong lô này còn chỗ nghi là mật khẩu /
+          ID điều khiển từ xa. Đường nạp của phần mềm <b>không</b> che credential
+          (nó chỉ che dữ liệu bên thứ ba), nên nút gửi vào kho bị khoá.`;
+    bao('#baoQuet', 'chu-y', h);
+  } else {
+    h += `<br>Cổng credential: sạch.
+          <button id="btnGui" style="margin-top:10px">Gửi vào phần mềm</button>`;
+    bao('#baoQuet', 'ok', h);
+    $('#btnGui').onclick = async () => {
+      $('#btnGui').disabled = true;
+      const k = await api('gui-kho', {});
+      if (k.loi) { bao('#baoQuet', 'loi', esc(k.loi)); return; }
+      $('#tienDo').hidden = false; dongHo = setInterval(theoDoi, 900);
+    };
+  }
+
+  if (r.baoCao) {
+    $('#tienDo').textContent = r.baoCao;
+    $('#tienDo').scrollTop = 0;
+  }
+  moKhoa('#the4');
+}
+
+// ---------- 4. prompt ----------
+$('#btnPrompt').onclick = async () => {
+  const kq = await api('prompt', {});
+  if (!kq.ok) { bao('#baoPrompt', 'loi', esc(kq.loi)); return; }
+
+  $('#prompt').value = kq.prompt;
+  $('#prompt').hidden = false;
+  $('#btnChep').hidden = false;
+  bao('#baoPrompt', 'ok',
+      `Đã ghi <code>${esc(kq.duong)}</code> · ${kq.soKyTu.toLocaleString('vi')} ký tự.
+       Prompt có sẵn luật “không rõ nguyên nhân thì trả KHONG-BIET” — đừng bỏ câu đó.`);
+  moKhoa('#the5');
+};
+$('#btnChep').onclick = async () => {
+  await navigator.clipboard.writeText($('#prompt').value);
+  $('#btnChep').textContent = 'Đã chép';
+  setTimeout(() => $('#btnChep').textContent = 'Sao chép toàn bộ', 1600);
+};
+
+// ---------- 5. nạp ----------
+$('#btnNap').onclick = async () => {
+  const kq = await api('nap', {ketQua: $('#ketQua').value});
+  if (!kq.ok) {
+    bao('#baoNap', 'loi', 'Không nạp được:<ul>' +
+        kq.loi.map(l => `<li>${esc(l)}</li>`).join('') + '</ul>');
+    return;
+  }
+  const bang = kq.nhom.map(n =>
+    `<tr><td>${esc(n.ten)}</td><td>${n.soCase}</td><td>${esc(n.moTa)}</td></tr>`).join('');
+  bao('#baoNap', 'ok',
+    `Đã nạp <b>${kq.soNhom}</b> nhóm cho <b>${kq.soGan}</b> case —
+     ${kq.soBiet} có nhóm, <b>${kq.soKhongBiet} trả KHÔNG BIẾT</b>.<br>
+     Ghi ra <code>${esc(kq.duong)}</code>.
+     <table><tr><th>Nhóm</th><th>Case</th><th>Nguyên nhân</th></tr>${bang}</table>`);
+};
+</script>
+</body>
+</html>
