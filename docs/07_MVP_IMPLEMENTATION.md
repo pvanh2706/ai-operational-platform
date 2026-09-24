@@ -432,6 +432,80 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô
+
+**Ngày 2026-09-24.** Lô 150 case quét ngày 23/09 qua giao diện (`IM-45`) bị `check_corpus`
+báo **CHẶN**: *45 chỗ nghi là credential*. `api_gui_kho` trả 409, đúng thiết kế `AR-j`.
+
+Soi tay cả 45 chỗ, không đọc output mà gọi thẳng `quet_bi_mat()` để lấy dữ liệu (đúng lý do
+hàm đó được tách ra):
+
+```text
+THẬT   9 chỗ / 5 mẩu
+NHẦM  36 chỗ / 15 mẩu          ->  precision 20%
+```
+
+### 9 chỗ thật
+
+```text
+ES-348807  JWT dán trong comment.  nbf 2026-09-16 · exp 2036-09-16 -> CÒN HIỆU LỰC
+           payload mang sẵn SiteID + ClientID.  Nghiêm trọng nhất trong lô.
+ES-349641  cặp UltraViewer: ID + mật khẩu
+ES-349666  cặp UltraViewer: ID + mật khẩu
+ES-349510  cặp UltraViewer: ID + mật khẩu
+ES-349684  cặp UltraViewer: ID + mật khẩu  — KHÔNG có nhãn nào
+```
+
+⚠ Giá trị thật **không** ghi ở đây, cố ý. File này được git theo dõi.
+
+`ES-349684` là chỗ đáng giữ nhất: nhân viên nhắn *"cho em xin ultraview vào máy kiểm tra ạ"*,
+khách trả lời bằng **hai dãy số trần**, không một chữ "mật khẩu" nào. Hình dạng 2 (tên công
+cụ) + hình dạng 3 (số trần ở dòng kế tiếp) bắt được nó. Không luật nào dựa vào nhãn làm được
+việc này — và recall đó là lý do giữ nguyên bộ luật ở phần dưới.
+
+### 36 chỗ nhầm — nhiễu CÓ HỆ THỐNG, không ngẫu nhiên
+
+Truy ngược đúng từ khoá làm hình dạng 4 (`key JSON`) nổ:
+
+```text
+"username" : null                    11   giá trị là chữ `null`
+PublicKeyToken=31bf3856ad364e35      10   hằng số công khai của Microsoft, trong stack trace .NET
+"bookingAccount" : "<GUID>"          11   mã booking nội bộ, không phải khoá đăng nhập
+Category id 12704                     2   id danh mục sản phẩm
+Agoda ID: 91997688                    2   id kênh OTA
+```
+
+32/36 đến từ ba từ khoá `account|username|token` khớp vào **payload nghiệp vụ**, không phải
+vào bí mật. Nghĩa là mỗi case OTA lỗi sẽ sinh đúng 3 chỗ nhầm — càng quét nhiều càng ồn.
+
+### Quyết định của chủ dự án, 2026-09-24
+
+```text
+lô 23/09          NẠP CẢ 150, chấp nhận rủi ro      (sau khi đã đọc đủ 9 chỗ thật)
+luật check_corpus GIỮ NGUYÊN fail-closed, không thêm ngoại lệ nào
+```
+
+Hai lựa chọn này xung đột về cơ chế: giữ nguyên luật thì nút "gửi vào kho" vẫn 409. Giải bằng
+cách **không đụng vào luật** — lô này đẩy thẳng qua `/signals/*` bằng script một lần, không
+qua giao diện. `check_corpus.py` và `api_gui_kho` không sửa một dòng nào.
+
+Kết quả: `dev-tenant` 235 → **384 case**, 377 → **717 evidence**. Năm mẩu mang bí mật nằm
+trong `kp.evidence_item` của `kp_dev` trên localhost — **database dev, không phải bản chạy
+thật**.
+
+### Phản biện đã nêu, và đã bị bác
+
+Một cổng kêu 45 lần mà sai 36 lần sẽ dạy người đọc bấm qua nó. Lần sau đúng cái JWT 10 năm
+có thể đi lọt vì nó nằm lẫn trong 36 dòng nhiễu mà ai cũng đã quen bỏ qua — cùng bệnh với
+`IM-42` (cổng canh trông như đang canh) và `IM-38` (bộ kiểm trông như đang phủ). Chủ dự án
+đã đọc lập luận này và vẫn chọn giữ nguyên. Ghi lại để lần sau không phải suy luận lại từ đầu.
+
+⚠ Một điều không được quên: **5 mẩu này đã nằm trên Jira từ trước.** Chặn ở đây chỉ ngăn
+nhân bản, không thu hồi được gì. Việc thu hồi JWT `ES-348807` phải làm ở phía hệ thống cấp
+token, và nó vẫn đang mở.
+
+---
+
 ## `IM-47` · Kênh 2 mở — và nó KHÔNG làm kho tri thức tăng một dòng nào
 
 **Ngày 2026-09-17, bước 8 — bước cuối của lộ trình mức 3.**
