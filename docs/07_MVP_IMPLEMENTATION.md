@@ -2603,6 +2603,9 @@ khứ** — và nó kéo theo mọi assertion đang dẫn chứng bằng mẩu �
 Muốn nói *"nguồn đã đổi"* thì đó là một mẩu evidence MỚI với khoá mới. Response vẫn
 trả `created: false` như mọi lần gửi lại khác, không phải lỗi.
 
+→ 2026-09-29, `AR-r` (4): mẩu mới đó phải **trỏ về mẩu cũ** — không thì hai phiên bản của
+cùng một comment trông như hai quan sát độc lập. Xoá ở nguồn là một dấu RIÊNG, `AR-r` (5).
+
 ⚠ Hệ quả chưa xử lý: hệ thống hiện KHÔNG phát hiện được việc nội dung ở nguồn đã đổi.
 Đó chính là trigger thứ năm của `V3` mà `AR-b` đã ghim là chưa hiện thực được.
 
@@ -3002,6 +3005,9 @@ AR-g   Đọc evidence ra bằng đường nào?                                
 
 AR-j   Dữ liệu vận hành thật mang theo BÍ MẬT SỐNG. Che bằng luật nào?      ← MỚI
        Ghi 2026-09-04 sau khi quét corpus Jira thật đầu tiên. CHƯA CHỌN HƯỚNG.
+       ✅ 2026-09-29: hai câu mở đầu dưới đây ("che ở TẦNG NÀO", "có GIỮ DẤU không") đã có
+          câu trả lời ở `AR-r` (1) — che ở TẦNG NẠP của server, giữ dấu, không chặn. Câu
+          thứ ba (sản phẩm có BÁO ĐỘNG khi thấy credential trong nguồn không) VẪN MỞ.
 
        ✅ QUYẾT ĐỊNH 1 CHỐT 2026-09-04 bởi người dùng: **lô 32 case này CHỈ vào
           `kp_dev` làm fixture, KHÔNG vào kho tri thức thật.**
@@ -3269,6 +3275,8 @@ AR-m   Nội dung ĐÃ BỊ NGƯỜI GỬI RÚT LẠI — chưa có chỗ nào �
           danh sách dùng được qua một KIỂU RIÊNG (không phải một cờ), và nội dung của nó
           không đi ra qua đường đọc. Chi tiết: §3 `IM-35`.
           ⚠ Thêm `RetractedBy` ngoài đề xuất gốc — lý do ở `IM-35`.
+          ⚠ 2026-09-29: mẩu bị XOÁ Ở NGUỒN KHÔNG đi qua dấu này — nó là sự kiện máy quan sát
+             được, không phải lời khẳng định của người. Dấu riêng: `AR-r` (5).
           🛑 **Giờ MỚI được chốt cách cắt transcript**, đúng thứ tự mục này đặt ra. Trước hôm
           nay thì không, và cắt rồi thì không ghép lại được.
        → THÊM CỘT `RetractedAt` + `RetractedReason` ở TẦNG MẨU, và CHỈ NGƯỜI điền tay.
@@ -3711,6 +3719,110 @@ AR-q   Bộ 5 ô phân bố cần ĐỊNH NGHĨA, không chỉ cần TÊN CỐ �
        ✅ Việc này làm được KHÔNG CẦN CREDIT, bằng đúng đường `--xuat-payload`.
        ⚠ Nhưng ĐỪNG sửa hai file cây dựng tay cho "khớp": chúng là bản A của `M2`
          (`IM-27`), sửa là hỏng mốc so.
+
+AR-r   Khách KHÔNG có Jira thì Kênh 1 và Kênh 2 vào bằng đường nào?        ← MỚI
+       ✅ CHỐT 2026-09-29 bởi chủ dự án (form hỏi đáp, bốn lượt). Năm ô dưới đây.
+       Sinh từ câu của chủ dự án: *"phần mềm này sẽ tích hợp với nhiều công ty/sản phẩm
+       khác nên không phải lúc nào cũng có jira"* — và ở lượt sau: *"có công ty có IT có
+       công ty không"*.
+
+       Ba tiền đề đã KIỂM trước khi hỏi, để không đọc câu này thành "phải viết lại":
+         · Hợp đồng server ĐÃ không biết Jira (`G1`). Không DTO nào có trường của Jira;
+           `sourceReference` là chuỗi tự do. Thứ gắn Jira là MỌI THỨ ĐỨNG TRƯỚC API:
+           `export_jira_to_channel1.py` và bước "sinh JQL" của giao diện.
+         · "Quét Jira" hôm nay thực chất là KÊNH 2 (nạp lịch sử hàng loạt) đi qua cửa
+           Kênh 1 — Program.cs đã cố ý dùng một đường cho cả lô một phần tử lẫn lô lịch
+           sử. Nguồn dạng B mới KHÔNG cần endpoint mới.
+         · `dry-run-cases.json` + `dry-run-evidence.json` đã là ĐỊNH DẠNG TRUNG GIAN trên
+           thực tế: check_corpus, prompt AI, load_fixture đều đọc chúng, không đọc Jira.
+       🛑 Và chỗ hở thật: ba cổng CHỈ sống ở phía script Jira — quét credential
+         (check_corpus), đoán machineReadability, xem trước bằng dry-run. Công ty tự viết
+         connector gọi thẳng API là đi vòng qua cả ba. Lúc nạp, server chỉ chạy
+         `ThirdPartyRedactor` (CaseEvidenceHandler), KHÔNG chạy `SecretShapeScanner`.
+
+       (1) CREDENTIAL LÚC NẠP → CHE Ở SERVER, GIỮ DẤU, ĐẾM, KHÔNG CHẶN.
+           `SecretShapeScanner` chạy ở CaseEvidenceHandler; chỗ nghi thay bằng dấu giữ
+           chỗ; response trả SỐ chỗ đã che (KHÔNG kèm giá trị), đúng khuôn
+           `ThirdPartyRedactedTotal`. Trả lời hai câu mở đầu của `AR-j`: che ở TẦNG NẠP
+           của server (không chỉ ở connector), và che thì GIỮ DẤU.
+           Lý do chọn: DB và backup không giữ credential, nên không đường đọc nào — kể
+           cả đường chưa viết — rò được. Không chặn vì với đồng bộ tự động, dữ liệu ở
+           nguồn không đổi: chặn lô là job kẹt vĩnh viễn ở đúng ticket đó.
+           Cái giá, nói thẳng: chỗ luật che NHẦM (vd một số đặt phòng) mất khỏi kho
+           vĩnh viễn. Chấp nhận vì bản gốc vẫn ở hệ thống nguồn, và luật đã được chỉnh
+           để không ăn `80771` / mã số thuế (`AR-j`).
+           ⚠ Cổng CHẶN của giao diện (check_corpus, đường chạy tay) GIỮ NGUYÊN — ở đó có
+             người để sửa. Cổng che ở khâu gửi ra (`AR-o`) cũng giữ nguyên.
+           ⚠ Che thêm ở đường ĐỌC không bắt thêm được gì: `EgressRedactor` dùng CÙNG
+             `SecretShapeScanner`, lúc nạp lọt thì lúc đọc cũng lọt. Recall của luật vẫn
+             là rủi ro mở của `AR-j`; quyết định này không đóng nó.
+
+           🔁 LỊCH SỬ CỦA Ô NÀY — giữ lại vì chủ dự án chọn khác ô đề xuất ở lượt đầu, và
+             lý do mở lại là LỖI CỦA AGENT:
+             Lượt 1 chủ dự án chọn "NẠP NGUYÊN VĂN, CHỈ CẢNH BÁO" (agent đề xuất "che +
+             đếm + báo"). Mô tả agent viết cho ô đó là *"vẫn được che ở khâu gửi ra"* —
+             và câu đó SAI. Lúc ghi quyết định, agent kiểm các đường đọc và thấy
+             `GET /cases/{khoaNguon}/evidence` (CaseEvidenceReadHandler, `AR-g`) trả
+             `Content` NGUYÊN VĂN, không qua `EgressRedactor`. Bốn đường kia (webhook ·
+             /xem · SopPromptBuilder · VongKhongCredit) có che; đường này không.
+             Trước đây chỗ đó ít hệ quả vì cổng giao diện chặn credential trước khi nạp.
+             Với nạp nguyên văn từ connector của công ty bất kỳ, ai cầm khoá API của một
+             khách là rút được MỌI credential khách đó đã nạp.
+             → Agent báo lại; chủ dự án chọn MỞ LẠI câu nạp (không chọn "che thêm đường
+               đọc"), rồi chốt ô hiện tại ở lượt 4.
+             Bài học: mô tả một phương án bằng một khẳng định về code CHƯA grep là đưa cho
+             người quyết một tiền đề sai. Lần này bắt được vì ghi quyết định buộc phải đọc
+             lại code.
+
+       (2) THỨ TỰ BUILD → CỔNG SERVER → CSV → ADAPTER SAAS KHI CÓ KHÁCH THẬT.
+             có IT                  họ viết adapter, gọi thẳng API. Mình cấp khoá,
+                                    docs/19, bộ kiểm. Cổng ở server là lưới DUY NHẤT.
+             không IT, SaaS có API  mình chạy adapter, họ cấp token — y hệt Jira hôm nay
+             không IT, không API    xuất CSV, ghép cột trên giao diện — không ai viết code
+           Lý do chọn: cổng server phục vụ nhóm có IT VÀ là lưới cho mọi đường khác. CSV
+           phủ cả nhóm "không IT dùng SaaS" ở mức chạy tay, nên không phí khi sau này có
+           adapter riêng. Adapter SaaS viết trước khi biết tên khách là đoán.
+           Kèm: tách script Jira thành ADAPTER (kết nối · lấy item · map trường · giữ con
+           trỏ) và PHẦN CHUNG (machineReadability · chia lô · dry-run → check_corpus →
+           đẩy · báo phần bỏ qua). Giao diện: bước "sinh JQL" thành bước "chọn nguồn".
+           ⚠ CSV đọc bằng thư viện chuẩn. `.xlsx` cần thư viện mới → §10.1, hỏi riêng.
+           ⚠ Giới hạn SẢN PHẨM phải nói với bên bán: công ty không IT và không dùng SaaS
+             có webhook thì KHÔNG có tín hiệu thời gian thực ở Kênh 1 — chỉ đồng bộ định
+             kỳ, cộng `/hoi`.
+
+       (3) ADAPTER NHẬN WEBHOOK CỦA SAAS → TIẾN TRÌNH RIÊNG, NGOÀI CORE.
+           Adapter kiểm chữ ký THEO KIỂU CỦA NGUỒN, dịch sang JSON chuẩn, gọi core bằng
+           khoá `kp_`. Lý do chọn: mỗi SaaS xác thực webhook một kiểu riêng; đặt
+           `/inbound/{nguon}` trong core là core phải biết từng nguồn — phá `G1`.
+
+       (4) NỘI DUNG BỊ SỬA Ở NGUỒN → MẨU MỚI, TRỎ VỀ MẨU CŨ. Bản cũ không đổi.
+           Khớp `IM-20` (*"nguồn đã đổi = một mẩu MỚI với khoá mới"*), thêm vế còn thiếu:
+           liên kết mẩu mới → mẩu cũ. Không có liên kết thì hai phiên bản của cùng một
+           comment trông như hai quan sát độc lập, và Path A đếm đôi.
+           ⚠ Chưa chốt, và là câu KỸ THUẬT (`J1-1`, agent tự quyết khi build): adapter
+             phát hiện "đã sửa" bằng gì (hash nội dung hay mốc updated của nguồn), khoá
+             mới đặt theo khuôn nào.
+
+       (5) MẨU BỊ XOÁ Ở NGUỒN → DẤU RIÊNG, LOẠI KHỎI DANH SÁCH DÙNG ĐƯỢC, GIỮ DÒNG.
+           🛑 KHÔNG dùng `RutLai` của `AR-m`. `AR-m` chốt dấu rút lại CHỈ NGƯỜI đặt; "xoá ở
+             nguồn" là SỰ KIỆN máy quan sát được, không phải lời khẳng định của ai. Khác
+             nguồn gốc thì khác dấu (`G6`/`AP3`). Agent viết lẫn hai thứ này ở lượt hỏi
+             đầu và tách ra ở lượt hai, trước khi chủ dự án chọn.
+           Lý do chọn: khách đã xoá mà mình vẫn gom là giữ thứ khách không muốn giữ. Giữ
+           dòng vì `K-B3`/`G5`: lịch sử không bị xoá.
+           ⚠ Nên dùng lại khuôn HAI KIỂU của CaseEvidenceReadHandler (danh sách dùng được
+             vs danh sách đã rút), không phải một cờ — cùng lý do: quên lọc thì không
+             biên dịch được.
+
+       Ba việc nhỏ agent nêu cùng lượt, CHƯA hỏi vì không chặn:
+         · `case-status` thêm trường tuỳ chọn `trangThaiNguon` (chuỗi thô). `R5` đòi giữ
+           bản thô khi dịch "Done / Đã xử lý / Chờ khách" thành `daXongONguon`. Thêm ô
+           thì giữ số phiên bản hợp đồng (docs/19 §6).
+         · Sentinel `khong-thuoc-khach-san` là từ vựng ezCloud; công ty không làm khách
+           sạn cần tên trung tính (vd `khong-thuoc-don-vi-con`), giữ tên cũ làm bí danh.
+           Đổi giá trị hợp đồng nhận vào → câu SẢN PHẨM, gom vào docs/18 khi tới lượt.
+         · Gắn mỗi khoá API với một tiền tố nguồn (`jira:*`), để provenance "ai ghi mẩu
+           này" đọc từ khoá thay vì tin chuỗi tự khai.
 ```
 
 ## `AR-q` · ĐÃ VIẾT ĐỊNH NGHĨA, ĐÃ ĐO — và ✅ **CHỐT 2026-09-15** (đo 2026-09-11)

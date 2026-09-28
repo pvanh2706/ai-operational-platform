@@ -299,6 +299,22 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> ✅ **KHÁCH KHÔNG CÓ JIRA — năm quyết định chốt 2026-09-29.** Chi tiết + lý do: `07` §5 `AR-r`.
+> Server vốn đã không biết Jira (`G1`); thứ gắn Jira là mọi thứ đứng TRƯỚC API. Hàng việc
+> mới, theo đúng thứ tự đã chốt:
+> ```text
+>    a  Che credential ở server LÚC NẠP (SecretShapeScanner), giữ dấu, không chặn
+>       — điều kiện TRƯỚC khi connector của công ty nào khác chạm vào DB
+>    b  Tách script Jira: ADAPTER riêng nguồn + PHẦN CHUNG (dry-run → check_corpus → đẩy)
+>    c  Adapter CSV + bước ghép cột trên giao diện — cho công ty KHÔNG có IT
+>    d  Adapter SaaS / webhook (tiến trình riêng ngoài core) — CHỈ khi có tên khách thật
+> ```
+> ⚠ Giới hạn sản phẩm: công ty không IT + không dùng SaaS có webhook = KHÔNG có tín hiệu
+> thời gian thực ở Kênh 1, chỉ đồng bộ định kỳ.
+> ⚠ Tìm thấy lúc ghi quyết định: `GET /cases/{khoaNguon}/evidence` trả `Content` nguyên văn,
+> không qua `EgressRedactor`. Việc (a) đóng lỗ đó cho dữ liệu nạp MỚI (trong giới hạn recall
+> của luật). Mẩu ĐÃ nằm sẵn trong DB — fixture ở `kp_dev` — KHÔNG tự được che.
+
 > ✅ **MỨC 3 CÓ LỘ TRÌNH VÀ ĐÃ ĐI XONG BƯỚC 1 — 2026-09-16.** Phiếu: `docs/18` (20/20, 0 mâu
 > thuẫn). Nhật ký kỹ thuật: `07` §3 `IM-39`.
 >
