@@ -50,7 +50,15 @@ PHIEN: dict = {
     "base": None, "auth": None, "nhan": None,
     "cases": [], "evidence": [], "jql": None,
     "corpus_chan": None,
+    # Kết quả AI đã qua `kiem_ket_qua`, giữ nguyên để bước 6 dựng lại bảng nhóm.
+    "phan_tich": None,
 }
+
+# Thư mục project của app — `--nap-dinh-tuyen` phải chạy với cwd ở đây, nếu không
+# content root lệch và app KHÔNG đọc được appsettings.Development.json (đã vấp: nó báo
+# "THIẾU chuỗi kết nối" trong khi file nằm ngay đó).
+DU_AN_APP = os.path.join(GOC, "..", "src", "KnowledgePlatform.Api")
+EXE_APP = os.path.join(DU_AN_APP, "bin", "Debug", "net10.0", "KnowledgePlatform.Api.exe")
 
 # Nhật ký tiến độ để trình duyệt hỏi lại — quét mất vài phút, một trang đứng im
 # không phân biệt được với một trang đã chết.
@@ -120,6 +128,138 @@ def bao_dam_git_bo_qua(duong: str) -> None:
             f"{os.path.basename(duong)} chưa được .gitignore chặn, mà nội dung là ticket "
             f"thật của khách. Không ghi gì. Thêm mẫu tương ứng vào .gitignore rồi thử lại.")
     X.chan_neu_git_khong_bo_qua(duong)
+
+
+# ------------------------------------------------- chốt nhóm -> định tuyến
+
+# AI trả `doTinCay`; đường nạp của app đòi `nguon` với đúng ba giá trị. Ánh xạ ở đây
+# chứ không bắt người dùng tự dịch — nhưng KHÔNG bịa: "thấp" không được lên
+# `noi-ro-trong-mo-ta`, vì đó là nhãn nói rằng hồ sơ CÓ ghi nguyên nhân.
+NGUON_THEO_TIN_CAY = {
+    "cao": "noi-ro-trong-mo-ta",
+    "vua": "suy-tu-trieu-chung",
+    "thap": "suy-tu-trieu-chung",
+}
+
+
+def dung_taxonomy(phan_tich: dict, giu: dict[str, str]) -> dict:
+    """Taxonomy theo hình dạng `LenhDinhTuyen.DocTaxonomy` đọc: chỉ `nhom[].ten` là bắt buộc.
+
+    ⚠ KHÔNG kèm `caseKeys`. File taxonomy-19 có trường đó, nhưng nó là danh sách mã
+      ticket thật; ở đây danh sách nhóm còn CHƯA được ai rà ngoài lượt bấm vừa rồi, nên
+      không nhân bản thêm mã ticket ra một file nữa. Đường nạp không cần nó.
+    """
+    # 🛑 GỘP theo tên chốt, không phải mỗi nhóm gốc một mục. Hai nhóm gốc được đặt trùng
+    #   tên là người vận hành CỐ Ý gộp; nếu cứ thế đẩy ra thì taxonomy có hai mục cùng
+    #   `ten` mà `moTa` chỏi nhau. `DocTaxonomy` dựng HashSet nên không vỡ — nhưng cả khối
+    #   taxonomy được dán nguyên vào prompt ở `DungGoi`, và hai định nghĩa mâu thuẫn dưới
+    #   một cái tên là đúng thứ làm model phân nhóm tệ đi. Hỏng im lặng, ở tận vòng sau.
+    theo_ten: dict[str, dict] = {}
+    for n in phan_tich.get("nhom", []):
+        ten_goc = str(n.get("ten", "")).strip()
+        if ten_goc not in giu:
+            continue
+
+        ten = giu[ten_goc]
+        mo_ta = str(n.get("moTa", "")).strip()
+        dau_hieu = [d for d in (n.get("dauHieu") or []) if str(d).strip()]
+
+        if ten not in theo_ten:
+            theo_ten[ten] = {"ten": ten, "moTa": mo_ta, "dauHieu": list(dau_hieu)}
+            continue
+
+        cu = theo_ten[ten]
+        if mo_ta and mo_ta not in cu["moTa"]:
+            cu["moTa"] = (cu["moTa"] + " / " + mo_ta).strip(" /")
+        for d in dau_hieu:
+            if d not in cu["dauHieu"]:
+                cu["dauHieu"].append(d)
+
+    ra = list(theo_ten.values())
+
+    return {
+        "nhom": ra,
+        "soNhom": len(ra),
+        "_ghiChu": [
+            "SINH TỰ ĐỘNG từ giao diện, sau khi người vận hành rà và chốt danh sách nhóm.",
+            "Nguồn: một lượt AI phân nhóm trên corpus quét từ Jira.",
+            "",
+            "⚠ Đây CHƯA phải taxonomy đã đo như `taxonomy-19-nhom-hoa-don.json` (84,1%, docs/13).",
+            "  Nó mới đủ để đường nạp chạy. Muốn tin con số nào thì phải chấm lại bằng",
+            "  scripts/jira-export/cham_routing.py.",
+        ],
+    }
+
+
+def chuyen_gan_nhan(phan_tich: dict, giu: dict[str, str]) -> tuple[list[dict], int]:
+    """Đổi `ganNhan` của AI sang hình dạng `--nap-dinh-tuyen` đọc được.
+
+    Hai hình dạng lệch nhau ở bốn tên trường, và đó là lý do file phân tích không tự nạp
+    được: `maCase/nhom/doTinCay/lyDo` so với `khoaNguon/nhom/nguon/giaiThich`.
+
+    🛑 Nhóm bị người vận hành BỎ thì case của nó thành `KHONG-BIET`, KHÔNG phải bị xoá
+      khỏi lô. Bỏ hẳn dòng đi thì case đó trông như chưa bao giờ được xét, và lần xuất
+      sau nó sẽ quay lại như mới — che mất việc đã có người nhìn và quyết định loại nó.
+    """
+    ra: list[dict] = []
+    thanh_khong_biet = 0
+
+    for g in phan_tich.get("ganNhan", []):
+        ma = str(g.get("maCase", "")).strip()
+        if not ma:
+            continue
+
+        ten_goc = str(g.get("nhom", "")).strip()
+        ten_moi = giu.get(ten_goc)
+
+        if ten_moi is None:
+            if ten_goc != "KHONG-BIET":
+                thanh_khong_biet += 1
+            ra.append({
+                "khoaNguon": ma,
+                "nhom": "KHONG-BIET",
+                "nguon": "khong-du-thong-tin",
+                "giaiThich": (g.get("lyDo") or "")[:400] or "nhóm bị loại khi chốt danh sách",
+            })
+            continue
+
+        tin_cay = str(g.get("doTinCay", "")).strip().lower()
+        ra.append({
+            "khoaNguon": ma,
+            "nhom": ten_moi,
+            "nguon": NGUON_THEO_TIN_CAY.get(tin_cay, "suy-tu-trieu-chung"),
+            "giaiThich": (g.get("lyDo") or "")[:400] or "(AI không ghi lý do)",
+        })
+
+    return ra, thanh_khong_biet
+
+
+def chay_nap_dinh_tuyen(file_kq: str, file_tax: str, ma_khach: str, nguoi_nap: str) -> tuple[int, str]:
+    """Gọi `--nap-dinh-tuyen` bằng EXE ĐÃ BUILD, không qua `dotnet run`.
+
+    🛑 Cố ý không dùng `dotnet run`: nó build lại, mà backend đang chạy đang giữ chính
+      mấy file DLL đó -> build đỏ với MSB3027 "file locked". Người dùng sẽ thấy một lỗi
+      về file khoá trong khi việc họ bấm là "nạp định tuyến". Exe đã build thì chạy được
+      ngay và không đụng tới backend.
+    """
+    if not os.path.exists(EXE_APP):
+        return 9, ("Chưa có bản build của app.\n"
+                   "Chạy trước:  dotnet build src/KnowledgePlatform.Api\n"
+                   f"(đang tìm ở {EXE_APP})")
+
+    moi_truong = {
+        **os.environ,
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        # Trỏ app sang taxonomy vừa chốt. Không sửa file cấu hình nào của app.
+        "DinhTuyen__DuongDanTaxonomy": os.path.abspath(file_tax),
+    }
+
+    kq = subprocess.run(
+        [EXE_APP, "--nap-dinh-tuyen", ma_khach, os.path.abspath(file_kq), nguoi_nap],
+        cwd=os.path.abspath(DU_AN_APP), capture_output=True, text=True,
+        encoding="utf-8", errors="replace", env=moi_truong)
+
+    return kq.returncode, (kq.stdout or "") + (kq.stderr or "")
 
 
 # -------------------------------------------------------------- việc nền
@@ -487,6 +627,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         with open(duong, "w", encoding="utf-8") as f:
             json.dump(du_lieu, f, ensure_ascii=False, indent=2)
 
+        PHIEN["phan_tich"] = du_lieu
+
         gan = du_lieu["ganNhan"]
         biet = [g for g in gan if str(g.get("nhom", "")).strip() != "KHONG-BIET"]
         self._tra(200, {
@@ -496,8 +638,140 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "soBiet": len(biet),
             "soKhongBiet": len(gan) - len(biet),
             "nhom": [{"ten": n.get("ten"), "moTa": n.get("moTa", ""),
+                      "dauHieu": n.get("dauHieu", []),
                       "soCase": sum(1 for g in gan if g.get("nhom") == n.get("ten"))}
                      for n in du_lieu["nhom"]],
+        })
+
+    def api_lo_da_co(self, t: dict) -> None:
+        """Các lô đã phân tích còn nằm trên đĩa.
+
+        ⚠ Có đường này vì trạng thái phiên nằm trong RAM: tắt giao diện là mất sạch
+          PAT, corpus và kết quả AI. Không có nó thì muốn chốt lại danh sách nhóm của
+          một lô cũ phải quét lại Jira từ đầu — mất vài phút cho một việc mà dữ liệu
+          đã có sẵn.
+        """
+        ra = []
+        for ten in sorted(os.listdir(JIRA_DIR)):
+            if ten.startswith("dry-run-") and ten.endswith("-phan-tich.json"):
+                nhan = ten[len("dry-run-"):-len("-phan-tich.json")]
+                ra.append({"nhan": nhan, "ten": ten})
+        self._tra(200, {"ok": True, "lo": ra})
+
+    def api_mo_lo(self, t: dict) -> None:
+        """Đọc lại một lô đã phân tích từ đĩa vào phiên."""
+        nhan = (t.get("nhan") or "").strip()
+        if not nhan:
+            self._tra(400, {"loi": "Thiếu nhãn lô."})
+            return
+
+        duong = duong_corpus(nhan, "phan-tich")
+        if not os.path.exists(duong):
+            self._tra(200, {"ok": False, "loi": f"Không thấy {os.path.basename(duong)}."})
+            return
+
+        with open(duong, encoding="utf-8") as f:
+            du_lieu = json.load(f)
+
+        # Soát lại dù file do chính công cụ này ghi ra: giữa hai lần chạy có thể có người
+        # sửa tay, và một file hỏng đọc vào đây sẽ nổ ở tận lúc dựng taxonomy.
+        if not isinstance(du_lieu, dict) or not du_lieu.get("nhom") or not du_lieu.get("ganNhan"):
+            self._tra(200, {"ok": False, "loi": "File không có đủ `nhom` và `ganNhan`."})
+            return
+
+        PHIEN["phan_tich"] = du_lieu
+        PHIEN["nhan"] = nhan
+
+        gan = du_lieu["ganNhan"]
+        self._tra(200, {
+            "ok": True,
+            "nhan": nhan,
+            "soGan": len(gan),
+            "nhom": [{"ten": n.get("ten"), "moTa": n.get("moTa", ""),
+                      "dauHieu": n.get("dauHieu", []),
+                      "soCase": sum(1 for g in gan if g.get("nhom") == n.get("ten"))}
+                     for n in du_lieu["nhom"]],
+        })
+
+    def api_chot_nhom(self, t: dict) -> None:
+        """Bước 6: người vận hành đã rà xong danh sách nhóm -> sinh taxonomy + nạp định tuyến.
+
+        🛑 Đây là chỗ DUY NHẤT quyết định tên nhóm nào được coi là hợp lệ. Sau bước này,
+          mọi tên nằm ngoài danh sách sẽ bị `--nap-dinh-tuyen` từ chối — cố ý, vì một
+          tên nhóm bịa ra sẽ đi thẳng tới người làm thật qua `/hoi` mà không có gì báo.
+        """
+        phan_tich = PHIEN.get("phan_tich")
+        if not phan_tich:
+            self._tra(400, {"loi": "Chưa nạp kết quả AI ở bước 5."})
+            return
+
+        ma_khach = (t.get("maKhach") or "").strip()
+        nguoi_nap = (t.get("nguoiNap") or "").strip()
+        if not ma_khach or not nguoi_nap:
+            self._tra(400, {"loi": "Cần mã khách hàng và tên người nạp."})
+            return
+
+        # {tên gốc -> tên chốt}. Nhóm không có trong đây = người vận hành đã BỎ.
+        giu: dict[str, str] = {}
+        loi: list[str] = []
+        da_dung: dict[str, str] = {}
+
+        for d in t.get("nhom") or []:
+            if not d.get("dung"):
+                continue
+            goc = str(d.get("tenGoc", "")).strip()
+            moi = str(d.get("ten", "")).strip()
+            if not goc:
+                continue
+            if not moi:
+                loi.append(f"Nhóm “{goc}” để tên trống.")
+                continue
+            if moi == "KHONG-BIET":
+                loi.append("Không được đặt tên nhóm là KHONG-BIET — đó là giá trị dành riêng.")
+                continue
+            # Gộp hai nhóm bằng cách đặt TRÙNG TÊN là hợp lệ và có chủ đích.
+            da_dung.setdefault(moi, goc)
+            giu[goc] = moi
+
+        if not giu:
+            loi.append("Không còn nhóm nào được giữ — cả lô sẽ thành KHÔNG BIẾT.")
+
+        if loi:
+            self._tra(200, {"ok": False, "loi": loi})
+            return
+
+        nhan = PHIEN["nhan"] or "ui"
+
+        # Taxonomy ĐỂ CẠNH các file dry-run, không để trong docs/: nó là danh sách sinh từ
+        # dữ liệu khách chưa ai rà kỹ, và `docs/ket-qua-phan-tich/` đang được git theo dõi.
+        # Muốn đưa vào repo thì đó là một quyết định riêng, do người bấm chọn, không phải
+        # hệ quả phụ của việc bấm nút ở đây.
+        duong_tax = duong_corpus(nhan, "taxonomy")
+        duong_kq = duong_corpus(nhan, "dinh-tuyen")
+
+        for d in (duong_tax, duong_kq):
+            bao_dam_git_bo_qua(d)
+
+        taxonomy = dung_taxonomy(phan_tich, giu)
+        dong, thanh_kb = chuyen_gan_nhan(phan_tich, giu)
+
+        with open(duong_tax, "w", encoding="utf-8") as f:
+            json.dump(taxonomy, f, ensure_ascii=False, indent=2)
+        with open(duong_kq, "w", encoding="utf-8") as f:
+            json.dump({"ketQua": dong}, f, ensure_ascii=False, indent=2)
+
+        ma_thoat, bao_cao = chay_nap_dinh_tuyen(duong_kq, duong_tax, ma_khach, nguoi_nap)
+
+        self._tra(200, {
+            "ok": ma_thoat == 0,
+            "maThoat": ma_thoat,
+            "baoCao": bao_cao.strip(),
+            "soNhomChot": len(taxonomy["nhom"]),
+            "soNhomGop": len(giu) - len(set(giu.values())),
+            "soDong": len(dong),
+            "soThanhKhongBiet": thanh_kb,
+            "duongTaxonomy": duong_tax,
+            "duongKetQua": duong_kq,
         })
 
     def api_gui_kho(self, t: dict) -> None:

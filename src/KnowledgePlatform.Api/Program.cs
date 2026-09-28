@@ -28,6 +28,20 @@ using Microsoft.Extensions.Options;
 //    deploy dedicated với bản shared dùng đúng cùng một đường code (`G13`).
 // =============================================================================
 
+// 🛑 Mọi câu app in ra đều bằng tiếng Việt, và trên Windows khi stdout BỊ CHUYỂN HƯỚNG
+//   thì .NET mã hoá bằng codepage OEM của máy — nơi `ấ`, `ệ`, `ữ` không tồn tại. Chúng bị
+//   thay bằng `?` NGAY LÚC GHI, nên phía đọc không giải mã lại được: đo thật 2026-09-28,
+//   "Không thấy file" ra thành "Không th?y file" với mọi codepage thử qua.
+//
+//   Chỗ này im lặng đúng kiểu khó chịu nhất: chạy tay trong console thì đẹp, mà log CI,
+//   file redirect và công cụ gọi vào đều nhận chữ vỡ — tức là chỉ hỏng ở nơi KHÔNG ai
+//   ngồi nhìn. Đặt lại encoding khi (và chỉ khi) bị chuyển hướng, để console tương tác
+//   giữ nguyên hành vi cũ.
+if (Console.IsOutputRedirected || Console.IsErrorRedirected)
+{
+    Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<TenancyOptions>(

@@ -184,6 +184,45 @@
     <div id="baoNap"></div>
   </div>
 
+  <!-- 6 -->
+  <div class="the" id="the6" data-khoa="1">
+    <h2><span class="so">6</span> Chốt danh sách nhóm &amp; nạp định tuyến</h2>
+    <p class="hint" style="margin:0 0 14px">
+      Đây là danh sách tên nhóm mà phần mềm sẽ CHẤP NHẬN. Sau bước này, mọi tên nằm
+      ngoài danh sách đều bị từ chối — cố ý, vì một tên bịa ra sẽ đi thẳng tới người
+      làm thật mà không có gì báo.<br>
+      Sửa tên cho gọn, bỏ nhóm sai, hoặc <b>đặt hai nhóm trùng tên để gộp</b>.
+      Case của nhóm bị bỏ sẽ thành <b>KHÔNG BIẾT</b>, không bị xoá.
+    </p>
+
+    <div class="hang" style="margin-bottom:12px">
+      <div>
+        <label>Mã khách hàng</label>
+        <input type="text" id="maKhach" value="dev-tenant">
+      </div>
+      <div>
+        <label>Tên người nạp <span class="hint">(ghi vào kho, để tra ngược)</span></label>
+        <input type="text" id="nguoiNap" placeholder="Tên bạn">
+      </div>
+    </div>
+
+    <div class="hang" style="margin-bottom:12px">
+      <div>
+        <label>Hoặc mở lại một lô đã phân tích trước đó
+               <span class="hint">(phiên nằm trong RAM, tắt là mất)</span></label>
+        <select id="loCu"></select>
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="phu2" id="btnMoLo" style="margin:0">Mở lại lô này</button>
+      </div>
+    </div>
+
+    <div id="bangNhom"></div>
+    <button id="btnChot" style="margin-top:12px">Chốt danh sách và nạp vào phần mềm</button>
+    <div id="baoChot"></div>
+    <pre id="ketChot" hidden></pre>
+  </div>
+
 </div>
 
 <script>
@@ -359,6 +398,91 @@ $('#btnNap').onclick = async () => {
      ${kq.soBiet} có nhóm, <b>${kq.soKhongBiet} trả KHÔNG BIẾT</b>.<br>
      Ghi ra <code>${esc(kq.duong)}</code>.
      <table><tr><th>Nhóm</th><th>Case</th><th>Nguyên nhân</th></tr>${bang}</table>`);
+
+  dungBangNhom(kq.nhom);
+  moKhoa('#the6');
+};
+
+// ---------- 6. chốt danh sách nhóm ----------
+//
+// Nhóm ÍT case để lên đầu, không phải nhóm đông. Chỗ cần người nhìn là đuôi dài:
+// một nhóm 1 case thường là nhóm đặt quá hẹp hoặc đặt sai, và nếu xếp theo số giảm
+// dần thì đúng những dòng đáng xem nhất lại nằm dưới cùng, nơi không ai cuộn tới.
+function dungBangNhom(nhom) {
+  const dong = [...nhom].sort((a, b) => a.soCase - b.soCase).map((n, i) => {
+    const dauHieu = (n.dauHieu || []).slice(0, 3).join(' · ');
+    return `<tr>
+      <td><input type="checkbox" class="dung" data-i="${i}" checked></td>
+      <td><input type="text" class="tenNhom" data-i="${i}" value="${esc(n.ten)}"
+                 data-goc="${esc(n.ten)}" style="margin:0"></td>
+      <td style="text-align:right"><b>${n.soCase}</b></td>
+      <td class="hint" style="font-size:12px">${esc(n.moTa)}
+          ${dauHieu ? `<br><i>${esc(dauHieu)}</i>` : ''}</td>
+    </tr>`;
+  }).join('');
+
+  $('#bangNhom').innerHTML =
+    `<table><tr><th style="width:34px">Dùng</th><th style="width:30%">Tên nhóm (sửa được)</th>
+     <th style="width:60px;text-align:right">Case</th><th>Nguyên nhân / dấu hiệu</th></tr>
+     ${dong}</table>`;
+}
+
+// Thẻ 6 mở khoá ngay từ đầu nếu trên đĩa còn lô cũ — người dùng có thể vào thẳng đây
+// mà không phải quét lại Jira.
+(async () => {
+  const r = await api('lo-da-co', {});
+  if (!r.lo || !r.lo.length) return;
+  $('#loCu').innerHTML = r.lo.map(l => `<option value="${esc(l.nhan)}">${esc(l.ten)}</option>`).join('');
+  moKhoa('#the6');
+})();
+
+$('#btnMoLo').onclick = async () => {
+  const kq = await api('mo-lo', {nhan: $('#loCu').value});
+  if (!kq.ok) { bao('#baoChot', 'loi', esc(kq.loi)); return; }
+  dungBangNhom(kq.nhom);
+  bao('#baoChot', 'ok',
+      `Đã mở lại lô <b>${esc(kq.nhan)}</b> — ${kq.nhom.length} nhóm, ${kq.soGan} case đã gán.`);
+};
+
+$('#btnChot').onclick = async () => {
+  const ds = [...document.querySelectorAll('.tenNhom')].map(o => ({
+    tenGoc: o.dataset.goc,
+    ten: o.value,
+    dung: document.querySelector(`.dung[data-i="${o.dataset.i}"]`).checked,
+  }));
+
+  $('#btnChot').disabled = true;
+  const kq = await api('chot-nhom', {
+    maKhach: $('#maKhach').value,
+    nguoiNap: $('#nguoiNap').value,
+    nhom: ds,
+  });
+  $('#btnChot').disabled = false;
+
+  if (kq.loi && !Array.isArray(kq.loi)) { bao('#baoChot', 'loi', esc(kq.loi)); return; }
+  if (kq.ok === false && Array.isArray(kq.loi)) {
+    bao('#baoChot', 'loi', 'Chưa chốt được:<ul>' +
+        kq.loi.map(l => `<li>${esc(l)}</li>`).join('') + '</ul>');
+    return;
+  }
+
+  $('#ketChot').hidden = false;
+  $('#ketChot').textContent = kq.baoCao || '(app không in gì)';
+
+  let h = `Chốt <b>${kq.soNhomChot}</b> nhóm, nạp <b>${kq.soDong}</b> dòng định tuyến.`;
+  if (kq.soNhomGop) h += ` Gộp <b>${kq.soNhomGop}</b> nhóm trùng tên.`;
+  if (kq.soThanhKhongBiet) h += `<br><b>${kq.soThanhKhongBiet}</b> case chuyển thành KHÔNG BIẾT do nhóm bị bỏ.`;
+  h += `<br>Taxonomy: <code>${esc(kq.duongTaxonomy)}</code>`;
+
+  if (kq.ok) {
+    h += `<br><br>Giờ phần mềm đã biết ticket nào thuộc nhóm nào — bước tiếp là soạn
+          hướng dẫn xử lý cho từng nhóm.`;
+    bao('#baoChot', 'ok', h);
+  } else {
+    h += `<br><br><b>App trả mã thoát ${kq.maThoat}.</b> Đọc khối bên dưới — dòng bị bỏ
+          qua KHÔNG được sửa hộ.`;
+    bao('#baoChot', 'chu-y', h);
+  }
 };
 </script>
 </body>
