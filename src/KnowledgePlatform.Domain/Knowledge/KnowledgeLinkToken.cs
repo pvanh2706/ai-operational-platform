@@ -54,6 +54,12 @@ public sealed class KnowledgeLinkToken
     public DateTimeOffset? RevokedAt { get; set; }
 
     /// <summary>
+    /// Lượt gợi ý đã phát link này (P6, 2026-10-10) — để lần mở link ghi được nấc OPENED vào đúng lượt.
+    /// <c>NULL</c> = link phát tay (<c>POST /knowledge/{id}/link</c>) hoặc phát trước khi có ô này.
+    /// </summary>
+    public Guid? LuotGoiYId { get; init; }
+
+    /// <summary>
     /// Còn mở được không. Nhận <paramref name="bayGio"/> từ ngoài thay vì đọc đồng hồ ở
     /// đây — để test kiểm được ca hết hạn mà không phải chờ thật.
     /// </summary>

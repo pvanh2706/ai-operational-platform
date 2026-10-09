@@ -1,4 +1,5 @@
 using KnowledgePlatform.Api.Documents;
+using KnowledgePlatform.Api.GoiY;
 using KnowledgePlatform.Api.Knowledge;
 using KnowledgePlatform.Api.QuyTrinh;
 using KnowledgePlatform.Api.Signals;
@@ -114,6 +115,10 @@ builder.Services.AddScoped<DocumentHandler>();
 // P4 (2026-10-10, mở lại I1): quy trình — ô D/E/F của sơ đồ luồng tín hiệu.
 builder.Services.AddScoped<KhopQuyTrinh>();
 builder.Services.AddScoped<QuyTrinhHandler>();
+
+// P6 (2026-10-10): ô J — lượt gợi ý + phản hồi. Taxonomy đọc MỘT lần (singleton, không chạm tenant).
+builder.Services.AddSingleton<TaxonomyNhom>();
+builder.Services.AddScoped<GoiYHandler>();
 
 // `AR5` — file gốc ở kho, DB chỉ giữ metadata. Interface MỎNG theo khuôn `AR3`.
 //
@@ -653,6 +658,7 @@ app.MapPost("/knowledge/{id:guid}/approve", async (
 app.MapPost("/hoi", async (
         CauHoi cauHoi,
         HoiHandler handler,
+        GoiYHandler goiY,
         CancellationToken ct) =>
     {
         if (string.IsNullOrWhiteSpace(cauHoi.MaTicket)
@@ -665,7 +671,8 @@ app.MapPost("/hoi", async (
                 detail: "Cần ít nhất một trong `maTicket`, `tieuDe`, `moTa`.");
         }
 
-        return Results.Ok(await handler.HoiAsync(cauHoi, ct));
+        // Ô J (P6): mỗi câu trả lời là một lượt gợi ý có ảnh chụp — kể cả KHÔNG BIẾT (nấc RETRIEVED không đạt).
+        return Results.Ok(await goiY.GhiHoiAsync(await handler.HoiAsync(cauHoi, ct), ct));
     })
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
@@ -1095,6 +1102,21 @@ app.MapPost("/quy-trinh/xac-nhan-buoc", async (YeuCauXacNhanBuoc yc, QuyTrinhHan
 
 app.MapPost("/quy-trinh/bo", async (YeuCauBoLuotChay yc, QuyTrinhHandler h, CancellationToken ct) =>
         TraVe(await h.BoAsync(yc, ct), "Không bỏ được lượt chạy"))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+
+// =============================================================================
+//  Ô J — ghi lại đã gợi ý gì, người có dùng không (P6, 2026-10-10 · N3-1 đóng L2-a).
+// =============================================================================
+
+app.MapPost("/goi-y/{id:guid}/phan-hoi", async (Guid id, YeuCauPhanHoi yc, GoiYHandler h, CancellationToken ct) =>
+        TraVe(await h.PhanHoiAsync(id, yc, ct), "Không ghi được phản hồi"))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapGet("/internal/goi-y/thong-ke", async (DateTimeOffset? tu, GoiYHandler h, CancellationToken ct) =>
+        Results.Ok(await h.ThongKeAsync(tu, ct)))
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 

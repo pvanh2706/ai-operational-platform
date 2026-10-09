@@ -47,6 +47,15 @@ public sealed record WebhookPayload(
     [System.Text.Json.Serialization.JsonIgnore(
         Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public WebhookQuyTrinh? QuyTrinh { get; init; }
+
+    /// <summary>
+    /// Thêm 2026-10-10 (P6, ô `J`): mã của LƯỢT GỢI Ý này — gửi lại vào <c>POST /goi-y/{id}/phan-hoi</c> để khai
+    /// "đã nhận / đã dùng". ⚠ KHÁC <see cref="MaGoi"/>: <c>maGoi</c> là khoá chống trùng của lượt GỬI (giữ nguyên
+    /// qua các lần thử lại), còn mã này đổi theo từng lần thử — mỗi lần thử là một câu trả lời dựng lại.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? MaLuotGoiY { get; init; }
 }
 
 /// <param name="TraTheo"><c>buoc</c> = hướng dẫn tra theo bước hiện tại · <c>nhom</c> = rơi về mức nhóm.</param>

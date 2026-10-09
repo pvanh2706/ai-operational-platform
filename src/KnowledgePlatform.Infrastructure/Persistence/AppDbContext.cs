@@ -1,6 +1,7 @@
 using KnowledgePlatform.Domain.Cases;
 using KnowledgePlatform.Domain.Documents;
 using KnowledgePlatform.Domain.Evidence;
+using KnowledgePlatform.Domain.GoiY;
 using KnowledgePlatform.Domain.Knowledge;
 using KnowledgePlatform.Domain.Process;
 using KnowledgePlatform.Domain.Sop;
@@ -410,6 +411,40 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             // 🛑 Một case có TỐI ĐA MỘT lượt chạy CHƯA BỎ. Hai lượt mở cùng lúc thì "đang ở bước nào" có hai đáp án.
             e.HasIndex(x => new { x.TenantId, x.CaseId }).IsUnique().HasFilter("\"AbandonedAt\" IS NULL");
             e.HasIndex(x => new { x.TenantId, x.CaseId, x.ProcessDefinitionId });
+        });
+
+        // --- P6 (2026-10-10): ô J — lượt gợi ý + các nấc L2. Tenant-scoped, CÓ RLS ---
+        b.Entity<LuotGoiY>(e =>
+        {
+            e.ToTable("luot_goi_y");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.KenhRa).HasMaxLength(16).IsRequired();
+            e.Property(x => x.KhoaNguonCase).HasMaxLength(512);
+            e.Property(x => x.Nhom).HasMaxLength(512);
+            e.Property(x => x.NguonDinhTuyen).HasMaxLength(256).IsRequired();
+            e.Property(x => x.LyDoKhongBiet).HasMaxLength(128);
+            e.Property(x => x.MaBuoc).HasMaxLength(64);
+            e.Property(x => x.NoiDung).IsRequired();
+
+            e.HasMany(x => x.SuKien)
+                .WithOne()
+                .HasForeignKey(s => s.LuotGoiYId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => new { x.TenantId, x.Luc });
+            e.HasIndex(x => new { x.TenantId, x.CaseId });
+        });
+
+        b.Entity<LuotGoiYSuKien>(e =>
+        {
+            e.ToTable("luot_goi_y_su_kien");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Nac).HasConversion<string>().HasMaxLength(16).IsRequired();
+            e.Property(x => x.NguoiKhai).HasMaxLength(256);
+            e.Property(x => x.GhiChu).HasMaxLength(2048);
+            e.Property(x => x.NhomDung).HasMaxLength(512);
+
+            e.HasIndex(x => new { x.TenantId, x.Nac });
         });
 
         // --- KnowledgeRecord + cụm assertion (§3C.5) ---

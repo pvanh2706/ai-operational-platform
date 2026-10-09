@@ -5,7 +5,8 @@ using Npgsql;
 namespace KnowledgePlatform.Api.Knowledge;
 
 /// <summary>Kết quả tra một token link. <c>null</c> ở chỗ gọi nghĩa là không mở được.</summary>
-public sealed record LinkTokenLookup(Guid TenantId, Guid KnowledgeRecordId);
+/// <param name="LuotGoiYId">Lượt gợi ý đã phát link này (P6) — để mở link ghi được nấc OPENED.</param>
+public sealed record LinkTokenLookup(Guid TenantId, Guid KnowledgeRecordId, Guid? LuotGoiYId = null);
 
 /// <summary>
 /// Cấu hình đường link công khai của bản deploy.
@@ -65,7 +66,7 @@ public sealed class LinkTokenDirectory(string connectionString)
         await using var cmd = conn.CreateCommand();
         cmd.CommandText =
             """
-            SELECT "TenantId", "KnowledgeRecordId", "SecretHash", "ExpiresAt", "RevokedAt"
+            SELECT "TenantId", "KnowledgeRecordId", "SecretHash", "ExpiresAt", "RevokedAt", "LuotGoiYId"
             FROM kp.knowledge_link_token WHERE "TokenId" = @tokenId
             """;
         cmd.Parameters.AddWithValue("tokenId", tokenId);
@@ -78,6 +79,7 @@ public sealed class LinkTokenDirectory(string connectionString)
         var hashLuu = reader.GetString(2);
         var hetHan = reader.GetFieldValue<DateTimeOffset>(3);
         var thuHoi = await reader.IsDBNullAsync(4, ct) ? (DateTimeOffset?)null : reader.GetFieldValue<DateTimeOffset>(4);
+        var luotGoiY = await reader.IsDBNullAsync(5, ct) ? (Guid?)null : reader.GetGuid(5);
 
         if (!ChuoiBiMat.HashKhop(ChuoiBiMat.Bam(biMat), hashLuu)) return null;
 
@@ -87,14 +89,16 @@ public sealed class LinkTokenDirectory(string connectionString)
             SecretHash = hashLuu, CreatedBy = string.Empty, ExpiresAt = hetHan, RevokedAt = thuHoi,
         };
 
-        return token.ConMoDuoc(bayGio) ? new LinkTokenLookup(tenantId, recordId) : null;
+        return token.ConMoDuoc(bayGio) ? new LinkTokenLookup(tenantId, recordId, luotGoiY) : null;
     }
 
     /// <summary>
     /// Phát một token mới. Chuỗi trả về là lần DUY NHẤT nó đọc được — bảng chỉ giữ hash.
     /// </summary>
+    /// <param name="luotGoiYId">Lượt gợi ý phát link này (P6). <c>null</c> khi phát tay.</param>
     public async Task<(string Chuoi, DateTimeOffset HetHanLuc)> PhatAsync(
-        Guid tenantId, Guid recordId, string nguoiPhat, TimeSpan han, CancellationToken ct = default)
+        Guid tenantId, Guid recordId, string nguoiPhat, TimeSpan han, CancellationToken ct = default,
+        Guid? luotGoiYId = null)
     {
         var (tokenId, hash, chuoi) = ChuoiBiMat.Sinh(KnowledgeLinkToken.TienTo);
         var hetHan = DateTimeOffset.UtcNow + han;
@@ -107,8 +111,8 @@ public sealed class LinkTokenDirectory(string connectionString)
             """
             INSERT INTO kp.knowledge_link_token
                 ("Id", "TenantId", "KnowledgeRecordId", "TokenId", "SecretHash",
-                 "CreatedAt", "CreatedBy", "ExpiresAt", "RevokedAt")
-            VALUES (@id, @tenantId, @recordId, @tokenId, @hash, @createdAt, @createdBy, @expiresAt, NULL)
+                 "CreatedAt", "CreatedBy", "ExpiresAt", "RevokedAt", "LuotGoiYId")
+            VALUES (@id, @tenantId, @recordId, @tokenId, @hash, @createdAt, @createdBy, @expiresAt, NULL, @luotGoiY)
             """;
         cmd.Parameters.AddWithValue("id", Guid.CreateVersion7());
         cmd.Parameters.AddWithValue("tenantId", tenantId);
@@ -118,6 +122,7 @@ public sealed class LinkTokenDirectory(string connectionString)
         cmd.Parameters.AddWithValue("createdAt", DateTimeOffset.UtcNow);
         cmd.Parameters.AddWithValue("createdBy", nguoiPhat);
         cmd.Parameters.AddWithValue("expiresAt", hetHan);
+        cmd.Parameters.AddWithValue("luotGoiY", (object?)luotGoiYId ?? DBNull.Value);
 
         await cmd.ExecuteNonQueryAsync(ct);
         return (chuoi, hetHan);

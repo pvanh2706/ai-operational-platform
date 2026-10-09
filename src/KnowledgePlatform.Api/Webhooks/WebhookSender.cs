@@ -58,7 +58,8 @@ public sealed class WebhookSender(
     TimeProvider clock,
     IOptions<WebhookOptions> options,
     ILogger<WebhookSender> logger,
-    Startup.CongChe congChe)
+    Startup.CongChe congChe,
+    GoiY.GoiYHandler goiY)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -89,9 +90,13 @@ public sealed class WebhookSender(
         {
             try
             {
-                var payload = await DungGoiAsync(luot, ct);
+                var (payload, luotGoiY) = await DungGoiAsync(luot, ct);
                 await GuiAsync(dich, luot, payload, ct);
                 luot.GhiThanhCong(clock.GetUtcNow());
+
+                // Ô J (P6): SHOWN chỉ khi bên nhận đã trả 2xx — tức "đã GIAO", không phải "người đã đọc".
+                // Lượt hỏng giữ nguyên chỉ một nấc RETRIEVED: đã tra, chưa giao.
+                luotGoiY.Ghi(Domain.GoiY.NacGoiY.Shown, true, clock.GetUtcNow());
                 xong++;
             }
             catch (Exception e) when (e is not OperationCanceledException)
@@ -108,11 +113,15 @@ public sealed class WebhookSender(
         return xong;
     }
 
-    private async Task<WebhookPayload> DungGoiAsync(WebhookDelivery luot, CancellationToken ct)
+    private async Task<(WebhookPayload Payload, Domain.GoiY.LuotGoiY LuotGoiY)> DungGoiAsync(
+        WebhookDelivery luot, CancellationToken ct)
     {
         // Đúng đường mà `/hoi` đi — kể cả hai cửa KHÔNG BIẾT.
         var traLoi = await hoi.HoiAsync(
             new CauHoi(luot.CaseSourceReference, luot.Subject, null), ct);
+
+        // Ô J (P6): MỖI lượt THỬ là một lượt gợi ý — dựng trước, để link phát ra mang được id của nó (OPENED).
+        var luotGoiY = goiY.TaoLuot("webhook", traLoi);
 
         var huongDan = new List<WebhookHuongDan>();
 
@@ -120,7 +129,7 @@ public sealed class WebhookSender(
         {
             // Link có thể không phát được (thiếu Link:PublicBaseUrl). Khi đó tóm tắt vẫn đi —
             // mất đường đọc đầy đủ còn hơn không gửi gì cả.
-            var link = await phatLink.PhatAsync(h.Id, "webhook", null, ct);
+            var link = await phatLink.PhatAsync(h.Id, "webhook", null, ct, luotGoiY.Id);
 
             huongDan.Add(new WebhookHuongDan(
                 Id: h.Id,
@@ -132,7 +141,7 @@ public sealed class WebhookSender(
                 TicketDanChung: TicketDanChung(h)));
         }
 
-        return new WebhookPayload(
+        var payload = new WebhookPayload(
             PhienBan: WebhookPayload.PhienBanHienTai,
             MaGoi: luot.Id,
             Luc: clock.GetUtcNow(),
@@ -150,7 +159,15 @@ public sealed class WebhookSender(
                     q.BuocHienTai is { } b ? new WebhookBuoc(b.Ma, Che(b.NoiDung), b.NoiXem is null ? null : Che(b.NoiXem)) : null,
                     q.DaXongHet, q.TraTheo)
                 : null,
+            MaLuotGoiY = luotGoiY.Id,
         };
+
+        // Ảnh chụp ĐÚNG thứ sắp gửi — lưu cùng lượt gửi ở cuối vòng quét, kể cả khi gửi hỏng (khi đó lượt
+        // gợi ý chỉ có nấc RETRIEVED). `WebhookDelivery` vẫn KHÔNG chứa payload, cố ý — xem WebhookDelivery.
+        luotGoiY.NoiDung = GoiY.GoiYHandler.ChupAnh(payload);
+        db.Set<Domain.GoiY.LuotGoiY>().Add(luotGoiY);
+
+        return (payload, luotGoiY);
     }
 
     /// <summary>

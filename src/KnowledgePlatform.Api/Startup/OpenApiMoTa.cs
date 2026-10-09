@@ -182,6 +182,20 @@ public static partial class OpenApiMoTa
                 "Đọc lại cấu hình nơi nhận",
                 "KHÔNG trả bí mật ký. Mất thì khai báo lại để sinh cái mới."),
 
+            // --- Ô J (P6, 2026-10-10) ---
+
+            ["POST /goi-y/{id}/phan-hoi"] = new(NhomHoi,
+                "Khai một gợi ý đã được NHẬN / DÙNG chưa",
+                "`id` là `maLuotGoiY` trong câu trả lời của /hoi hoặc trong gói webhook. `nac`: `accepted` | `used`, " +
+                "`datDuoc` BẮT BUỘC (true/false), `nguoiKhai` BẮT BUỘC — đây là LỜI KHAI (N3-1). Ba nấc kia " +
+                "(RETRIEVED · SHOWN · OPENED) hệ thống tự ghi. `nhomDung` (E2-1): định tuyến sai thì khai nhóm ĐÚNG " +
+                "(phải có trong taxonomy) — lượt hỏi sau của chính case đó đi theo nhóm này."),
+
+            ["GET /internal/goi-y/thong-ke"] = new(NhomHaTang,
+                "Phễu 5 nấc của các lượt gợi ý",
+                "Mỗi nấc đếm số LƯỢT có ít nhất một sự kiện đạt / không đạt. ⚠ SHOWN = đã GIAO, không phải người đã " +
+                "đọc; ACCEPTED/USED là lời khai. Lọc từ một mốc bằng `?tu=`."),
+
             // --- Quy trình (P4, 2026-10-10 — mở lại I1) ---
 
             ["POST /processes"] = new(NhomQuyTrinh,

@@ -52,6 +52,15 @@ public sealed class HoiHandler(AppDbContext db, IDinhTuyenNhom dinhTuyen, KhopQu
             ? null
             : await TraCaseTheoMa.TimMotAsync(db, cauHoi.MaTicket, ct);
 
+        var traLoi = await TraLoiAsync(cauHoi, c, ct);
+
+        // Gắn case đã giải ra vào MỌI kết cục — cả hai cửa KHÔNG BIẾT. Ô J (P6) ghi lượt gợi ý theo case.
+        return c is null ? traLoi : traLoi with { KhoaNguonCase = c.SourceReference, CaseId = c.Id };
+    }
+
+    private async Task<CauTraLoi> TraLoiAsync(CauHoi cauHoi, Domain.Cases.CanonicalCase? c, CancellationToken ct)
+    {
+
         // Case đã có thì định tuyến bằng CHÍNH dữ liệu của case (tiêu đề + mẩu sớm nhất) — đúng thứ có mặt
         // lúc ticket đến (`docs/13` §1), không phụ thuộc người hỏi gõ lại tiêu đề hay không.
         var tuyen = c is not null
@@ -238,6 +247,20 @@ public sealed record CauTraLoi(
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? LyDoKhongCoQuyTrinh { get; init; }
+
+    /// <summary>
+    /// Mã của lượt gợi ý này (ô `J`, P6) — gửi lại vào <c>POST /goi-y/{id}/phan-hoi</c> để khai "đã nhận / đã dùng".
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? MaLuotGoiY { get; init; }
+
+    /// <summary>Case mà <c>maTicket</c> giải ra (khớp chính xác hoặc khớp đuôi). Vắng = không phải case đã có.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? KhoaNguonCase { get; init; }
+
+    /// <summary>Nội bộ — cho sổ ghi lượt gợi ý. Không ra ngoài: bên tích hợp dùng khoá nguồn, không dùng id nội bộ.</summary>
+    [JsonIgnore]
+    public Guid? CaseId { get; init; }
 
     public static CauTraLoi KhongBiet(string LyDo, string? GiaiThich, string Nguon, string? Nhom) =>
         new(false, Nhom, Nguon, GiaiThich, LyDo, []);

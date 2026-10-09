@@ -186,18 +186,8 @@ public static class LenhDinhTuyen
         return JsonDocument.Parse(File.ReadAllText(duong)).RootElement.Clone();
     }
 
-    private static string DuongTaxonomyMacDinh()
-    {
-        var goc = AppContext.BaseDirectory;
-        for (var i = 0; i < 8 && goc is not null; i++)
-        {
-            var thu = Path.Combine(goc, "docs", "ket-qua-phan-tich", "taxonomy-19-nhom-hoa-don.json");
-            if (File.Exists(thu)) return thu;
-            goc = Path.GetDirectoryName(goc);
-        }
-
-        return "docs/ket-qua-phan-tich/taxonomy-19-nhom-hoa-don.json";
-    }
+    // Một chỗ dò đường mặc định cho cả CLI lẫn API phản hồi (P6) — xem TaxonomyNhom.
+    private static string DuongTaxonomyMacDinh() => TaxonomyNhom.DuongMacDinh();
 
     /// <summary>
     /// Chốt chép nguyên từ <c>SoanNhapRunner --xuat-payload</c>: file chứa dữ liệu khách thật,

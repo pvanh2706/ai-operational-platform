@@ -663,6 +663,35 @@ def quy_trinh() -> None:
     kiem("POST /quy-trinh/bo  không có lượt chạy mở -> 409", s, 409)
 
 
+def goi_y() -> None:
+    """
+    Ô J (P6, 2026-10-10): ghi lại đã gợi ý gì, người có dùng không. Mỗi câu trả lời của /hoi là một LƯỢT
+    gợi ý mang `maLuotGoiY`; ba nấc đầu hệ thống tự ghi, hai nấc cuối là LỜI KHAI.
+
+    ⚠ Không khai `nhomDung` ở đây: nó SỬA kho định tuyến của case thật — đúng việc nó sinh ra để làm, nên
+    không được chạy trong một phép kiểm. Vòng J → G do bộ test C# `GoiYTests` giữ.
+    """
+    muc("N · Ô J — lượt gợi ý + phản hồi  (2 endpoint · P6)")
+
+    s, b = goi("POST", "/hoi", {"maTicket": khoa("goi-y-khong-co-that")})
+    kiem("POST /hoi trả maLuotGoiY (kể cả KHÔNG BIẾT)", s == 200 and bool((b or {}).get("maLuotGoiY")), True)
+    if s != 200 or not (b or {}).get("maLuotGoiY"):
+        return
+    ma = b["maLuotGoiY"]
+
+    s, _ = goi("POST", f"/goi-y/{ma}/phan-hoi", {"nac": "shown", "datDuoc": True, "nguoiKhai": "kiem-dau-cuoi"})
+    kiem("POST /goi-y/{id}/phan-hoi  nấc hệ thống -> 400", s, 400)
+
+    s, b = goi("POST", f"/goi-y/{ma}/phan-hoi",
+               {"nac": "used", "datDuoc": False, "nguoiKhai": "kiem-dau-cuoi", "ghiChu": "kiem dau cuoi"})
+    kiem("  ... lời khai USED -> 200", (s, (b or {}).get("nac")), (200, "USED"))
+
+    s, b = goi("GET", "/internal/goi-y/thong-ke")
+    kiem("GET /internal/goi-y/thong-ke -> 200", s, 200)
+    kiem("  ... đủ 5 nấc L2", sorted(x["nac"] for x in (b or {}).get("theoNac", [])),
+         sorted(["RETRIEVED", "SHOWN", "OPENED", "ACCEPTED", "USED"]))
+
+
 def phu_hop_dong() -> None:
     """
     🛑 **Phép kiểm tự soi chính nó.** Đối chiếu những đường file này ĐÃ GỌI với hợp đồng
@@ -771,6 +800,7 @@ def main() -> int:
     soan_nhap()
     kenh_hai()
     quy_trinh()
+    goi_y()
     phu_hop_dong()
 
     print("\n" + "=" * 68)

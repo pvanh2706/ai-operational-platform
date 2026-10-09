@@ -183,6 +183,115 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.ToTable("evidence_item", "kp");
                 });
 
+            modelBuilder.Entity("KnowledgePlatform.Domain.GoiY.LuotGoiY", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("BietTraLoi")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("CaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("KenhRa")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("KhoaNguonCase")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.PrimitiveCollection<List<Guid>>("KnowledgeRecordIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
+
+                    b.Property<DateTimeOffset>("Luc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LyDoKhongBiet")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("MaBuoc")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("NguonDinhTuyen")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Nhom")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("NoiDung")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ProcessDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProcessRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CaseId");
+
+                    b.HasIndex("TenantId", "Luc");
+
+                    b.ToTable("luot_goi_y", "kp");
+                });
+
+            modelBuilder.Entity("KnowledgePlatform.Domain.GoiY.LuotGoiYSuKien", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("DatDuoc")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("GhiChu")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<DateTimeOffset>("Luc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LuotGoiYId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Nac")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("NguoiKhai")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NhomDung")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LuotGoiYId");
+
+                    b.HasIndex("TenantId", "Nac");
+
+                    b.ToTable("luot_goi_y_su_kien", "kp");
+                });
+
             modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.Assertion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -285,6 +394,9 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("KnowledgeRecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("LuotGoiYId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("RevokedAt")
@@ -775,6 +887,15 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("KnowledgePlatform.Domain.GoiY.LuotGoiYSuKien", b =>
+                {
+                    b.HasOne("KnowledgePlatform.Domain.GoiY.LuotGoiY", null)
+                        .WithMany("SuKien")
+                        .HasForeignKey("LuotGoiYId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.Assertion", b =>
                 {
                     b.HasOne("KnowledgePlatform.Domain.Knowledge.KnowledgeRecord", null)
@@ -938,6 +1059,11 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("KnowledgePlatform.Domain.GoiY.LuotGoiY", b =>
+                {
+                    b.Navigation("SuKien");
                 });
 
             modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.Assertion", b =>

@@ -639,6 +639,34 @@ commit chứa code P5 mang tên P4. Commit đó chưa push (`main` đi trước 
 ✅ 494/494 test (240 + 30 + 224), trước 489. Đột biến: tắt nhánh tra theo bước → 2 test đỏ (câu
 trả lời đổi theo bước · gói webhook chỉ mang nguyên nhân của bước hiện tại).
 
+### P6 ✅ — ô J + vòng J→G: lượt gợi ý, 5 nấc L2, lời khai (2026-10-10)
+
+```text
+luot_goi_y          một dòng = một câu trả lời ĐÃ trả / ĐÃ gửi, kèm ẢNH CHỤP JSON đúng thứ đó
+luot_goi_y_su_kien  append-only; nấc theo từ vựng ĐÃ KHOÁ L2 + DatDuoc (không đẻ nấc thứ sáu)
+RETRIEVED           mọi lượt, kể cả KHÔNG BIẾT (DatDuoc = false)
+SHOWN               /hoi: lúc trả response · webhook: CHỈ khi bên nhận trả 2xx
+OPENED              mở /xem/{token} — token mang id lượt gợi ý đã phát nó; ghi mỗi lần mở
+ACCEPTED / USED     LỜI KHAI qua POST /goi-y/{id}/phan-hoi: datDuoc + nguoiKhai BẮT BUỘC
+J → G               nhomDung (E2-1, phải có trong taxonomy) → ghi kho định tuyến của CHÍNH case
+                    đó; lượt chạy quy trình của nhóm cũ bị bỏ, bởi chính người khai
+phễu                GET /internal/goi-y/thong-ke — số LƯỢT có ít nhất một sự kiện đạt / không đạt
+```
+
+🛑 **Hai thứ trông giống nhau mà khác hẳn, ghi ra để không ai "gộp cho gọn":**
+`WebhookDelivery` cố ý KHÔNG lưu payload (lượt thử lại phải mang câu trả lời MỚI NHẤT), còn `luot_goi_y`
+lưu đúng payload (câu *"hôm ấy đã gửi gì"* không dựng lại được từ một kho tri thức đổi liên tục, `G5`).
+Và `maGoi` (chống trùng của lượt GỬI) khác `maLuotGoiY` (đổi theo từng lần thử) — có test giữ.
+
+⚠ Vì sao phản hồi sửa nhóm phải BỎ lượt chạy cũ: case đang chạy thì giữ quy trình của nó (`N6-1`), nên
+không bỏ thì sửa định tuyến không có tác dụng gì cho tới khi ai đó nhớ ra mà bỏ tay.
+
+⚠ Nhãn vòng J→G trên sơ đồ README ghi *"nạp lại cho thước đo tháng đầu"* — nhưng `docs/02` định nghĩa
+thước đo tháng đầu là M2 (duyệt + diff A/B), còn "có được dùng không" là M3 / tầng 1. Sửa nhãn ở P10.
+
+✅ 505/505 test (240 + 30 + 235), trước 494. Đột biến: bỏ dòng ghi SHOWN sau khi gửi thành công → đúng
+test đó đỏ. `kiem_dau_cuoi.py` mục N gọi thật hai route mới (không khai `nhomDung` — nó sửa dữ liệu thật).
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

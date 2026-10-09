@@ -45,7 +45,12 @@ public sealed class DinhTuyenDaNap : ITenantScoped
     public string? GiaiThich { get; set; }
 
     /// <summary>Ai nạp. Không phải để phân quyền — để lúc chấm lại biết lô nào của ai.</summary>
-    public required string NguoiNap { get; init; }
+    /// <summary>
+    /// Ai nạp lần GẦN NHẤT. Cho ghi đè từ 2026-10-10 (P6): phản hồi "nhóm đúng là X" của người dùng (`E2-1`) sửa
+    /// một kết quả đã có, và để nguyên tên người nạp cũ là để kết quả mới mang tên người không viết ra nó.
+    /// Lịch sử ai sửa gì nằm ở <c>luot_goi_y_su_kien</c>.
+    /// </summary>
+    public required string NguoiNap { get; set; }
 
     public DateTimeOffset NapLuc { get; init; } = DateTimeOffset.UtcNow;
 

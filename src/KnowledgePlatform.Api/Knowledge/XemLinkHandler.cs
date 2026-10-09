@@ -15,7 +15,14 @@ public sealed class LinkTokenContext
 {
     public Guid? KnowledgeRecordId { get; private set; }
 
-    internal void Dat(Guid recordId) => KnowledgeRecordId = recordId;
+    /// <summary>Lượt gợi ý đã phát link này, nếu có (P6) — để ghi nấc OPENED.</summary>
+    public Guid? LuotGoiYId { get; private set; }
+
+    internal void Dat(Guid recordId, Guid? luotGoiYId = null)
+    {
+        KnowledgeRecordId = recordId;
+        LuotGoiYId = luotGoiYId;
+    }
 }
 
 /// <summary>
@@ -52,7 +59,7 @@ public sealed class LinkTokenEndpointFilter(
         }
 
         tenantContext.Resolve(mo.TenantId);
-        linkContext.Dat(mo.KnowledgeRecordId);
+        linkContext.Dat(mo.KnowledgeRecordId, mo.LuotGoiYId);
 
         return await next(context);
     }
@@ -69,9 +76,26 @@ public sealed class LinkTokenEndpointFilter(
 /// đường ĐỌC vẫn kiểm lại: một bản đã duyệt có thể bị sửa và rơi về <c>NeedsReview</c> sau
 /// khi link đã phát. Kiểm ở một chỗ rồi tin mãi là cách một cổng đúng trở thành cổng hở.
 /// </summary>
-public sealed class XemLinkHandler(AppDbContext db, LinkTokenContext linkContext, Startup.CongChe congChe)
+public sealed class XemLinkHandler(
+    AppDbContext db, LinkTokenContext linkContext, Startup.CongChe congChe, GoiY.GoiYHandler goiY)
 {
+    /// <summary>
+    /// Mở một bản tri thức bằng link — và ghi nấc OPENED vào lượt gợi ý đã phát link, nếu có (ô `J`, P6).
+    /// Ghi CẢ lần mở không được (<c>DatDuoc = false</c>): một người bấm link rồi gặp "đang xem lại" cũng là dữ kiện.
+    /// </summary>
     public async Task<XemKetQua> XemAsync(CancellationToken ct = default)
+    {
+        var kq = await MoAsync(ct);
+
+        if (linkContext.LuotGoiYId is { } luot)
+        {
+            await goiY.GhiMoLinkAsync(luot, kq.MoDuoc, ct);
+        }
+
+        return kq;
+    }
+
+    private async Task<XemKetQua> MoAsync(CancellationToken ct)
     {
         var id = linkContext.KnowledgeRecordId
                  ?? throw new InvalidOperationException("Chưa có token nào được mở cho request này.");
@@ -160,7 +184,9 @@ public sealed class PhatLinkHandler(
 {
     private readonly LinkXemOptions _options = options.Value;
 
-    public async Task<PhatLinkKetQua> PhatAsync(Guid recordId, string nguoiPhat, int? hanNgay, CancellationToken ct = default)
+    /// <param name="luotGoiYId">Lượt gợi ý phát link này (P6) — webhook truyền vào; phát tay thì bỏ trống.</param>
+    public async Task<PhatLinkKetQua> PhatAsync(
+        Guid recordId, string nguoiPhat, int? hanNgay, CancellationToken ct = default, Guid? luotGoiYId = null)
     {
         if (string.IsNullOrWhiteSpace(_options.PublicBaseUrl))
         {
@@ -187,7 +213,7 @@ public sealed class PhatLinkHandler(
                 $"\"{record.DisplayState}\" — duyệt trước đã.");
         }
 
-        var (chuoi, hetHan) = await directory.PhatAsync(tenant.TenantId, recordId, nguoiPhat, han, ct);
+        var (chuoi, hetHan) = await directory.PhatAsync(tenant.TenantId, recordId, nguoiPhat, han, ct, luotGoiYId);
 
         return new PhatLinkKetQua(
             Phat: true, LyDo: null,

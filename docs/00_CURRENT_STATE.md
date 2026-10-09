@@ -309,7 +309,7 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >    P3  H  dẫn chứng thật: assertion_evidence > 0, bản B kế thừa, rút lại → NEEDS_REVIEW   ✅ 2026-10-10
 >    P4  D/E/F  ProcessDefinition · ProcessRun · suy bước hiện tại từ evidence   ✅ 2026-10-10
 >    P5  G/I  tra tri thức theo BƯỚC, trả kèm dẫn chứng (/hoi + webhook)   ✅ 2026-10-10
->    P6  J  ghi lượt gợi ý theo 5 nấc L2 + API phản hồi; phản hồi sửa nhóm = vòng J→G
+>    P6  J  ghi lượt gợi ý theo 5 nấc L2 + API phản hồi; phản hồi sửa nhóm = vòng J→G   ✅ 2026-10-10
 >    P7  "nhận về là xử lý luôn": evidence mới đổi bước hiện tại → gửi lượt mới
 >    P8  định tuyến ticket MỚI bằng model (cờ riêng, N7-1) — chưa có credit để chạy thật
 >    P9  Kênh 2: trích chữ không thêm thư viện + job quét thư mục
