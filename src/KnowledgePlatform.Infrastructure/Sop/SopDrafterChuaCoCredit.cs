@@ -18,15 +18,15 @@ public sealed class ChuaCoCreditException(string message) : Exception(message);
 /// (<c>--xuat-soan-nhap</c> → dán cho một ngữ cảnh AI → <c>POST /knowledge/sop-draft</c>),
 /// đúng đường mà `IM-29` đã đi thật ngày 2026-09-10.
 ///
-/// ⚠ Đổi sang bản gọi model thật là đặt `Anthropic:ApiKey` — KHÔNG sửa dòng code nào.
-/// Đó là toàn bộ lý do `AR3` giữ interface này mỏng.
+/// ⚠ Đổi sang bản gọi model thật là đặt `Anthropic:ApiKey` hoặc `ANTHROPIC_API_KEY` — KHÔNG sửa
+/// dòng code nào. Đó là toàn bộ lý do `AR3` giữ interface này mỏng.
 /// </summary>
 public sealed class SopDrafterChuaCoCredit : ISopDrafter
 {
     public Task<SopDraftResult> DraftAsync(SopDraftRequest request, CancellationToken ct = default) =>
         throw new ChuaCoCreditException(
             """
-            Chưa cấu hình Anthropic:ApiKey nên không gọi model được.
+            Chưa cấu hình khoá Anthropic (Anthropic:ApiKey hoặc ANTHROPIC_API_KEY) nên không gọi model được.
 
             Vòng thay thế, KHÔNG tốn credit và đã chạy thật (IM-29):
               1. dotnet run --project src/KnowledgePlatform.Api -- \

@@ -78,7 +78,12 @@ public sealed class WebhookGuiVeTests(ApiDatabaseFixture db) : IClassFixture<Api
     /// *"chưa khai báo đích thì không xếp hàng"* đọc phải cái đích mà test trước vừa khai,
     /// rồi xanh/đỏ tuỳ THỨ TỰ CHẠY. Cùng hình dạng lỗi mà `VongTriThucTests` đã ghi.
     /// </summary>
-    private async Task<BoiCanh> MoiBoiAsync(bool dinhTuyenBiet = true)
+    /// <param name="bangKhoaTran">
+    /// Bảng đo lưu mã TRẦN (<c>WH-…</c>) trong khi case mang khoá nguồn (<c>jira:WH-…</c>) — đúng
+    /// hình dạng của <c>dinh-tuyen-150-case.json</c> thật. Mặc định <c>false</c> giữ hành vi cũ
+    /// của file này, và chính mặc định đó là thứ đã GIẤU lỗi lệch khoá tới 2026-10-10.
+    /// </param>
+    private async Task<BoiCanh> MoiBoiAsync(bool dinhTuyenBiet = true, bool bangKhoaTran = false)
     {
         var (tenantKey, tenantId) = await db.TaoTenantMoiAsync();
         var id = Guid.CreateVersion7().ToString("N");
@@ -90,7 +95,7 @@ public sealed class WebhookGuiVeTests(ApiDatabaseFixture db) : IClassFixture<Api
         {
             ketQua = new Dictionary<string, object>
             {
-                [ticket] = new
+                [bangKhoaTran ? $"WH-{id}" : ticket] = new
                 {
                     nhom = dinhTuyenBiet ? nhom : "KHONG-BIET",
                     nguon = "noi-ro-trong-mo-ta",
@@ -273,6 +278,30 @@ public sealed class WebhookGuiVeTests(ApiDatabaseFixture db) : IClassFixture<Api
     // =========================================================================
     //  Gửi
     // =========================================================================
+
+    /// <summary>
+    /// 🛑 Lỗi THẬT tìm ra 2026-10-09 khi đối chiếu sơ đồ với code: connector gửi case mang khoá
+    /// nguồn <c>jira:ES-…</c>, bảng đo lưu <c>ES-…</c>, và webhook đưa nguyên khoá nguồn vào bộ
+    /// định tuyến → mọi lượt trượt bảng, ra KHÔNG BIẾT. Không crash, không đỏ test nào, vì mọi test
+    /// ở đây tự dựng bảng có sẵn tiền tố. Test này dựng bảng ĐÚNG hình dạng bảng thật.
+    /// </summary>
+    [Fact]
+    public async Task Bang_do_luu_ma_TRAN_thi_webhook_VAN_dinh_tuyen_ra_nhom()
+    {
+        var b = await MoiBoiAsync(bangKhoaTran: true);
+        using var app = App(b);
+        var c = app.CreateClient();
+
+        await KhaiBaoDichAsync(c);
+        await NapVaDuyetAsync(c, b.Nhom);
+        (await TinHieuAsync(c, b.Ticket)).EnsureSuccessStatusCode();
+
+        Assert.Equal(1, await GuiMotVongAsync(app, b));
+
+        var goi = JsonSerializer.Deserialize<JsonElement>(_benNhan.DaNhan.Single().Body);
+        Assert.True(goi.GetProperty("bietTraLoi").GetBoolean());
+        Assert.Equal(b.Nhom, goi.GetProperty("nhom").GetString());
+    }
 
     [Fact]
     public async Task Goi_gui_di_mang_tom_tat_VA_link_va_chu_ky_dung()

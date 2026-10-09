@@ -491,6 +491,25 @@ phẩm nằm ở `docs/18` NHÓM N. Mỗi phase là một commit, và mục này
 ⚠ Năm trong chín chỗ là **lỗi im lặng** — đúng loại lỗi mà cả dự án dựng ra để chặn. Không chỗ
 nào làm crash. Ghi lại vì bản nháp đó trông hoàn chỉnh.
 
+### P1 ✅ — hai lỗi định tuyến (2026-10-10)
+
+```text
+1  Bảng đo khớp chính xác, mà bảng lưu ES-… còn case mang jira:ES-…  -> mọi webhook KHÔNG BIẾT
+   Sửa: khớp chính xác TRƯỚC (ý người ghi thắng), trượt thì bỏ tiền tố nguồn rồi thử lại.
+   Bỏ MỌI tiền tố trước ':' đầu tiên + đuôi '#…' — gắn cứng "jira:" là trái G1.
+2  Host KIỂM Anthropic:ApiKey, client ĐỌC ANTHROPIC_API_KEY — hai tên, hai chỗ đọc
+   Sửa: KhoaAnthropic.Doc đọc cả hai từ IConfiguration, đưa thẳng cho AnthropicClient.
+   Tách SopDrafterOptions.ModelMacDinh để đường gọi model thứ hai (P8) dùng lại đúng nó.
+```
+
+⚠ **Bẫy dựng sẵn mà sửa (2) suýt mở ra:** test chạy với biến môi trường của máy. Host bắt đầu
+đọc `ANTHROPIC_API_KEY` thì một máy dev có sẵn khoá sẽ biến test *"chưa có credit"* thành một
+lượt **gọi model thật** — tốn tiền, xanh/đỏ theo máy. `ApiFactory` giờ xoá trắng hai khoá đó
+trước mọi cấu hình của test.
+
+✅ 432/432 test (212 + 27 + 193), trước 418. Test webhook mới đã chứng minh biết ĐỎ: tắt đường
+lùi → đỏ; bật lại → xanh.
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

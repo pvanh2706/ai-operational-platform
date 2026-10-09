@@ -32,6 +32,17 @@ public sealed class ApiFactory(Dictionary<string, string?> settings, Action<ISer
         builder.UseEnvironment("Production");
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
 
+        // 🛑 XOÁ TRẮNG khoá Anthropic thừa hưởng từ máy chạy test. Host đọc cả biến môi trường
+        //   ANTHROPIC_API_KEY (KhoaAnthropic), nên một máy dev có sẵn khoá sẽ biến test "chưa có
+        //   credit" thành một lượt GỌI MODEL THẬT — tốn tiền, và xanh/đỏ theo máy. Đặt TRƯỚC
+        //   `settings` để test nào cần khoá vẫn ghi đè được.
+        builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(
+            new Dictionary<string, string?>
+            {
+                ["Anthropic:ApiKey"] = string.Empty,
+                ["ANTHROPIC_API_KEY"] = string.Empty,
+            }));
+
         builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(settings));
         if (dichVu is not null) builder.ConfigureServices(dichVu);
     }

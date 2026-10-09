@@ -48,7 +48,11 @@ public sealed class DinhTuyenTraSan : IDinhTuyenNhom
                 "Muốn định tuyến ticket mới thì phải cắm bản gọi model thật."));
         }
 
-        if (!_bang.Value.TryGetValue(yeuCau.MaTicket.Trim(), out var dong))
+        var ma = yeuCau.MaTicket.Trim();
+
+        // Khớp CHÍNH XÁC trước; trượt thì thử lại bằng khoá đã bỏ tiền tố nguồn. Xem BoTienToNguon.
+        if (!_bang.Value.TryGetValue(ma, out var dong)
+            && !(BoTienToNguon(ma) is { } tran && _bang.Value.TryGetValue(tran, out dong)))
         {
             return Task.FromResult(KetQuaDinhTuyen.KhongXacDinh(
                 "tra-san-khong-co-trong-bang",
@@ -63,6 +67,39 @@ public sealed class DinhTuyenTraSan : IDinhTuyenNhom
         }
 
         return Task.FromResult(new KetQuaDinhTuyen(dong.Nhom, dong.Nguon ?? "khong-ro", dong.VietTat));
+    }
+
+    /// <summary>
+    /// Khoá nguồn của case (<c>jira:ES-345990</c>) → mã trần mà bảng đo dùng (<c>ES-345990</c>).
+    /// Trả <c>null</c> khi không có gì để bỏ.
+    ///
+    /// 🛑 Vì sao phải có: bảng đo lưu mã TRẦN, còn case vào qua connector mang tiền tố nguồn
+    /// (`G1` — <c>sourceReference</c> là chuỗi tự do). <c>WebhookSender</c> đưa nguyên khoá nguồn
+    /// vào, nên trước 2026-10-10 MỌI lượt webhook trượt bảng và ra KHÔNG BIẾT — kể cả cho chính
+    /// 150 ticket đã đo — trong khi <c>/hoi</c> với mã trần thì ra nhóm. Cùng một ticket, hai
+    /// đường ra, hai kết cục. Test cũ không thấy vì nó tự dựng bảng có sẵn tiền tố <c>jira:</c>.
+    ///
+    /// ⚠ Bỏ MỌI tiền tố (phần trước dấu <c>:</c> đầu tiên), không chỉ <c>jira:</c> — gắn cứng tên
+    /// một connector ở đây là trái `G1`. Đuôi <c>#…</c> (khoá của một mẩu evidence) cũng bỏ.
+    ///
+    /// ⚠ Bảng đo là SINGLETON dùng chung mọi khách hàng. Bỏ tiền tố làm bảng trả lời được cho
+    /// nhiều khoá hơn — vô hại hôm nay vì bảng chỉ chứa 150 ticket của khách #0, nhưng là thứ
+    /// phải nhớ nếu có ngày bảng chứa dữ liệu của hơn một khách.
+    /// </summary>
+    public static string? BoTienToNguon(string khoa)
+    {
+        ArgumentNullException.ThrowIfNull(khoa);
+
+        var tran = khoa;
+
+        var thang = tran.IndexOf('#');
+        if (thang >= 0) tran = tran[..thang];
+
+        var haiCham = tran.IndexOf(':');
+        if (haiCham >= 0) tran = tran[(haiCham + 1)..];
+
+        tran = tran.Trim();
+        return tran.Length == 0 || tran == khoa ? null : tran;
     }
 
     private IReadOnlyDictionary<string, DongTraSan> Doc()

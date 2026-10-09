@@ -121,10 +121,13 @@ builder.Services.AddSingleton<IKhoFile>(sp =>
 //
 // 🛑 Không có khoá thì cắm bản NÉM kèm hướng dẫn, KHÔNG để trống DI (host chết vì một tính
 //   năng chưa dùng tới) và KHÔNG trả bản nháp rỗng (nó đi thẳng vào kho, trông như thật).
+//
+// ⚠ Khoá đọc ĐÚNG MỘT LẦN và đưa thẳng cho client — xem KhoaAnthropic cho lỗi đã có ở đây
+//   (kiểm một tên, client đọc một tên khác).
 builder.Services.AddScoped<ISopDrafter>(sp =>
-    string.IsNullOrWhiteSpace(sp.GetRequiredService<IConfiguration>()["Anthropic:ApiKey"])
-        ? new SopDrafterChuaCoCredit()
-        : new AnthropicSopDrafter(new Anthropic.AnthropicClient()));
+    KhoaAnthropic.Doc(sp.GetRequiredService<IConfiguration>()) is { } khoaAnthropic
+        ? new AnthropicSopDrafter(new Anthropic.AnthropicClient { ApiKey = khoaAnthropic })
+        : new SopDrafterChuaCoCredit());
 builder.Services.AddScoped<WebhookConfigHandler>();
 builder.Services.AddScoped<WebhookSender>();
 

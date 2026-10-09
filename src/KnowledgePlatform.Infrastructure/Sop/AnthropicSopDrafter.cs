@@ -6,14 +6,24 @@ using KnowledgePlatform.Domain.Sop;
 namespace KnowledgePlatform.Infrastructure.Sop;
 
 /// <summary>
-/// Cấu hình cho <see cref="AnthropicSopDrafter"/>. Cố ý KHÔNG có API key ở đây: SDK tự đọc
-/// `ANTHROPIC_API_KEY` (hoặc profile của `ant auth login`). Một khoá đi qua tay mình là
-/// một khoá có thể rơi vào log, vào appsettings, vào git.
+/// Cấu hình cho <see cref="AnthropicSopDrafter"/>. Cố ý KHÔNG có API key ở đây: khoá thuộc về
+/// <c>AnthropicClient</c>, không thuộc về lớp này. Một khoá nằm trong options là một khoá có thể
+/// rơi vào log (options hay được in ra khi gỡ lỗi), vào appsettings, vào git.
+///
+/// ⚠ Sửa 2026-10-10: câu cũ ở đây nói *"SDK tự đọc `ANTHROPIC_API_KEY`"* — đúng với SDK, nhưng
+/// host lại KIỂM một tên khác (<c>Anthropic:ApiKey</c>) để chọn bản hiện thực. Host giờ đọc khoá
+/// từ cấu hình đúng một lần rồi đưa cho client — xem <c>KhoaAnthropic</c> ở project Api.
 /// </summary>
 public sealed class SopDrafterOptions
 {
-    /// <summary>`AR3` chốt `claude-opus-5`. Đổi model là một quyết định, không phải tuỳ chọn vận hành.</summary>
-    public string Model { get; init; } = "claude-opus-5";
+    /// <summary>
+    /// `AR3` chốt <c>claude-opus-5</c>. Hằng số để đường gọi model THỨ HAI (định tuyến) dùng lại
+    /// đúng nó: đổi model là quyết định `AGENT.md` §10.1, không phải tuỳ chọn vận hành — và hai chỗ
+    /// tự viết chuỗi riêng là hai chỗ sẽ lệch nhau.
+    /// </summary>
+    public const string ModelMacDinh = "claude-opus-5";
+
+    public string Model { get; init; } = ModelMacDinh;
 
     /// <summary>
     /// Bản nháp của một nhóm 10 case đo được khoảng 5-6 nghìn token đầu ra. Để 16 000 vì
