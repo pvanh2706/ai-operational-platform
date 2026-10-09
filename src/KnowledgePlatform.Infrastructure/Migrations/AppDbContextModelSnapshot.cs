@@ -819,6 +819,10 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("DeliveredAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("KhoaKhuTrung")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<string>("LastError")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -829,6 +833,10 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
+                    b.Property<string>("SuKien")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<string>("Subject")
                         .IsRequired()
                         .HasMaxLength(1024)
@@ -838,6 +846,10 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "KhoaKhuTrung")
+                        .IsUnique()
+                        .HasFilter("\"KhoaKhuTrung\" IS NOT NULL");
 
                     b.HasIndex("TenantId", "State", "NextAttemptAt");
 

@@ -56,6 +56,12 @@ public sealed record WebhookPayload(
     [System.Text.Json.Serialization.JsonIgnore(
         Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public Guid? MaLuotGoiY { get; init; }
+
+    /// <summary>
+    /// Thêm 2026-10-10 (P7): vì sao có gói này — <c>case-moi</c> (có việc mới ở nguồn) hay <c>buoc-hien-tai-doi</c>
+    /// (dữ liệu vừa nhận làm case bước sang bước khác; <see cref="QuyTrinh"/> mang bước MỚI).
+    /// </summary>
+    public string SuKien { get; init; } = "case-moi";
 }
 
 /// <param name="TraTheo"><c>buoc</c> = hướng dẫn tra theo bước hiện tại · <c>nhom</c> = rơi về mức nhóm.</param>

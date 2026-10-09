@@ -24,7 +24,8 @@ public sealed class QuyTrinhHandler(
     ITenantContext tenant,
     KhopQuyTrinh khop,
     CongChe congChe,
-    IOptions<TenancyOptions> tenancy)
+    IOptions<TenancyOptions> tenancy,
+    XuLyNgay xuLyNgay)
 {
     // =========================================================================
     //  Định nghĩa
@@ -222,7 +223,7 @@ public sealed class QuyTrinhHandler(
         var noiDung = $"Đã làm bước {buoc.Ma} ({buoc.NoiDung}) — xác nhận bởi {yc.NguoiXacNhan.Trim()}." +
                       (string.IsNullOrWhiteSpace(yc.GhiChu) ? "" : $" Ghi chú: {yc.GhiChu.Trim()}");
 
-        db.EvidenceItems.Add(new EvidenceItem
+        var xacNhan = new EvidenceItem
         {
             TenantId = tenant.TenantId,
             Content = congChe.CheBenThuBa(noiDung).Text,
@@ -233,8 +234,12 @@ public sealed class QuyTrinhHandler(
             Origin = Origin.UserConfirmed,
             XacNhanProcessStepId = buoc.Id,
             DaCheBenThuBa = congChe.DaQuaCongChe,
-        });
+        };
+        db.EvidenceItems.Add(xacNhan);
         await db.SaveChangesAsync(ct);
+
+        // P7: lời xác nhận cũng là dữ liệu vừa nhận — bước đổi thì xếp một lượt trả kết quả về.
+        await xuLyNgay.SauKhiCoEvidenceAsync([xacNhan.Id], ct);
 
         return KetQua<TienDoCase>.Xong(TienDoCase.Tu(yc.KhoaNguon, await khop.KhopAsync(c, tuyen, taoLuotChay: false, ct)));
     }

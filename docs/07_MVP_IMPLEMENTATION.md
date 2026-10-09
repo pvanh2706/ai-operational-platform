@@ -667,6 +667,27 @@ thước đo tháng đầu là M2 (duyệt + diff A/B), còn "có được dùng
 ✅ 505/505 test (240 + 30 + 235), trước 494. Đột biến: bỏ dòng ghi SHOWN sau khi gửi thành công → đúng
 test đó đỏ. `kiem_dau_cuoi.py` mục N gọi thật hai route mới (không khai `nhomDung` — nó sửa dữ liệu thật).
 
+### P7 ✅ — "nhận về là xử lý luôn" (2026-10-10)
+
+Mẩu evidence MỚI (đường nạp tín hiệu) hoặc một lời xác nhận bước làm case BƯỚC SANG bước khác → xếp một
+lượt trả kết quả về, `suKien: buoc-hien-tai-doi`, gói mang tri thức của bước MỚI.
+
+🛑 "Bước đổi" nhận ra bằng cách SUY tiến độ HAI LẦN — trước và sau lô vừa nhận — bằng cùng hàm thuần
+`TienDoQuyTrinh`. Không có cờ "bước trước đó" nào được lưu (PR1). So trước/sau chứ không so với lượt gửi
+gần nhất: lượt "case mới" đã mang bước K1, và so với nó thì mẩu đầu tiên ở K1 sẽ đẻ một thông báo trùng.
+
+```text
+KHÔNG xếp khi    chưa có lượt chạy · case đã xong ở nguồn (tinh thần F1-1) · đang có lượt CHỜ (nó dựng
+                 gói lúc gửi nên tự mang bước mới nhất) · khoá chống trùng (lượt chạy + bước) đã có
+chống trùng      webhook_delivery.KhoaKhuTrung, unique khi có giá trị — hai lô cùng làm đổi một bước
+                 cùng lúc thì database giữ đúng một lượt
+case-status      VẪN không làm gì (F1-1, có test giữ)
+rút lại (AR-m)   có thể làm tiến độ LÙI, nhưng đó là việc của người — không kích hoạt
+```
+
+✅ 511/511 test (240 + 30 + 241), trước 505. Đột biến: bỏ phép so trước/sau (xếp với mọi mẩu mới) → đúng
+test "không đổi bước thì không xếp" đỏ.
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

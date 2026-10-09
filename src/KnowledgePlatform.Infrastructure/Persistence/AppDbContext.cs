@@ -272,6 +272,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.Property(x => x.Subject).HasMaxLength(1024).IsRequired();
             e.Property(x => x.LastError).HasMaxLength(1000);
             e.Property(x => x.State).HasConversion<int>();
+            e.Property(x => x.SuKien).HasMaxLength(32);
+            e.Property(x => x.KhoaKhuTrung).HasMaxLength(128);
+
+            // P7: một lần đổi bước = TỐI ĐA một thông báo, kể cả khi hai lô cùng làm đổi bước đó cùng lúc.
+            e.HasIndex(x => new { x.TenantId, x.KhoaKhuTrung }).IsUnique().HasFilter("\"KhoaKhuTrung\" IS NOT NULL");
 
             // Đường NÓNG của vòng quét: "còn chờ, và đã tới hạn".
             e.HasIndex(x => new { x.TenantId, x.State, x.NextAttemptAt });

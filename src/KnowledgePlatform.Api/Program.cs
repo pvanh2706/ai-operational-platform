@@ -115,6 +115,7 @@ builder.Services.AddScoped<DocumentHandler>();
 // P4 (2026-10-10, mở lại I1): quy trình — ô D/E/F của sơ đồ luồng tín hiệu.
 builder.Services.AddScoped<KhopQuyTrinh>();
 builder.Services.AddScoped<QuyTrinhHandler>();
+builder.Services.AddScoped<XuLyNgay>();
 
 // P6 (2026-10-10): ô J — lượt gợi ý + phản hồi. Taxonomy đọc MỘT lần (singleton, không chạm tenant).
 builder.Services.AddSingleton<TaxonomyNhom>();

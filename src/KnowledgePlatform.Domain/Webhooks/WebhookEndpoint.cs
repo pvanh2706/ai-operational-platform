@@ -100,6 +100,18 @@ public sealed class WebhookDelivery : ITenantScoped
     public DateTimeOffset? DeliveredAt { get; set; }
 
     /// <summary>
+    /// Vì sao có lượt gửi này (P7, 2026-10-10): <c>NULL</c> = case MỚI (mọi lượt trước P7 đều là loại này) ·
+    /// <c>buoc-hien-tai-doi</c> = dữ liệu vừa nhận làm case bước sang bước khác. Gói gửi đi mang đúng giá trị này.
+    /// </summary>
+    public string? SuKien { get; init; }
+
+    /// <summary>
+    /// Khoá chống trùng (lượt chạy + bước), unique khi có giá trị. Nạp lại cả lô evidence không đẻ thông báo thứ
+    /// hai cho cùng một lần đổi bước — cùng luật `IM-20` mà đường VÀO đã giữ, giờ áp cho đường RA.
+    /// </summary>
+    public string? KhoaKhuTrung { get; init; }
+
+    /// <summary>
     /// Ghi nhận một lượt thất bại và xếp lịch thử lại, giãn theo cấp số nhân.
     ///
     /// Giãn dần chứ không đều: bên nhận sập thường sập vài phút tới vài giờ, và đập cửa mỗi

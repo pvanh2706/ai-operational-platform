@@ -25,7 +25,8 @@ namespace KnowledgePlatform.Api.Signals;
 /// chỉ sinh khi có hành vi khẳng định. Response nói đúng thứ đã xảy ra: mẩu nào,
 /// gắn case nào, mới hay đã có (`G11`).
 /// </summary>
-public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant, Startup.CongChe congChe)
+public sealed class CaseEvidenceHandler(
+    AppDbContext db, ITenantContext tenant, Startup.CongChe congChe, QuyTrinh.XuLyNgay xuLyNgay)
 {
     /// <summary>
     /// Tra một lượt mọi khoá case được nhắc tới trong lô. MỘT câu truy vấn cho cả lô,
@@ -89,6 +90,10 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant, 
             .Count();
 
         var boQua = results.Count(r => r.SubTenantNotApplied);
+
+        // P7 — "nhận về là xử lý luôn": mẩu MỚI có thể làm case bước sang bước khác → xếp một lượt trả kết quả
+        // về. Chỉ mẩu VỪA TẠO: gửi lại mẩu cũ (created: false) không phải dữ liệu mới.
+        await xuLyNgay.SauKhiCoEvidenceAsync([.. results.Where(r => r.Created).Select(r => r.EvidenceId)], ct);
 
         return new CaseEvidenceBatchResult(
             Received: signals.Count,

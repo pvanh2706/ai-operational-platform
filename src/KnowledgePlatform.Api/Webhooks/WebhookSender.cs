@@ -160,6 +160,7 @@ public sealed class WebhookSender(
                     q.DaXongHet, q.TraTheo)
                 : null,
             MaLuotGoiY = luotGoiY.Id,
+            SuKien = luot.SuKien ?? "case-moi",
         };
 
         // Ảnh chụp ĐÚNG thứ sắp gửi — lưu cùng lượt gửi ở cuối vòng quét, kể cả khi gửi hỏng (khi đó lượt

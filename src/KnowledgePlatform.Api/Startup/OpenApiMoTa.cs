@@ -83,7 +83,9 @@ public static partial class OpenApiMoTa
                 "cố ý không tự điền hộ, vì \"chưa biết\" khác \"chưa ai hỏi\". " +
                 "Nội dung đi qua luật che dữ liệu bên thứ ba ngay tại cửa vào — TRỪ KHI bản deploy " +
                 "bật cờ `CongChe:TatTamVaChapNhanRuiRo` (N1-2); khi đó mẩu vào kho NGUYÊN VĂN và " +
-                "không che lại được về sau."),
+                "không che lại được về sau. 🎯 P7: mẩu MỚI làm case bước sang bước khác của quy trình " +
+                "đang chạy thì một lượt trả kết quả về được xếp hàng (`suKien: buoc-hien-tai-doi`) — " +
+                "gửi lại cùng mẩu không xếp thêm."),
 
             ["POST /evidence/rut-lai"] = new(NhomTinHieu,
                 "Đánh dấu một mẩu đã bị NGƯỜI GỬI rút lại",
