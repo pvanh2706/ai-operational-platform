@@ -30,6 +30,12 @@ public sealed class SopDrafterOptions
     /// đụng trần là output bị cắt giữa câu và phải gọi lại — mà gọi lại thì mất tiền hai lần.
     /// </summary>
     public int MaxTokens { get; init; } = 16_000;
+
+    /// <summary>
+    /// <c>false</c> chỉ khi bản deploy bật cờ `N1-2` — payload đi nguyên văn. Mặc định <c>true</c>:
+    /// công cụ rời <c>SoanNhapRunner</c> dựng options không truyền ô này, và nó phải LUÔN che.
+    /// </summary>
+    public bool QuaCongChe { get; init; } = true;
 }
 
 /// <summary>
@@ -63,7 +69,7 @@ public sealed class AnthropicSopDrafter(AnthropicClient client, SopDrafterOption
     {
         // Cổng che chạy Ở ĐÂY, trước khi có byte nào rời khỏi máy (`AR-o`). Nếu payload
         // không sạch được thì hàm này ném và KHÔNG gọi gì — fail closed.
-        var prompt = SopPromptBuilder.Build(request);
+        var prompt = SopPromptBuilder.Build(request, _options.QuaCongChe);
 
         var schema = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(SopDraftSchema.Json)
                      ?? throw new InvalidOperationException("SopDraftSchema.Json không đọc được.");

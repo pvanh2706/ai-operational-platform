@@ -46,6 +46,13 @@ DIA_CHI = "127.0.0.1"
 CONG = 8791
 
 # Trạng thái phiên — RAM, không bền. `auth` là chuỗi bí mật: không bao giờ đi ra ngoài.
+# `N1-2` (docs/18, 2026-10-10): chủ dự án chọn TẮT TẠM mọi cổng che bằng MỘT cờ. Phía server
+# là `CongChe:TatTamVaChapNhanRuiRo`; phía giao diện này là biến môi trường dưới đây. Bật thì cổng
+# credential của check_corpus vẫn CHẠY và vẫn BÁO — chỉ thôi CHẶN nút gửi vào kho.
+# ⚠ Hai cờ là hai chỗ đặt riêng, cố ý: giao diện không đọc được cấu hình của server. Bật cờ ở đây
+#   mà server vẫn che thì mẩu vào kho VẪN được che bên thứ ba; ngược lại thì không.
+CONG_CHE_TAT_TAM = os.environ.get("KP_CONG_CHE_TAT_TAM") == "1"
+
 PHIEN: dict = {
     "base": None, "auth": None, "nhan": None,
     "cases": [], "evidence": [], "jql": None,
@@ -489,6 +496,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "viec": DANG_CHAY["viec"],
                 "baoCao": DANG_CHAY.get("bao_cao"),
                 "corpusChan": PHIEN["corpus_chan"],
+                "congCheTatTam": CONG_CHE_TAT_TAM,
                 "soCase": len(PHIEN["cases"]),
                 "soEvidence": len(PHIEN["evidence"]),
             })
@@ -778,10 +786,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if not PHIEN["cases"]:
             self._tra(400, {"loi": "Chưa quét được lô nào."})
             return
-        if PHIEN["corpus_chan"]:
+        if PHIEN["corpus_chan"] and not CONG_CHE_TAT_TAM:
             # 🛑 Không cho đi vòng. AR-j: đường nạp KHÔNG che credential, ThirdPartyRedactor
             #   chỉ che dữ liệu bên thứ ba. Cổng này là thứ duy nhất đứng giữa 61 chỗ nghi
             #   là bí mật và database.
+            #   ⚠ Ngoại lệ DUY NHẤT: cờ `N1-2` (KP_CONG_CHE_TAT_TAM=1) — quyết định có ghi lại
+            #     của chủ dự án, không phải một đường vòng.
             self._tra(409, {"loi": "check_corpus báo CHẶN — còn chỗ nghi là credential. "
                                    "Không gửi vào kho."})
             return
@@ -799,6 +809,9 @@ def main() -> int:
     dia = f"http://{DIA_CHI}:{CONG}"
     print(f"Giao diện chạy ở {dia}")
     print("⚠ Trang này hiện dữ liệu khách thật. Chỉ nghe trên loopback; Ctrl+C để tắt.")
+    if CONG_CHE_TAT_TAM:
+        print("🛑 KP_CONG_CHE_TAT_TAM=1 — cổng credential CHỈ BÁO, KHÔNG CHẶN (N1-2). "
+              "Lô có mật khẩu/token vẫn gửi được vào kho.")
     try:
         webbrowser.open(dia)
     except Exception:  # noqa: BLE001 — không mở được trình duyệt thì vẫn chạy

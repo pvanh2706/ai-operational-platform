@@ -340,15 +340,25 @@ async function theoDoi() {
   }
 
   let h = `Quét xong: <b>${r.soCase}</b> case, <b>${r.soEvidence}</b> mẩu nội dung.`;
-  if (r.corpusChan) {
+  const coNut = !r.corpusChan || r.congCheTatTam;
+  if (r.corpusChan && !r.congCheTatTam) {
     h += `<br><br><b>Cổng credential CHẶN.</b> Trong lô này còn chỗ nghi là mật khẩu /
           ID điều khiển từ xa. Đường nạp của phần mềm <b>không</b> che credential
           (nó chỉ che dữ liệu bên thứ ba), nên nút gửi vào kho bị khoá.`;
+    bao('#baoQuet', 'chu-y', h);
+  } else if (r.corpusChan) {
+    // N1-2: chủ dự án chọn tắt tạm cổng che. Vẫn BÁO rõ, chỉ thôi khoá nút.
+    h += `<br><br><b>Cổng credential báo CÓ chỗ nghi là mật khẩu / ID điều khiển từ xa</b> —
+          nhưng cờ <code>KP_CONG_CHE_TAT_TAM=1</code> đang bật (N1-2), nên vẫn gửi được.
+          Các giá trị đó sẽ vào kho <b>nguyên văn</b>.
+          <button id="btnGui" style="margin-top:10px">Gửi vào phần mềm (KHÔNG che)</button>`;
     bao('#baoQuet', 'chu-y', h);
   } else {
     h += `<br>Cổng credential: sạch.
           <button id="btnGui" style="margin-top:10px">Gửi vào phần mềm</button>`;
     bao('#baoQuet', 'ok', h);
+  }
+  if (coNut) {
     $('#btnGui').onclick = async () => {
       $('#btnGui').disabled = true;
       const k = await api('gui-kho', {});

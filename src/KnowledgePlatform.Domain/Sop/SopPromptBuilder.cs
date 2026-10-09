@@ -115,7 +115,12 @@ public static class SopPromptBuilder
     /// Dựng payload. Ném <see cref="EgressBlockedException"/> nếu cổng che không làm sạch
     /// được — `AR-o` fail closed.
     /// </summary>
-    public static SopPrompt Build(SopDraftRequest request)
+    /// <param name="quaCongChe">
+    /// <c>false</c> CHỈ khi bản deploy bật cờ `N1-2` (<c>CongChe:TatTamVaChapNhanRuiRo</c>) — khi đó
+    /// payload đi NGUYÊN VĂN, đếm 0 chỗ che. Mặc định <c>true</c>, cố ý: Domain không đọc cấu hình,
+    /// nên một chỗ gọi mới mà quên truyền tham số này phải rơi về phía CÓ che, không phải phía hở.
+    /// </param>
+    public static SopPrompt Build(SopDraftRequest request, bool quaCongChe = true)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (request.Cases.Count == 0)
@@ -170,6 +175,13 @@ public static class SopPromptBuilder
         // không mang nhãn mật khẩu (1), không mang tên công cụ remote (2), và không có key
         // JSON (4). Nếu ai đổi khung thì phải kiểm lại đúng bốn điều đó — đổi khung thành
         // một dòng chỉ có số là tự che mất mã ticket của mình.
+        if (!quaCongChe)
+        {
+            // `N1-2`: cờ tắt-tạm đang bật. Không che, không quét lại — và đếm 0 chỗ, để biên lai
+            // `LuotSoanNhap.SoChoDaChe` nói đúng sự thật thay vì một con số trông như đã che.
+            return new SopPrompt(SystemText, sb.ToString(), 0);
+        }
+
         var daChe = EgressRedactor.Redact(sb.ToString());
         EgressRedactor.EnsureSafeToSend(daChe.Text);
 

@@ -46,7 +46,7 @@ public sealed record KetQuaNap(int DaNap, int DaDe, IReadOnlyList<string> BoQua)
 ///     bẫy thứ ba, cùng loại lỗi mà `G6`/`AP3` chặn ở bản nháp SOP.</item>
 /// </list>
 /// </summary>
-public sealed class VongKhongCredit(AppDbContext db, ITenantContext tenant)
+public sealed class VongKhongCredit(AppDbContext db, ITenantContext tenant, Startup.CongChe congChe)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -96,11 +96,21 @@ public sealed class VongKhongCredit(AppDbContext db, ITenantContext tenant)
         ];
     }
 
-    /// <summary>Dựng gói để dán cho một ngữ cảnh AI đọc. Nội dung ĐÃ qua cổng che.</summary>
-    public static string DungGoi(IReadOnlyList<TicketCanDinhTuyen> ticket, JsonElement taxonomy) =>
+    /// <summary>Dựng gói để dán cho một ngữ cảnh AI đọc.</summary>
+    /// <param name="daQuaCongChe">
+    /// Nội dung trong <paramref name="ticket"/> có đi qua cổng che không — để câu cảnh báo in vào
+    /// file nói ĐÚNG sự thật. Cờ `N1-2` bật thì file chứa dữ liệu nguyên văn, và câu "ĐÃ qua cổng
+    /// che" cũ sẽ là một lời nói dối nằm ngay đầu file.
+    /// </param>
+    public static string DungGoi(
+        IReadOnlyList<TicketCanDinhTuyen> ticket, JsonElement taxonomy, bool daQuaCongChe = true) =>
         JsonSerializer.Serialize(new
         {
-            _canhBao = "Dữ liệu khách hàng. ĐÃ qua cổng che AR-o. Không commit, không dán ra nơi công khai.",
+            _canhBao = daQuaCongChe
+                ? "Dữ liệu khách hàng. ĐÃ qua cổng che AR-o. Không commit, không dán ra nơi công khai."
+                : "Dữ liệu khách hàng CHƯA CHE — cờ N1-2 đang bật. Có thể chứa mật khẩu/token thật. " +
+                  "Không commit, không dán ra nơi công khai.",
+            daQuaCongChe,
             huongDan = HuongDan,
             soTicket = ticket.Count,
             taxonomy,
@@ -200,7 +210,7 @@ public sealed class VongKhongCredit(AppDbContext db, ITenantContext tenant)
         return new KetQuaNap(daNap, daDe, boQua);
     }
 
-    private static string Che(string? s) => EgressRedactor.Redact(s).Text;
+    private string Che(string? s) => congChe.CheDuongRa(s).Text;
 
     private const string HuongDan = """
         Bạn nhận một danh sách ticket hỗ trợ và một TAXONOMY gồm các nhóm nguyên nhân.

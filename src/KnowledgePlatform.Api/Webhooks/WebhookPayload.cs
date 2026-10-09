@@ -21,6 +21,11 @@ namespace KnowledgePlatform.Api.Webhooks;
 /// <c>nhom-chua-co-sop-duoc-duyet</c> (đúng nhóm nhưng nhóm chưa có SOP được người duyệt).
 /// Hai thứ rất khác nhau về việc phải làm gì tiếp.
 /// </param>
+/// <param name="DaQuaCongChe">
+/// Thêm 2026-10-10 (`N1-2`). <c>false</c> nghĩa là bản deploy đang bật cờ tắt-tạm cổng che:
+/// tóm tắt và tiêu đề trong gói này là NGUYÊN VĂN, có thể chứa mật khẩu/token thật. Thêm ô nên
+/// giữ <see cref="PhienBan"/> = "1" (`docs/19` §6).
+/// </param>
 public sealed record WebhookPayload(
     string PhienBan,
     Guid MaGoi,
@@ -30,7 +35,8 @@ public sealed record WebhookPayload(
     string? Nhom,
     string NguonDinhTuyen,
     string? LyDoKhongBiet,
-    IReadOnlyList<WebhookHuongDan> HuongDan)
+    IReadOnlyList<WebhookHuongDan> HuongDan,
+    bool DaQuaCongChe)
 {
     public const string PhienBanHienTai = "1";
 }

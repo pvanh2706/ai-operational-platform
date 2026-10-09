@@ -510,6 +510,33 @@ trước mọi cấu hình của test.
 ✅ 432/432 test (212 + 27 + 193), trước 418. Test webhook mới đã chứng minh biết ĐỎ: tắt đường
 lùi → đỏ; bật lại → xanh.
 
+### P2 ✅ — cờ tắt tạm cổng che `CongChe:TatTamVaChapNhanRuiRo` (2026-10-10)
+
+```text
+MỘT cửa          Api/Startup/CongChe — CheDuongRa (AR-o) · CheBenThuBa (AR-n B2a)
+                 thay 4 helper Che() riêng lẻ: WebhookSender · XemLinkHandler · VongKhongCredit
+                 + CaseEvidenceHandler. Cờ chỉ đọc ở MỘT chỗ.
+Domain           SopPromptBuilder.Build(req, quaCongChe = true) — Domain không đọc cấu hình,
+                 nên chỗ gọi mới quên tham số phải rơi về phía CÓ che. Có test giữ chiều rơi đó.
+cửa MỘT CHIỀU    evidence_item.DaCheBenThuBa (nullable, KHÔNG điền bù: NULL = trước luật)
+shared           TỪ CHỐI KHỞI ĐỘNG khi cờ bật — dữ liệu nhiều công ty, không ai trong số họ chấp nhận
+nói ra           cảnh báo mỗi lần khởi động · mục riêng trong --kiem-cau-hinh · daQuaCongChe ở
+                 webhook + /xem · câu "ĐÃ qua cổng che" trong file xuất đổi theo cờ
+giao diện Jira   KP_CONG_CHE_TAT_TAM=1: check_corpus vẫn chạy và vẫn BÁO, chỉ thôi khoá nút gửi
+```
+
+⚠ **Tìm thấy lúc làm, sửa trong cùng commit:** mô tả OpenAPI của `POST /hoi` ngụ ý nội dung trả về
+đi qua cổng che (*"cổng che ở khâu gửi ra chỉ phải canh một đường"*). Không đúng — `HoiHandler` trả
+nội dung tri thức nguyên văn từ trước tới nay. Chỉ webhook và `/xem` đi qua cổng. Câu mô tả đã sửa
+cho khớp; hành vi KHÔNG đổi.
+
+⚠ **Sự cố môi trường giữa phase:** ổ `C:` của máy dev hết sạch chỗ (0 GB) — build, test và cả
+heredoc của bash đều chết với *"No space left on device"*. Thư mục tạm chỉ chiếm ~800 MB nên thủ
+phạm nằm chỗ khác, chưa tìm. Chủ dự án chọn chuyển thư mục tạm của phiên sang `D:	mp-kp`; KHÔNG
+xoá gì trên `C:`.
+
+✅ 439/439 test (214 + 27 + 198). Đột biến: cho `CongChe` bỏ qua cờ → đúng 2 test "cờ bật" đỏ.
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

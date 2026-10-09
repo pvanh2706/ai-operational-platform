@@ -47,7 +47,8 @@ public static class LenhDinhTuyen
                 return;
             }
 
-            await File.WriteAllTextAsync(duong, VongKhongCredit.DungGoi(ticket, taxonomy.Value), ct);
+            await File.WriteAllTextAsync(duong, VongKhongCredit.DungGoi(
+                ticket, taxonomy.Value, sp.GetRequiredService<CongChe>().DaQuaCongChe), ct);
 
             Console.WriteLine($"Đã xuất {ticket.Count} ticket -> {duong}");
             Console.WriteLine();

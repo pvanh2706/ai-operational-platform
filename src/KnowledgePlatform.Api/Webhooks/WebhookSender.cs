@@ -57,7 +57,8 @@ public sealed class WebhookSender(
     IHttpClientFactory httpClientFactory,
     TimeProvider clock,
     IOptions<WebhookOptions> options,
-    ILogger<WebhookSender> logger)
+    ILogger<WebhookSender> logger,
+    Startup.CongChe congChe)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -139,7 +140,8 @@ public sealed class WebhookSender(
             Nhom: traLoi.Nhom,
             NguonDinhTuyen: traLoi.NguonDinhTuyen,
             LyDoKhongBiet: traLoi.LyDoKhongBiet,
-            HuongDan: huongDan);
+            HuongDan: huongDan,
+            DaQuaCongChe: congChe.DaQuaCongChe);
     }
 
     /// <summary>
@@ -158,7 +160,7 @@ public sealed class WebhookSender(
         return che.Length <= _options.TomTatToiDa ? che : che[.._options.TomTatToiDa].TrimEnd() + "…";
     }
 
-    private static string Che(string? s) => EgressRedactor.Redact(s).Text;
+    private string Che(string? s) => congChe.CheDuongRa(s).Text;
 
     private async Task GuiAsync(WebhookEndpoint dich, WebhookDelivery luot, WebhookPayload payload, CancellationToken ct)
     {

@@ -417,8 +417,30 @@ public sealed class WebhookGuiVeTests(ApiDatabaseFixture db) : IClassFixture<Api
     [Fact]
     public async Task Goi_gui_di_da_qua_cong_che_AR_o()
     {
+        var body = await GuiGoiCoBiMatAsync(tatCongChe: false);
+
+        Assert.Contains("ultraview", body);
+        Assert.DoesNotContain("13579", body);
+        Assert.True(JsonSerializer.Deserialize<JsonElement>(body).GetProperty("daQuaCongChe").GetBoolean());
+    }
+
+    /// <summary>
+    /// `N1-2`: cờ tắt-tạm bật thì gói đi NGUYÊN VĂN — và gói phải NÓI RA điều đó. Bên nhận đọc
+    /// <c>daQuaCongChe=false</c> mới biết comment Jira sắp ghi có thể chứa mật khẩu thật.
+    /// </summary>
+    [Fact]
+    public async Task Co_N1_2_bat_thi_goi_di_NGUYEN_VAN_va_noi_ra_daQuaCongChe_false()
+    {
+        var body = await GuiGoiCoBiMatAsync(tatCongChe: true);
+
+        Assert.Contains("13579", body);
+        Assert.False(JsonSerializer.Deserialize<JsonElement>(body).GetProperty("daQuaCongChe").GetBoolean());
+    }
+
+    private async Task<string> GuiGoiCoBiMatAsync(bool tatCongChe)
+    {
         var b = await MoiBoiAsync();
-        using var app = App(b);
+        using var app = tatCongChe ? App(b).With("CongChe:TatTamVaChapNhanRuiRo", "true") : App(b);
         var c = app.CreateClient();
 
         await KhaiBaoDichAsync(c);
@@ -452,9 +474,6 @@ public sealed class WebhookGuiVeTests(ApiDatabaseFixture db) : IClassFixture<Api
         (await TinHieuAsync(c, b.Ticket)).EnsureSuccessStatusCode();
         await GuiMotVongAsync(app, b);
 
-        var body = _benNhan.DaNhan.Single().Body;
-
-        Assert.Contains("ultraview", body);
-        Assert.DoesNotContain("13579", body);
+        return _benNhan.DaNhan.Single().Body;
     }
 }

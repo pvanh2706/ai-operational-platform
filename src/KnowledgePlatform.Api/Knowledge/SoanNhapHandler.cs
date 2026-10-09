@@ -56,7 +56,8 @@ public sealed class SoanNhapHandler(
     ISopDrafter drafter,
     SopDraftIngestHandler nap,
     TimeProvider clock,
-    IOptions<SoanNhapOptions> options)
+    IOptions<SoanNhapOptions> options,
+    Startup.CongChe congChe)
 {
     private readonly SoanNhapOptions _options = options.Value;
 
@@ -136,7 +137,7 @@ public sealed class SoanNhapHandler(
         SopPrompt prompt;
         try
         {
-            prompt = SopPromptBuilder.Build(yeuCau);
+            prompt = SopPromptBuilder.Build(yeuCau, congChe.DaQuaCongChe);
         }
         catch (EgressBlockedException e)
         {

@@ -31,6 +31,7 @@ public static class StartupChecks
 
         RequireConnectionString(config);
         RequireApiAuthDecision(tenancy, auth);
+        RequireCongCheDecision(tenancy, sp.GetRequiredService<IOptions<CongCheOptions>>().Value);
         CanhBaoDiaChiLink(sp.GetRequiredService<IOptions<LinkXemOptions>>().Value);
         await ResolveTenancyAsync(sp, tenancy, ct);
 
@@ -185,6 +186,43 @@ public static class StartupChecks
         Console.Error.WriteLine(
             "⚠ Auth:AcknowledgeUnauthenticatedApi = true — API đang chạy KHÔNG cần khoá. " +
             "Chỉ dùng cho máy dev và bộ test.");
+    }
+
+    /// <summary>
+    /// `N1-2` — cờ TẮT TẠM mọi cổng che.
+    ///
+    /// 🛑 Chế độ <b>shared</b> TỪ CHỐI KHỞI ĐỘNG khi cờ bật. Lý do không phải "kém an toàn hơn"
+    /// mà là PHẠM VI của quyết định: chủ dự án chấp nhận rủi ro cho dữ liệu của chính khách mình
+    /// trên một bản deploy riêng. Một bản shared mang dữ liệu của NHIỀU công ty — không ai trong
+    /// số họ đã chấp nhận điều đó, và khâu nạp là cửa MỘT CHIỀU (xem <see cref="CongChe"/>).
+    ///
+    /// ⚠ Ở dedicated thì chạy được, nhưng in cảnh báo MỖI LẦN khởi động — cùng khuôn với
+    /// <c>Auth:AcknowledgeUnauthenticatedApi</c>: sơ suất phải thành quyết định, và quyết định
+    /// phải không im lặng.
+    /// </summary>
+    private static void RequireCongCheDecision(TenancyOptions tenancy, CongCheOptions congChe)
+    {
+        if (!congChe.TatTamVaChapNhanRuiRo) return;
+
+        if (tenancy.Mode == TenancyMode.SharedMultiTenant)
+        {
+            throw new InvalidOperationException(
+                """
+                CongChe:TatTamVaChapNhanRuiRo = true KHÔNG dùng được ở chế độ SharedMultiTenant.
+
+                Cờ này tắt mọi cổng che dữ liệu (N1-2). Một bản shared mang dữ liệu của NHIỀU công ty,
+                và không công ty nào trong số đó đã chấp nhận để mật khẩu/token của họ đi nguyên văn
+                tới model và vào hệ thống bên ngoài.
+
+                ⚠ Khâu nạp là cửa MỘT CHIỀU: mẩu vào lúc cờ bật nằm trong kho KHÔNG CHE, và tắt cờ đi
+                  cũng không che lại được.
+                """);
+        }
+
+        Console.Error.WriteLine(
+            "🛑 CongChe:TatTamVaChapNhanRuiRo = true — MỌI CỔNG CHE ĐANG TẮT (N1-2). " +
+            "Mật khẩu/token trong dữ liệu sẽ đi NGUYÊN VĂN tới model, webhook, trang /xem, và vào kho. " +
+            "Mẩu nạp lúc này mang dấu DaCheBenThuBa = false.");
     }
 
     private static async Task ResolveTenancyAsync(

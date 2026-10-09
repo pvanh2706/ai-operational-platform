@@ -121,6 +121,9 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool?>("DaCheBenThuBa")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTimeOffset>("IngestedAt")
                         .HasColumnType("timestamp with time zone");
 

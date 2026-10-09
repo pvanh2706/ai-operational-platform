@@ -40,6 +40,31 @@ public sealed class SopPromptBuilderTests
         Assert.Contains(EgressRedactor.Marker, prompt.UserText);
     }
 
+    /// <summary>
+    /// `N1-2`: cờ tắt-tạm bật thì payload đi NGUYÊN VĂN — và đếm 0 chỗ che, để biên lai
+    /// <c>SoChoDaChe</c> không nói một con số trông như đã che.
+    /// </summary>
+    [Fact]
+    public void Qua_cong_che_false_thi_payload_NGUYEN_VAN_va_dem_0()
+    {
+        var prompt = SopPromptBuilder.Build(Yeu_cau("Mật khẩu: 13579"), quaCongChe: false);
+
+        Assert.Contains("13579", prompt.UserText);
+        Assert.Equal(0, prompt.RedactedCount);
+    }
+
+    /// <summary>
+    /// 🛑 Mặc định PHẢI là che. Domain không đọc cấu hình, nên một chỗ gọi mới quên truyền tham
+    /// số phải rơi về phía an toàn — đây là test giữ chiều rơi đó.
+    /// </summary>
+    [Fact]
+    public void Khong_truyen_tham_so_thi_VAN_che()
+    {
+        var prompt = SopPromptBuilder.Build(Yeu_cau("Mật khẩu: 13579"));
+
+        Assert.DoesNotContain("13579", prompt.UserText);
+    }
+
     /// <summary>Giá trị bí mật KHÔNG được có mặt trong payload, dù ở bất kỳ dạng nào.</summary>
     [Fact]
     public void Gia_tri_bi_mat_khong_con_trong_payload()

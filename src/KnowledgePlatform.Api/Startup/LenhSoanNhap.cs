@@ -52,10 +52,12 @@ public static class LenhSoanNhap
 
             // 🛑 Cổng che AR-o chạy Ở ĐÂY, trước khi bất cứ byte nào ra file. Nó ném thì
             //    KHÔNG GHI GÌ CẢ — fail closed, không phải "che được bao nhiêu thì ghi bấy nhiêu".
+            var congChe = sp.GetRequiredService<CongChe>();
+
             SopPrompt prompt;
             try
             {
-                prompt = SopPromptBuilder.Build(yeuCau);
+                prompt = SopPromptBuilder.Build(yeuCau, congChe.DaQuaCongChe);
             }
             catch (Domain.Redaction.EgressBlockedException e)
             {
@@ -67,7 +69,11 @@ public static class LenhSoanNhap
 
             var goi = new
             {
-                _canhBao = "Dữ liệu khách hàng. ĐÃ qua cổng che AR-o. Không commit, không dán nơi công khai.",
+                _canhBao = congChe.DaQuaCongChe
+                    ? "Dữ liệu khách hàng. ĐÃ qua cổng che AR-o. Không commit, không dán nơi công khai."
+                    : "Dữ liệu khách hàng CHƯA CHE — cờ N1-2 (CongChe:TatTamVaChapNhanRuiRo) đang bật. " +
+                      "Có thể chứa mật khẩu/token thật. Không commit, không dán nơi công khai.",
+                daQuaCongChe = congChe.DaQuaCongChe,
                 nhom,
                 soCase = yeuCau.Cases.Count,
                 soMauEvidence = yeuCau.Cases.Sum(c => c.Evidence.Count),
@@ -86,7 +92,9 @@ public static class LenhSoanNhap
             Console.WriteLine($"Đã xuất   : {duong}");
             Console.WriteLine($"Nhóm      : {nhom}");
             Console.WriteLine($"Case      : {yeuCau.Cases.Count} · mẩu evidence: {yeuCau.Cases.Sum(c => c.Evidence.Count)}");
-            Console.WriteLine($"Đã che    : {prompt.RedactedCount} chỗ nghi là bí mật (AR-o)");
+            Console.WriteLine(congChe.DaQuaCongChe
+                ? $"Đã che    : {prompt.RedactedCount} chỗ nghi là bí mật (AR-o)"
+                : "Đã che    : KHÔNG — cờ N1-2 đang bật, file này chứa dữ liệu NGUYÊN VĂN");
             Console.WriteLine();
             Console.WriteLine("Bước tiếp:");
             Console.WriteLine("  1. Dán `system` + `user` cho một ngữ cảnh AI sạch, đòi đúng `schemaDauRa`.");

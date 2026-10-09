@@ -109,6 +109,21 @@ public sealed class EvidenceItem : ITenantScoped
     public bool DaRutLai => RetractedAt is not null;
 
     /// <summary>
+    /// Mẩu này đã đi qua cổng che dữ liệu BÊN THỨ BA (`AR-n` B2a) lúc nạp hay chưa.
+    ///
+    /// 🛑 Vì sao phải lưu: cờ `N1-2` (`docs/18`, 2026-10-10) tắt tạm được mọi cổng che, và khâu
+    /// NẠP là cửa MỘT CHIỀU — <c>ThirdPartyRedactor</c> không giữ bản gốc, nên mẩu vào lúc cờ bật
+    /// nằm trong kho KHÔNG CHE, và tắt cờ đi cũng không che lại được. Không có ô này thì về sau
+    /// không ai trả lời được câu *"mẩu nào trong kho còn nguyên dữ liệu người ngoài?"*.
+    ///
+    /// ⚠ BA giá trị, đừng gộp — cùng luật với <see cref="SubTenantCode"/>:
+    /// <c>true</c> đã qua cổng · <c>false</c> nạp lúc cờ TẮT-TẠM đang bật · <c>NULL</c> nạp trước
+    /// khi có ô này (tất cả đều đã qua cổng, vì trước 2026-10-10 không có đường nào bỏ qua nó —
+    /// nhưng ô này không khẳng định thay cho dữ liệu cũ).
+    /// </summary>
+    public bool? DaCheBenThuBa { get; init; }
+
+    /// <summary>
     /// Người đánh dấu một mẩu là ĐÃ BỊ NGƯỜI GỬI RÚT LẠI.
     ///
     /// 🛑 **KHÔNG có đường nào cho máy gọi hàm này.** `B1-1` chọn ít tín hiệu mà mỗi cái đều

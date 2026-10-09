@@ -27,6 +27,7 @@ public static class SoiCauHinh
         var auth = services.GetRequiredService<IOptions<AuthOptions>>().Value;
         var link = services.GetRequiredService<IOptions<LinkXemOptions>>().Value;
         var webhook = services.GetRequiredService<IOptions<WebhookOptions>>().Value;
+        var congChe = services.GetRequiredService<IOptions<CongCheOptions>>().Value;
 
         var vanDe = new List<string>();
 
@@ -81,6 +82,25 @@ public static class SoiCauHinh
         else
         {
             Ok("đòi khoá API cho mọi endpoint (trừ /health, /health/ready, /xem/{token})");
+        }
+
+        // --- Cổng che (N1-2) ---
+        Muc("Cổng che dữ liệu (AR-o, AR-n · N1-2)");
+        if (!congChe.TatTamVaChapNhanRuiRo)
+        {
+            Ok("ĐANG CHẠY — dữ liệu đi ra (model, webhook, /xem) và vào kho đều qua cổng che");
+        }
+        else if (tenancy.Mode == TenancyMode.SharedMultiTenant)
+        {
+            Sai("CongChe:TatTamVaChapNhanRuiRo = true ở chế độ shared. App sẽ TỪ CHỐI KHỞI ĐỘNG.");
+            vanDe.Add("cờ tắt cổng che bật ở chế độ shared");
+        }
+        else
+        {
+            Canh("CongChe:TatTamVaChapNhanRuiRo = TRUE — MỌI CỔNG CHE ĐANG TẮT.");
+            Console.WriteLine("       Mật khẩu/token đi NGUYÊN VĂN tới model, webhook, /xem và vào kho.");
+            Console.WriteLine("       Khâu nạp là cửa MỘT CHIỀU: tắt cờ đi cũng không che lại mẩu đã vào.");
+            vanDe.Add("cổng che đang tắt (N1-2)");
         }
 
         // --- Địa chỉ link ---

@@ -80,7 +80,9 @@ public static partial class OpenApiMoTa
                 "`subTenantCode` là BẮT BUỘC (AR-l): chưa biết thì khai `khong-xac-dinh`, " +
                 "không thuộc khách sạn nào thì khai `khong-thuoc-khach-san`. Bỏ trống là 400 — " +
                 "cố ý không tự điền hộ, vì \"chưa biết\" khác \"chưa ai hỏi\". " +
-                "Nội dung đi qua luật che dữ liệu bên thứ ba ngay tại cửa vào."),
+                "Nội dung đi qua luật che dữ liệu bên thứ ba ngay tại cửa vào — TRỪ KHI bản deploy " +
+                "bật cờ `CongChe:TatTamVaChapNhanRuiRo` (N1-2); khi đó mẩu vào kho NGUYÊN VĂN và " +
+                "không che lại được về sau."),
 
             ["POST /evidence/rut-lai"] = new(NhomTinHieu,
                 "Đánh dấu một mẩu đã bị NGƯỜI GỬI rút lại",
@@ -151,7 +153,8 @@ public static partial class OpenApiMoTa
             ["GET /xem/{token}"] = new(NhomTichHop,
                 "Mở một tri thức bằng link",
                 "KHÔNG cần khoá API — chính token là giấy thông hành. Nội dung đi qua cổng che " +
-                "trước khi ra. Link sai, hết hạn hay đã thu hồi đều trả 404 GIỐNG HỆT NHAU, cố ý: " +
+                "trước khi ra, trừ khi bản deploy bật cờ N1-2 — trường `daQuaCongChe` nói rõ lượt " +
+                "đọc này có qua cổng không. Link sai, hết hạn hay đã thu hồi đều trả 404 GIỐNG HỆT NHAU, cố ý: " +
                 "phân biệt chúng là nói cho người cầm link biết token đó từng có thật."),
 
             ["POST /hoi"] = new(NhomHoi,
@@ -161,7 +164,8 @@ public static partial class OpenApiMoTa
                 "kiểm chứng riêng; `MÂU THUẪN` là một giá trị hạng nhất, không phải lỗi. " +
                 "⚠ Đây CŨNG là cửa cho loại tín hiệu THỨ BA của Kênh 1 — *người dùng hỏi về tài " +
                 "liệu* (`F2-1`). Cố ý không có endpoint riêng: một cửa cho mọi câu hỏi nghĩa là " +
-                "một cổng KHÔNG BIẾT, và cổng che ở khâu gửi ra chỉ phải canh một đường."),
+                "một cổng KHÔNG BIẾT. ⚠ Nội dung trả về KHÔNG đi qua cổng che — chỉ gói webhook " +
+                "và trang /xem đi qua (ghi rõ 2026-10-10; câu cũ ở đây ngụ ý ngược lại)."),
 
             ["PUT /internal/webhook"] = new(NhomTichHop,
                 "Khai báo nơi nhận kết quả trả về",

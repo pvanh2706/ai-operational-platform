@@ -25,7 +25,7 @@ namespace KnowledgePlatform.Api.Signals;
 /// chỉ sinh khi có hành vi khẳng định. Response nói đúng thứ đã xảy ra: mẩu nào,
 /// gắn case nào, mới hay đã có (`G11`).
 /// </summary>
-public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
+public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant, Startup.CongChe congChe)
 {
     /// <summary>
     /// Tra một lượt mọi khoá case được nhắc tới trong lô. MỘT câu truy vấn cho cả lô,
@@ -166,7 +166,10 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
         // ⚠ Đánh đổi đã biết và CỐ Ý nhận: bản gốc KHÔNG được giữ ở đâu cả. Không thể "che
         // rồi hoàn tác" — muốn lấy lại giá trị thật thì phải quay về nguồn (Jira). Đó là cái
         // giá của việc không nhân bản dữ liệu người ngoài vào kho của mình.
-        var che = ThirdPartyRedactor.Redact(signal.Content);
+        //
+        // ⚠ `N1-2`: cờ tắt-tạm bật thì nội dung vào kho NGUYÊN VĂN — và đây là cửa MỘT CHIỀU.
+        // Dấu `DaCheBenThuBa` dưới đây là thứ duy nhất còn nói được mẩu nào vào lúc đó.
+        var che = congChe.CheBenThuBa(signal.Content);
 
         var item = new EvidenceItem
         {
@@ -177,6 +180,7 @@ public sealed class CaseEvidenceHandler(AppDbContext db, ITenantContext tenant)
             MachineReadability = readability,
             ObservedAt = signal.ObservedAt,
             SubTenantCode = maKhachSan,
+            DaCheBenThuBa = congChe.DaQuaCongChe,
         };
 
         db.EvidenceItems.Add(item);

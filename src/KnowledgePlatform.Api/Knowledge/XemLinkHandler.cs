@@ -69,7 +69,7 @@ public sealed class LinkTokenEndpointFilter(
 /// đường ĐỌC vẫn kiểm lại: một bản đã duyệt có thể bị sửa và rơi về <c>NeedsReview</c> sau
 /// khi link đã phát. Kiểm ở một chỗ rồi tin mãi là cách một cổng đúng trở thành cổng hở.
 /// </summary>
-public sealed class XemLinkHandler(AppDbContext db, LinkTokenContext linkContext)
+public sealed class XemLinkHandler(AppDbContext db, LinkTokenContext linkContext, Startup.CongChe congChe)
 {
     public async Task<XemKetQua> XemAsync(CancellationToken ct = default)
     {
@@ -102,7 +102,8 @@ public sealed class XemLinkHandler(AppDbContext db, LinkTokenContext linkContext
                 PhamViXem: record.VisibilityScope?.ToWire(),
                 CachNhanRa: Che(record, AssertionKind.Recognition),
                 CachXuLy: Che(record, AssertionKind.Handling),
-                DieuKienApDung: Che(record, AssertionKind.Applicability));
+                DieuKienApDung: Che(record, AssertionKind.Applicability),
+                DaQuaCongChe: congChe.DaQuaCongChe);
         }
         catch (EgressBlockedException e)
         {
@@ -114,9 +115,9 @@ public sealed class XemLinkHandler(AppDbContext db, LinkTokenContext linkContext
         }
     }
 
-    private static string Che(string? s) => EgressRedactor.Redact(s).Text;
+    private string Che(string? s) => congChe.CheDuongRa(s).Text;
 
-    private static PhatBieu[] Che(KnowledgeRecord r, AssertionKind kind) =>
+    private PhatBieu[] Che(KnowledgeRecord r, AssertionKind kind) =>
     [
         .. r.Assertions
             .Where(a => a.Kind == kind && a.IsCurrent)
@@ -134,8 +135,13 @@ public sealed record XemKetQua(
     string? PhamViXem,
     PhatBieu[] CachNhanRa,
     PhatBieu[] CachXuLy,
-    PhatBieu[] DieuKienApDung)
+    PhatBieu[] DieuKienApDung,
+    [property: System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    bool? DaQuaCongChe = null)
 {
+    // `DaQuaCongChe` (`N1-2`): nội dung trang này CÓ đi qua cổng che không. Chỉ có mặt khi có
+    // nội dung — một trang "không mở được" không trả ra chữ nào để mà che.
     public static XemKetQua KhongMoDuoc(string lyDo) =>
         new(false, lyDo, Guid.Empty, null, null, null, [], [], []);
 }

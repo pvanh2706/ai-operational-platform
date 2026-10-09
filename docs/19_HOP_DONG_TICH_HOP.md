@@ -224,7 +224,8 @@ Gói webhook mang **tóm tắt + link**, không mang toàn văn. Cố ý:
 
 - gói gửi đi nằm lại trong hệ thống của bạn (comment, log) — càng ít nội dung ra ngoài càng ít bề mặt;
 - bản đầy đủ đọc qua link thì **mỗi lượt đọc** đi qua cổng che và cổng trạng thái *tại thời
-  điểm đọc*. Nhét toàn văn vào gói là đóng băng một bản chưa chắc còn đúng, ở nơi không thu hồi được.
+  điểm đọc* — trừ khi bản deploy bật cờ tắt-tạm cổng che (`N1-2`, 2026-10-10). Gói webhook và
+  trang `/xem` mang `daQuaCongChe`; `false` nghĩa là nội dung NGUYÊN VĂN, có thể chứa mật khẩu. Nhét toàn văn vào gói là đóng băng một bản chưa chắc còn đúng, ở nơi không thu hồi được.
 
 ```text
 link mở được NHIỀU LẦN trong hạn      "một lần" là một lần PHÁT, không phải một lần MỞ

@@ -60,6 +60,11 @@ builder.Services.Configure<SoanNhapOptions>(
     builder.Configuration.GetSection(SoanNhapOptions.SectionName));
 builder.Services.Configure<KhoFileOptions>(
     builder.Configuration.GetSection(KhoFileOptions.SectionName));
+builder.Services.Configure<CongCheOptions>(
+    builder.Configuration.GetSection(CongCheOptions.SectionName));
+
+// `N1-2` — MỘT cửa cho mọi lần che. Singleton vì nó chỉ đọc một cờ cấu hình, không chạm tenant.
+builder.Services.AddSingleton<CongChe>();
 
 // Danh bạ tenant nằm NGOÀI ranh giới tenant — xem TenantDirectory.
 builder.Services.AddSingleton(sp => new TenantDirectory(
@@ -126,7 +131,9 @@ builder.Services.AddSingleton<IKhoFile>(sp =>
 //   (kiểm một tên, client đọc một tên khác).
 builder.Services.AddScoped<ISopDrafter>(sp =>
     KhoaAnthropic.Doc(sp.GetRequiredService<IConfiguration>()) is { } khoaAnthropic
-        ? new AnthropicSopDrafter(new Anthropic.AnthropicClient { ApiKey = khoaAnthropic })
+        ? new AnthropicSopDrafter(
+            new Anthropic.AnthropicClient { ApiKey = khoaAnthropic },
+            new SopDrafterOptions { QuaCongChe = sp.GetRequiredService<CongChe>().DaQuaCongChe })
         : new SopDrafterChuaCoCredit());
 builder.Services.AddScoped<WebhookConfigHandler>();
 builder.Services.AddScoped<WebhookSender>();

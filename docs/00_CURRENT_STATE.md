@@ -305,7 +305,7 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > ```text
 >    P0  ghi quyết định (docs/18 N, 07 AR-s + IM-49, file này)        ✅ 2026-10-10
 >    P1  hai lỗi định tuyến: khoá jira:ES-… vs ES-… · khoá Anthropic   ✅ 2026-10-10
->    P2  cờ TẮT TẠM cổng che (N1-2) — mặc định tắt cờ, shared từ chối
+>    P2  cờ TẮT TẠM cổng che (N1-2) — mặc định tắt cờ, shared từ chối   ✅ 2026-10-10
 >    P3  H  dẫn chứng thật: assertion_evidence > 0, bản B kế thừa, rút lại → NEEDS_REVIEW
 >    P4  D/E/F  ProcessDefinition · ProcessRun · suy bước hiện tại từ evidence
 >    P5  G/I  tra tri thức theo BƯỚC, trả kèm dẫn chứng (/hoi + webhook)
