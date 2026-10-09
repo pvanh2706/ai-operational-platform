@@ -223,6 +223,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.HasIndex(x => new { x.TenantId, x.Hash }).IsUnique();
         });
 
+        // --- P8: biên lai + bộ nhớ đệm của định tuyến bằng model (N7-1) — tenant-scoped, CÓ RLS ---
+        b.Entity<LuotDinhTuyenModel>(e =>
+        {
+            e.ToTable("luot_dinh_tuyen_model");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.KhoaNguon).HasMaxLength(512);
+            e.Property(x => x.HashDauVao).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Nhom).HasMaxLength(512);
+            e.Property(x => x.Nguon).HasMaxLength(64);
+            e.Property(x => x.GiaiThich).HasMaxLength(2048);
+            e.Property(x => x.Loi).HasMaxLength(1000);
+
+            e.HasIndex(x => new { x.TenantId, x.Luc });          // đếm trần tháng
+            e.HasIndex(x => new { x.TenantId, x.KhoaNguon });    // đệm theo case
+            e.HasIndex(x => new { x.TenantId, x.HashDauVao });   // đệm theo nội dung
+        });
+
         // --- Biên lai mỗi lượt gọi model (E3-1) — tenant-scoped, CÓ RLS ---
         b.Entity<LuotSoanNhap>(e =>
         {

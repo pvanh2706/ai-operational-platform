@@ -12,21 +12,28 @@ namespace KnowledgePlatform.Api.Knowledge;
 /// </summary>
 public sealed class TaxonomyNhom(IConfiguration cfg)
 {
-    private readonly Lazy<IReadOnlySet<string>?> _ten = new(() => Doc(cfg));
+    private readonly Lazy<IReadOnlyList<Domain.Sop.NhomTaxonomy>?> _nhom = new(() => Doc(cfg));
 
-    public IReadOnlySet<string>? TenNhom => _ten.Value;
+    /// <summary>Tên + mô tả từng nhóm — model định tuyến (P8) đọc mô tả để biết RANH GIỚI giữa hai nhóm kề nhau.</summary>
+    public IReadOnlyList<Domain.Sop.NhomTaxonomy>? Nhom => _nhom.Value;
+
+    public IReadOnlySet<string>? TenNhom => _nhom.Value?.Select(n => n.Ten).ToHashSet(StringComparer.Ordinal);
 
     public string DuongDan => cfg["DinhTuyen:DuongDanTaxonomy"] ?? DuongMacDinh();
 
-    private static IReadOnlySet<string>? Doc(IConfiguration cfg)
+    private static IReadOnlyList<Domain.Sop.NhomTaxonomy>? Doc(IConfiguration cfg)
     {
         var duong = cfg["DinhTuyen:DuongDanTaxonomy"] ?? DuongMacDinh();
         if (!File.Exists(duong)) return null;
 
         using var doc = JsonDocument.Parse(File.ReadAllText(duong));
-        return doc.RootElement.GetProperty("nhom").EnumerateArray()
-            .Select(x => x.GetProperty("ten").GetString()!)
-            .ToHashSet(StringComparer.Ordinal);
+        return
+        [
+            .. doc.RootElement.GetProperty("nhom").EnumerateArray()
+                .Select(x => new Domain.Sop.NhomTaxonomy(
+                    x.GetProperty("ten").GetString()!,
+                    x.TryGetProperty("moTa", out var m) ? m.GetString() : null))
+        ];
     }
 
     /// <summary>Dò ngược từ thư mục chạy tới gốc repo — cùng cách <c>DinhTuyenOptions.DuongDanMacDinh</c>.</summary>

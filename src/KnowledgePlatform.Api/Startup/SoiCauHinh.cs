@@ -28,6 +28,7 @@ public static class SoiCauHinh
         var link = services.GetRequiredService<IOptions<LinkXemOptions>>().Value;
         var webhook = services.GetRequiredService<IOptions<WebhookOptions>>().Value;
         var congChe = services.GetRequiredService<IOptions<CongCheOptions>>().Value;
+        var dinhTuyen = services.GetRequiredService<IOptions<DinhTuyenOptions>>().Value;
 
         var vanDe = new List<string>();
 
@@ -101,6 +102,24 @@ public static class SoiCauHinh
             Console.WriteLine("       Mật khẩu/token đi NGUYÊN VĂN tới model, webhook, /xem và vào kho.");
             Console.WriteLine("       Khâu nạp là cửa MỘT CHIỀU: tắt cờ đi cũng không che lại mẩu đã vào.");
             vanDe.Add("cổng che đang tắt (N1-2)");
+        }
+
+        // --- Định tuyến ticket MỚI bằng model (P8, N7-1 PROPOSED) ---
+        Muc("Định tuyến ticket mới bằng model (N7-1)");
+        var coKhoa = KhoaAnthropic.Doc(cfg) is not null;
+        if (!dinhTuyen.GoiModel)
+        {
+            Console.WriteLine("    TẮT (DinhTuyen:GoiModel = false) — ticket ngoài bảng đo nhận KHÔNG BIẾT.");
+        }
+        else if (!coKhoa)
+        {
+            Canh("DinhTuyen:GoiModel = true nhưng KHÔNG có khoá Anthropic — vẫn không gọi được, ticket mới nhận KHÔNG BIẾT.");
+            vanDe.Add("bật định tuyến bằng model mà thiếu khoá");
+        }
+        else
+        {
+            Canh($"BẬT — mọi ticket ngoài bảng đo đều gọi model (tính tiền). Ngưỡng {dinhTuyen.NguongTinCay:0.00} CHƯA ĐO, " +
+                 $"trần {dinhTuyen.TranThang} lượt/tháng/khách.");
         }
 
         // --- Địa chỉ link ---

@@ -688,6 +688,30 @@ rút lại (AR-m)   có thể làm tiến độ LÙI, nhưng đó là việc c�
 ✅ 511/511 test (240 + 30 + 241), trước 505. Đột biến: bỏ phép so trước/sau (xếp với mọi mẩu mới) → đúng
 test "không đổi bước thì không xếp" đỏ.
 
+### P8 ✅ (code) — định tuyến ticket MỚI bằng model (2026-10-10, `N7-1` PROPOSED)
+
+```text
+thứ tự tra      người nạp → bảng đo → kết quả model đã lưu → GỌI model
+                bảng đo nói KHONG-BIET cho ticket ĐÃ ĐO thì đó là KẾT QUẢ — model không đoán lại
+chỉ gọi khi     có khoá Anthropic VÀ DinhTuyen:GoiModel = true (mặc định TẮT)
+payload         DinhTuyenPromptBuilder: CHỈ tiêu đề + mô tả, KHÔNG tham số mã ticket nào (docs/13 §1);
+                qua cổng che như mọi đường ra (AR-o, cờ N1-2)
+nghe model khi  doTinCay ≥ NguongTinCay (0,9 — CHƯA ĐO) VÀ nhóm có trong taxonomy (G6)
+chi phí         biên lai GHI TRƯỚC khi gọi · trần DinhTuyen:TranThang (500/tháng/khách) · lượt thành công
+                là BỘ NHỚ ĐỆM (định tuyến chạy trên mọi webhook và mọi /hoi)
+lỗi             mất mạng / hết credit → KHÔNG BIẾT + biên lai giữ lỗi; /hoi VẪN 200
+nguồn           "model:…· ngưỡng 0.90 CHƯA ĐO" — không trộn với tra-san: hay nguoi-nap:
+```
+
+🛑 **CHƯA TỪNG GỌI THẬT.** Hình dạng request/response kiểm bằng HttpClient giả cắm vào `AnthropicClient`
+(SDK nhận response giả, request mang `output_config`). Con số 84,1% của `docs/13` KHÔNG áp cho prompt này —
+prompt này chưa được đo. Ngưỡng 0,9 cũng chưa đo. Hai thứ đó chỉ có được khi có credit.
+
+⚠ Model dùng lại đúng `SopDrafterOptions.ModelMacDinh` (`AR3`). Một model rẻ hơn cho phân loại là hợp lý nhưng là
+câu §10.1 — agent không tự chọn.
+
+✅ 526/526 test (244 + 33 + 249), trước 511. Đột biến: gỡ ngưỡng tin cậy → đúng test "dưới ngưỡng thì im lặng" đỏ.
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

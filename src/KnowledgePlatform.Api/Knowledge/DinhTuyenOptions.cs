@@ -20,6 +20,22 @@ public sealed class DinhTuyenOptions
     public string? DuongDanBangTraSan { get; set; }
 
     /// <summary>
+    /// `N7-1` (PROPOSED, 2026-10-10): BẬT định tuyến ticket MỚI bằng model. Mặc định TẮT — có khoá API thôi thì CHƯA
+    /// gọi. Lý do nó là một cờ riêng: định tuyến chạy TỰ ĐỘNG trên mọi webhook và mọi <c>/hoi</c>, một loại chi phí
+    /// mà trần của `E3-1` (người bấm soạn nháp) chưa bao giờ phủ.
+    /// </summary>
+    public bool GoiModel { get; set; }
+
+    /// <summary>
+    /// Model tự chấm dưới ngưỡng này thì hệ thống IM LẶNG — KHÔNG BIẾT (`E1-1`: thà im lặng hơn thà đoán).
+    /// ⚠ 0,9 là PROPOSED, CHƯA ĐO: chưa có lượt gọi thật nào để biết model tự chấm lệch tới đâu.
+    /// </summary>
+    public double NguongTinCay { get; set; } = 0.9;
+
+    /// <summary>Trần lượt gọi model định tuyến mỗi tháng, mỗi khách. Biên lai ghi TRƯỚC khi gọi.</summary>
+    public int TranThang { get; set; } = 500;
+
+    /// <summary>
     /// Tìm gốc repo bằng thư mục <c>.git</c>, cùng cách <c>SoanNhapRunner</c> đã dùng.
     /// </summary>
     public static string DuongDanMacDinh()

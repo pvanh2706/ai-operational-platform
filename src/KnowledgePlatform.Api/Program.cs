@@ -169,7 +169,14 @@ builder.Services.AddSingleton(sp =>
         new DinhTuyenTraSan(cfg.DuongDanBangTraSan ?? DinhTuyenOptions.DuongDanMacDinh()));
 });
 
-// Bản đang cắm: KHO KẾT QUẢ ĐÃ NẠP của khách hàng này, rơi về bảng đã đo nếu chưa có.
+// P8 (N7-1, PROPOSED): bản gọi model định tuyến — CHỈ dựng khi có khoá Anthropic. Có khoá thôi CHƯA gọi: còn phải
+// bật DinhTuyen:GoiModel. Singleton vì AnthropicClient dùng chung được; nó không chạm tenant.
+builder.Services.AddSingleton(sp => new ModelDinhTuyen(
+    KhoaAnthropic.Doc(sp.GetRequiredService<IConfiguration>()) is { } khoaDinhTuyen
+        ? new AnthropicDinhTuyen(new Anthropic.AnthropicClient { ApiKey = khoaDinhTuyen })
+        : null));
+
+// Bản đang cắm: KHO KẾT QUẢ ĐÃ NẠP của khách hàng này, rơi về bảng đã đo, rồi (nếu bật) về model.
 // SCOPED vì nó đọc dữ liệu của tenant trong request — xem DinhTuyenKho.
 builder.Services.AddScoped<IDinhTuyenNhom, DinhTuyenKho>();
 
