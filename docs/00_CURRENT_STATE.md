@@ -299,6 +299,27 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> 🔄 **HOÀN THIỆN MỌI Ô CỦA SƠ ĐỒ LUỒNG TÍN HIỆU — chốt 2026-10-10, MỞ LẠI `I1`.** Quyết định:
+> `docs/18` NHÓM N · lý do: `07` §5 `AR-s` · kỹ thuật: `07` §3 `IM-49`. Trước đó sơ đồ README có
+> 4 ô đủ, 5 ô một phần, và **D E F J không có dòng code nào**.
+> ```text
+>    P0  ghi quyết định (docs/18 N, 07 AR-s + IM-49, file này)        ✅ 2026-10-10
+>    P1  hai lỗi định tuyến: khoá jira:ES-… vs ES-… · khoá Anthropic
+>    P2  cờ TẮT TẠM cổng che (N1-2) — mặc định tắt cờ, shared từ chối
+>    P3  H  dẫn chứng thật: assertion_evidence > 0, bản B kế thừa, rút lại → NEEDS_REVIEW
+>    P4  D/E/F  ProcessDefinition · ProcessRun · suy bước hiện tại từ evidence
+>    P5  G/I  tra tri thức theo BƯỚC, trả kèm dẫn chứng (/hoi + webhook)
+>    P6  J  ghi lượt gợi ý theo 5 nấc L2 + API phản hồi; phản hồi sửa nhóm = vòng J→G
+>    P7  "nhận về là xử lý luôn": evidence mới đổi bước hiện tại → gửi lượt mới
+>    P8  định tuyến ticket MỚI bằng model (cờ riêng, N7-1) — chưa có credit để chạy thật
+>    P9  Kênh 2: trích chữ không thêm thư viện + job quét thư mục
+>    P10 tài liệu khớp code: README, docs/08 (đang trỏ file đã xoá), docs/19
+> ```
+> ⚠ **Sau P10, ô `A2` và `K` VẪN là `◐`** — chọn không thêm thư viện (`N4-1`) nghĩa là không có
+> connector Drive/Jira trong host và không đọc PDF/ảnh. Không đánh `✅` cho chúng.
+> ⚠ Việc `a`–`d` của `AR-r` bên dưới **không bị bỏ**, chỉ lùi sau lộ trình này. Riêng `a` (che
+> credential lúc nạp) giờ đứng sau cờ của `N1-2`: cờ bật thì nó cũng tắt.
+
 > ✅ **KHÁCH KHÔNG CÓ JIRA — năm quyết định chốt 2026-09-29.** Chi tiết + lý do: `07` §5 `AR-r`.
 > Server vốn đã không biết Jira (`G1`); thứ gắn Jira là mọi thứ đứng TRƯỚC API. Hàng việc
 > mới, theo đúng thứ tự đã chốt:

@@ -432,6 +432,67 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-49` · Mười một phase để mọi ô của sơ đồ có code — và chín chỗ bản nháp kế hoạch đã sai
+
+**Ngày 2026-10-10.** Sinh từ `AR-s` (§5). Đây là các lựa chọn KỸ THUẬT (`J1-1`); câu sản
+phẩm nằm ở `docs/18` NHÓM N. Mỗi phase là một commit, và mục này được bổ sung khi phase xong.
+
+### Bảy lựa chọn, kèm lý do
+
+```text
+1  Quy trình TUYẾN TÍNH (PR2). Bước = các bước KIỂM của SOP theo thứ tự + "xử lý theo
+   nguyên nhân đã nhận ra" + bước xác nhận. Nhánh "thấy X thì là nguyên nhân Y" ở lại
+   Knowledge (Recognition).
+   Vì sao: SOP thật là CÂY (docs/11, IM-30) trong khi PR2 cấm nhánh — mâu thuẫn chưa ai
+   gỡ. Tách "làm gì tiếp" (Process) khỏi "thấy gì thì kết luận gì" (Knowledge) gỡ được
+   nó mà không phải mở lại PR2, và khớp PR3 (escalation là Knowledge) lẫn L1.
+
+2  ProcessDefinition sinh ở DRAFT từ bản nháp SOP của Path A (S4 quy tắc 1, 05:197-198)
+   + tạo tay qua API. Chỉ người duyệt mới ACTIVE (D4). Dùng lại StoredLifecycleState,
+   VisibilityScope, KnowledgeApproval — 05 §5 nói Process dùng CHUNG nhân với Knowledge,
+   nên không đẻ từ vựng mới (bệnh "từ vựng song song" đã tái phát 3 lần).
+
+3  Ô D (khớp case → quy trình) = định tuyến nhóm → quy trình ACTIVE của nhóm đó.
+   Không có quy trình thì RƠI VỀ đường SOP-theo-nhóm đang chạy, KHÔNG trả rỗng.
+
+4  Chủ đề (L1) = khoá trên từng bước, khớp tri thức qua assertion Applicability — đúng
+   cơ chế HoiHandler đang dùng cho nhãn nhóm. "Chủ đề" chưa từng được định nghĩa ở đâu
+   (04 §3D.7 không có), nên KHÔNG thêm cột: AP1 nói applicability là assertion.
+
+5  Bản B kế thừa dẫn chứng của bản A. Người sửa NỘI DUNG; mẩu nguồn không đổi.
+
+6  Sửa lệch khoá jira:ES-… / ES-… (README §Rủi ro, 2026-10-09). Hôm qua chủ dự án chọn
+   "ghi lại, chưa sửa"; mục tiêu mới đòi ô G chạy qua webhook nên phải sửa. ĐỔI LỰA CHỌN
+   VÌ MỤC TIÊU ĐỔI, không phải vì lựa chọn cũ sai.
+
+7  Nấc của ô J theo từ vựng ĐÃ KHOÁ L2 (04 §3B.2): RETRIEVED → SHOWN → OPENED → ACCEPTED
+   → USED. "Không dùng" = nấc USED với DatDuoc=false — không đẻ nấc thứ sáu.
+```
+
+### Chín chỗ bản nháp kế hoạch sai — một agent soi lại với code TRƯỚC khi viết dòng nào
+
+```text
+1  Tên nấc tự đặt (da-tra, da-gui…) va với từ vựng đã khoá L2           -> dùng L2
+2  PR-c, PR-e là câu MỞ ở 05 -> không được tự chốt                        -> PROPOSED, docs/18 N5/N6
+3  Sửa khoá Anthropic định "truyền thẳng khoá" — đi ngược comment
+   SopDrafterOptions ("khoá không đi qua tay mình")                       -> đọc từ IConfiguration
+4  Định tuyến bằng model là một ĐƯỜNG RA MỚI tới bên thứ ba, và nó tự
+   tính tiền trên mọi ticket                                               -> qua cổng che + cờ riêng
+5  "Rút lại → NEEDS_REVIEW" là luật SUY RA: handler nào không nạp liên
+   kết evidence thì luật hỏng IM LẶNG                                      -> MỘT extension nạp chung
+6  Bản B chép dẫn chứng: KnowledgeRevisionHandler không nạp EvidenceLinks
+   -> chép được 0 dòng mà không lỗi                                        -> nạp trước khi chép
+7  Tắt che ở khâu NẠP là cửa MỘT CHIỀU                                     -> dấu trên từng mẩu,
+                                                                              shared từ chối khởi động
+8  ProcessDefinition thiếu phạm vi xem + cổng duyệt (05 §5 shared kernel)  -> dùng chung với Knowledge
+9  A2, K không thể ✅ một cách trung thực khi không thêm thư viện          -> giữ ◐, nói rõ thiếu gì
+```
+
+⚠ Năm trong chín chỗ là **lỗi im lặng** — đúng loại lỗi mà cả dự án dựng ra để chặn. Không chỗ
+nào làm crash. Ghi lại vì bản nháp đó trông hoàn chỉnh.
+
+---
+
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô
 
 **Ngày 2026-09-24.** Lô 150 case quét ngày 23/09 qua giao diện (`IM-45`) bị `check_corpus`
@@ -3823,6 +3884,40 @@ AR-r   Khách KHÔNG có Jira thì Kênh 1 và Kênh 2 vào bằng đường nà
            Đổi giá trị hợp đồng nhận vào → câu SẢN PHẨM, gom vào docs/18 khi tới lượt.
          · Gắn mỗi khoá API với một tiền tố nguồn (`jira:*`), để provenance "ai ghi mẩu
            này" đọc từ khoá thay vì tin chuỗi tự khai.
+
+AR-s   Hoàn thiện MỌI ô của sơ đồ luồng tín hiệu — mở lại I1, và bảy câu sinh ra từ đó  ← MỚI
+       ✅ CHỐT 2026-10-10 bởi chủ dự án (form, một lượt bốn câu) + ba câu PROPOSED.
+       Phiếu: docs/18 NHÓM N. Kế hoạch 11 phase: docs/00 §"Việc tiếp theo". Kỹ thuật: §3 IM-49.
+       Sinh từ yêu cầu: *"hoàn thiện nốt code để đáp ứng toàn bộ case trong sơ đồ"* · *"tạm thời
+       bỏ qua việc ẩn dữ liệu như tài khoản, mật khẩu"* · *"cứ nhận dữ liệu về là cho vào luồng
+       trong sơ đồ để xử lý luôn"*.
+
+       (0) I1-1 → I1-2. Capability 2 (ProcessDefinition/ProcessRun) VÀO phạm vi.
+           Lập luận cũ của I1-1 KHÔNG sai: đây vẫn là bước nặng nhất và không chặn tích hợp.
+           Thứ đổi là MỤC TIÊU — sơ đồ có ba ô D E F không có dòng code nào.
+
+       (1) N1-2 — CỜ TẮT TẠM MỌI CỔNG CHE, mặc định tắt cờ. Chủ dự án chọn KHÁC ô đề xuất
+           (N1-1: chỉ bỏ chặn lô, giữ cổng đường ra).
+           🛑 Đây là MỞ LẠI điều kiện chính chủ dự án đặt ngày 2026-09-08 (§5, đoạn
+             "đồng ý gửi dữ liệu ticket cho API" — chỉ khi luật che chạy trước mỗi lần gọi),
+             và nới AR-o + AR-n B2a CÓ ĐIỀU KIỆN. Điều kiện cũ KHÔNG bị xoá: nó vẫn là trạng
+             thái mặc định, và là trạng thái DUY NHẤT được phép ở chế độ shared.
+           Ba thứ code phải giữ (IM-49): dấu "đã qua cổng che bên thứ ba" trên từng mẩu vì
+           khâu nạp là cửa MỘT CHIỀU · shared từ chối khởi động khi bật cờ · cảnh báo mỗi
+           lần khởi động + `daQuaCongChe` ở mọi cửa ra.
+       (2) N2-1 — bước xong ⟸ dấu hiệu trong evidence HOẶC lời xác nhận lưu thành EVIDENCE.
+           Đúng PR1 (`05`:72-97): xác nhận của người là một loại evidence, không phải cờ.
+       (3) N3-1 — đóng L2-a của `04`: 3 nấc đầu hệ thống tự ghi, 2 nấc cuối là lời khai qua
+           API phản hồi. Nấc theo từ vựng ĐÃ KHOÁ L2 — không đặt tên mới.
+       (4) N4-1 — Kênh 2 không thêm thư viện. A2 và K của sơ đồ VẪN ◐ sau khi làm xong.
+
+       PROPOSED — agent chọn để code chạy được, chủ dự án bác được bất cứ lúc nào:
+       (5) N5-1 — PR-c: quy trình ACTIVE bất biến, sửa = phiên bản mới.
+       (6) N6-1 — PR-e: ProcessRun giữ phiên bản nó bắt đầu.
+       (7) N7-1 — định tuyến bằng model cần cờ riêng + trần tháng + biên lai trước khi gọi.
+           Lý do nó là câu SẢN PHẨM chứ không phải kỹ thuật: E3-1 đặt trần cho việc NGƯỜI
+           bấm soạn nháp; định tuyến chạy TỰ ĐỘNG trên mọi ticket — một loại chi phí E3
+           chưa bao giờ phủ.
 ```
 
 ## `AR-q` · ĐÃ VIẾT ĐỊNH NGHĨA, ĐÃ ĐO — và ✅ **CHỐT 2026-09-15** (đo 2026-09-11)

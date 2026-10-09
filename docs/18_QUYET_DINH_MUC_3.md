@@ -33,6 +33,8 @@ NHÓM I  phạm vi nghiệm thu            ✅ 2/2 CHỐT 2026-09-16
 NHÓM J  cách làm việc                 ✅ 2/2 CHỐT 2026-09-16
                                       ────────────────────────
                                       ✅ 20/20 — điền xong trong MỘT phiên
+NHÓM N  hoàn thiện sơ đồ luồng        ✅ 4/7 CHỐT 2026-10-10   · 3 câu PROPOSED chờ chủ dự án
+        (thêm 2026-10-10, sinh từ việc MỞ LẠI I1)
 ```
 
 🛑 **20/20 KHÔNG nghĩa là hết chặn.** Ba thứ còn chặn và **không thứ nào gỡ được bằng một
@@ -383,10 +385,16 @@ ngoài bộ test C#, và một file mô tả đẹp đẽ không làm con số �
 Thiết kế xong ở `docs/05` §5, chưa có dòng code nào. Đây là bước **nặng nhất** còn lại, và
 nó **không** chặn tích hợp.
 
-- [x] **I1-1 — Không**, để sau mức 3. (đề xuất — bước nặng nhất còn lại, và nó KHÔNG chặn
-      tích hợp)
-- [ ] **I1-2 — Có**, mức 3 phải có Capability 2.
+- [ ] **I1-1 — Không**, để sau mức 3. (đề xuất — bước nặng nhất còn lại, và nó KHÔNG chặn
+      tích hợp) · *chốt 2026-09-16 · **MỞ LẠI 2026-10-10**, xem dưới*
+- [x] **I1-2 — Có**, mức 3 phải có Capability 2.
 - [ ] **I1-3 — Chỉ phần đọc** (xem định nghĩa quy trình), chưa chạy được.
+
+🔄 **MỞ LẠI 2026-10-10 — chuyển từ `I1-1` sang `I1-2`.** Chủ dự án yêu cầu hoàn thiện code cho
+**mọi ô** của sơ đồ README §"Luồng chạy khi có một tín hiệu" — trong đó ba ô `D` `E` `F` chính là
+Capability 2. Lập luận của `I1-1` bên trên **không sai và không bị xoá**: nó vẫn đúng rằng đây là
+bước nặng nhất và không chặn tích hợp. Cái đổi là *mục tiêu*, không phải *số đo*. Các câu sinh
+ra từ việc mở lại nằm ở **NHÓM N** cuối file.
 
 ✅ **`I1-1` cắt mức 3 từ 11 bước xuống 10.** ⚠ Đừng nhầm hai thứ tên gần giống nhau:
 `Capability 2` (chạy quy trình) **ra khỏi** phạm vi, còn `Kênh 2` (nạp tài liệu) **vẫn nằm
@@ -450,3 +458,91 @@ không phải lúc nào cũng rõ. Luật để phân: nếu quyết định đ�
 credential thật khỏi 5 file ĐANG ĐƯỢC THEO DÕI, và tìm ra nhờ quét TRƯỚC LÚC PUSH.
 → Chạy `python scripts/quet_credential_repo.py` trước mỗi commit chạm tới dữ liệu hay
 tài liệu sinh từ corpus. Đây là luật tự áp, không phải tuỳ hứng.
+
+---
+
+# NHÓM N — hoàn thiện MỌI ô của sơ đồ luồng tín hiệu · ✅ 4/7 CHỐT 2026-10-10
+
+Sinh ra từ việc **mở lại `I1`** (xem trên). Bốn câu đầu chủ dự án chọn qua form ngày 2026-10-10.
+Ba câu sau là chỗ agent PHẢI chọn một hướng để code chạy được, nhưng chúng **đổi thứ người dùng
+thấy** — nên theo `J1-1` chúng là câu sản phẩm: code theo phương án `(PROPOSED)`, và chủ dự án
+bác được bất cứ lúc nào. Kế hoạch đầy đủ, 11 phase: `docs/00` §"Việc tiếp theo".
+
+## N1 · "Tạm bỏ qua việc ẩn dữ liệu (tài khoản, mật khẩu…)" nghĩa là gì?
+
+- [ ] **N1-1 — Không build thêm che, bỏ chặn lô** ở giao diện quét Jira; giữ cổng che đường ra.
+      (đề xuất)
+- [x] **N1-2 — Tắt tạm MỌI cổng che bằng MỘT cờ cấu hình**, mặc định tắt cờ (= cổng vẫn chạy).
+- [ ] **N1-3 — Chỉ không build thêm**, giữ nguyên mọi cổng.
+
+🛑 **`N1-2` mở lại điều kiện chủ dự án tự đặt ngày 2026-09-08** (`07` §5 — chỉ gửi dữ liệu ticket
+cho model *"nếu luật che chạy trên payload trước mỗi lần gọi"*), và nới `AR-o` + `AR-n` B2a **có
+điều kiện**. Ba hệ quả code phải giữ, ghi ra để không ai "sửa cho gọn":
+```text
+1  khâu NẠP là cửa MỘT CHIỀU: mẩu vào lúc cờ bật thì nằm trong DB KHÔNG CHE, tắt cờ không
+   che lại được  ->  mỗi mẩu mang dấu "đã qua cổng che bên thứ ba hay chưa"
+2  chế độ SharedMultiTenant TỪ CHỐI KHỞI ĐỘNG khi cờ bật — dữ liệu của nhiều công ty
+3  mọi lượt khởi động in cảnh báo; gói webhook và /xem mang daQuaCongChe
+```
+⚠ Corpus thật có credential ở **5,2%** mẩu evidence (`README` §"Rủi ro đang mở"). Bật cờ trên dữ
+liệu đó là gửi các giá trị ấy cho Anthropic và vào hệ thống của khách.
+
+## N2 · Ô `E` — một bước quy trình được coi là ĐÃ XONG khi nào?
+
+- [x] **N2-1 — Dấu hiệu trong evidence + người xác nhận.** (đề xuất) Bước khai vài cụm từ; evidence
+      chưa rút lại của case chứa cụm đó thì coi là xong. Người/connector khai "đã làm bước K1" thì
+      lời khai được lưu thành **EVIDENCE có tác giả** (`PR1`: *"tôi đã check mapping rồi"* chính là
+      evidence), không phải một cờ tiến độ.
+- [ ] **N2-2 — Chỉ người xác nhận.**
+- [ ] **N2-3 — Chỉ dấu hiệu trong evidence.**
+
+⚠ Bước sinh từ bản nháp SOP **chưa có dấu hiệu nào** (`SopDraft` không có trường đó), nên lúc đầu
+chúng chỉ xong được bằng xác nhận. Người duyệt thêm dấu hiệu khi quy trình còn ở DRAFT.
+
+## N3 · Ô `J` — ai báo "gợi ý đã được dùng"? (đóng `L2-a` của `04`)
+
+- [x] **N3-1 — Hệ thống tự ghi 3 nấc đầu + API phản hồi cho 2 nấc cuối.** (đề xuất) Nấc theo từ vựng
+      đã khoá `L2`: `RETRIEVED` → `SHOWN` → `OPENED` tự ghi; `ACCEPTED` / `USED` do bên tích hợp gọi
+      về, kèm tên người khai.
+- [ ] **N3-2 — Chỉ tự ghi 3 nấc đầu.**
+- [ ] **N3-3 — Tự suy `USED` từ evidence về sau.**
+
+⚠ `ACCEPTED` / `USED` là **LỜI KHAI**, cùng loại với `nguoiDuyet` và `xacNhanDuLieuThuongMai`:
+hệ thống chưa biết người gọi là ai (`docs/18` §"hình dạng chung"). Và `SHOWN` ở đây nghĩa là
+*hệ thống đã giao tới bên nhận*, không phải *một người đã nhìn thấy*.
+
+## N4 · Kênh 2 — đọc chữ trong tài liệu và job quét làm tới đâu?
+
+- [x] **N4-1 — Không thêm thư viện.** (đề xuất) Trích chữ txt/md/csv/html/json/xml và `.docx` (đọc
+      thẳng XML trong file zip bằng thư viện chuẩn); PDF/ảnh ghi *"chưa đọc được"*; job nền quét một
+      thư mục cấu hình — thư mục Drive đồng bộ về máy cũng dùng được.
+- [ ] **N4-2 — Thêm thư viện cho `.docx`/`.pdf`** (DocumentFormat.OpenXml + PdfPig, `AGENT.md` §10.1).
+- [ ] **N4-3 — Hoãn Kênh 2.**
+
+⚠ **Hệ quả nói trước:** ô `A2` và `K` của sơ đồ sẽ **vẫn là `◐`** — không connector Drive/Jira chạy
+trong host, không đọc PDF/ảnh. `N4-1` làm đủ phần đạt được không cần thư viện mới, không hơn.
+
+## N5 · `PR-c` — ai được sửa một quy trình đã ACTIVE? · PROPOSED
+
+- [x] **N5-1 — Không ai.** (PROPOSED — agent chọn để code chạy được) DRAFT sửa được; ACTIVE bất biến;
+      muốn đổi thì tạo phiên bản mới.
+- [ ] **N5-2 — Người duyệt sửa trực tiếp**, có lịch sử.
+
+## N6 · `PR-e` — định nghĩa đổi trong lúc một case đang chạy dở? · PROPOSED
+
+- [x] **N6-1 — Case giữ phiên bản nó bắt đầu.** (PROPOSED) Duyệt phiên bản mới thì bản cũ thành
+      DEPRECATED; `ProcessRun` trỏ đúng id bản cũ, nên tiến độ không tự nhảy.
+- [ ] **N6-2 — Case chuyển sang phiên bản mới ngay.**
+
+## N7 · Định tuyến ticket MỚI bằng model tốn tiền ở MỌI ticket — bật thế nào? · PROPOSED
+
+`E3-1` đặt trần cho việc **soạn nháp SOP** (người bấm nút). Định tuyến bằng model thì chạy **tự
+động trên mọi webhook và mọi `/hoi`** — `E3` chưa bao giờ phủ loại chi phí này.
+
+- [x] **N7-1 — Cờ riêng `DinhTuyen:GoiModel=true` + trần tháng + biên lai ghi TRƯỚC khi gọi.**
+      (PROPOSED) Có khoá API thôi thì CHƯA gọi. Ngưỡng tin cậy mặc định 0,9 nghiêng về phía im lặng
+      (`E1-1`), và response ghi rõ *"ngưỡng chưa đo"*.
+- [ ] **N7-2 — Có khoá là gọi.**
+
+⚠ Model dùng lại đúng hằng số của bộ soạn nháp (`AR3`). Đổi sang model rẻ hơn cho việc phân loại là
+câu `AGENT.md` §10.1 — agent không tự chọn.
