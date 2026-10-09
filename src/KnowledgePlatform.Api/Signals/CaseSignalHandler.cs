@@ -10,10 +10,11 @@ namespace KnowledgePlatform.Api.Signals;
 /// <summary>
 /// Ô "Tìm hoặc tạo Case" của sơ đồ luồng tín hiệu.
 ///
-/// ⚠ **Nó dừng ở đúng đây, cố ý.** Các ô sau trong sơ đồ — khớp quy trình đã duyệt,
-/// suy ra đang ở bước nào, tra tri thức, trả gợi ý — đều chưa build. Trả về một
-/// gợi ý rỗng hay một trường <c>suggestions: []</c> sẽ làm bên gọi tưởng đường đó
-/// đã tồn tại. `G11`: không tự phỏng to một capability đã chốt.
+/// ⚠ **Response dừng ở đúng đây, cố ý.** Khớp quy trình đã duyệt và suy ra đang ở bước
+/// nào vẫn chưa build. Tra tri thức + trả gợi ý thì đã có từ `D1-1`, nhưng đi đường RIÊNG:
+/// <see cref="XepHangGuiVeAsync"/> xếp hàng, vòng nền gửi sau — KHÔNG đi trong response.
+/// Trả về một gợi ý rỗng hay một trường <c>suggestions: []</c> ở đây sẽ làm bên gọi tưởng
+/// response là chỗ nhận kết quả. `G11`: không tự phỏng to một capability đã chốt.
 ///
 /// Nên response chỉ nói đúng thứ đã xảy ra: case nào, mới hay đã có.
 /// </summary>

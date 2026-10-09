@@ -269,9 +269,10 @@ app.MapGet("/internal/tenant-boundary", async (
 
 // --- KÊNH 1: đường nhận tín hiệu từ phần mềm có sẵn của khách (06 §1) ---
 //
-// Tín hiệu đi vào đây và dừng ở ô "Tìm hoặc tạo Case" của sơ đồ luồng. Các ô sau
-// — khớp quy trình đã duyệt, suy ra bước hiện tại, tra tri thức, trả gợi ý — CHƯA
-// BUILD, và response cố ý không có chỗ nào trông như thể chúng đã có (G11).
+// Response dừng ở ô "Tìm hoặc tạo Case" của sơ đồ luồng, và cố ý không có chỗ nào
+// trông như thể các ô sau đã có (G11). Khớp quy trình đã duyệt và suy ra bước hiện tại
+// vẫn CHƯA BUILD. Tra tri thức + trả gợi ý thì CÓ, nhưng đi đường RIÊNG: case mới được
+// xếp hàng gửi kết quả về (D1-1, xem CaseSignalHandler) — không nằm trong response này.
 //
 // Nhận một MẢNG tín hiệu, không phải một tín hiệu. Lô một phần tử là ca thường
 // gặp; lô lớn là đường nạp case lịch sử. Một đường code cho cả hai — xem
