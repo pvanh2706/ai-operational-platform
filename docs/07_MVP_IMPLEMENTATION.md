@@ -613,6 +613,32 @@ một namespace `KnowledgePlatform.Api.Process` sẽ che tên đó ở mọi fil
 (duyệt quy trình ở shared → 409 AR-l · khoá A đọc quy trình của B → 404). Hai script này CHƯA chạy —
 để vào phép kiểm đầu-cuối cuối lộ trình.
 
+### P5 ✅ — ô G/I: tra theo BƯỚC, trả kèm dẫn chứng (2026-10-10)
+
+```text
+lõi chung    HoiHandler dùng cho CẢ /hoi lẫn webhook — một chỗ quyết định biết / không biết
+case đã có   maTicket (khoá đầy đủ hoặc mã TRẦN) → TraCaseTheoMa (tách từ P3, dùng chung) →
+             định tuyến bằng chính dữ liệu của case (tiêu đề + mẩu sớm nhất, docs/13 §1)
+ô D          khớp quy trình; hỏi về case = case đang được xử lý → tạo lượt chạy NẾU có bản ACTIVE
+ô G          tra theo chủ đề của bước hiện tại → không có tri thức gắn bước thì RƠI VỀ nhóm
+             (traTheo: buoc | nhom). Case đang chạy quy trình thì nhóm lấy từ quy trình, kể cả khi
+             định tuyến nói không biết.
+ô I          mỗi phát biểu kèm danChung: khoá nguồn mẩu + ticket + quan hệ + ghi chú. KHÔNG nội
+             dung mẩu. Mẩu đã rút không được trích. /xem cũng kèm; webhook kèm ticketDanChung.
+hợp đồng     ô mới đều bỏ qua khi null (IM-15) — thiếu quyTrinh KHÔNG phải "quy trình rỗng";
+             phienBan webhook giữ "1"
+```
+
+⚠ Hai cửa KHÔNG BIẾT giữ nguyên, và test cũ (219 test API trước P5) xanh nguyên không sửa dòng nào.
+
+⚠ **Sự cố quy trình của chính tôi lúc commit phase này:** bước sửa tài liệu thất bại (một mẫu khớp sai),
+nên file commit message vẫn là của P4 — và lệnh commit nằm trên dòng riêng nên vẫn chạy. Kết quả là một
+commit chứa code P5 mang tên P4. Commit đó chưa push (`main` đi trước `origin/main` 35 commit), nên sửa bằng
+`--amend` ngay. Bài học: lệnh commit phải nối `&&` với bước chuẩn bị message, không đứng riêng một dòng.
+
+✅ 494/494 test (240 + 30 + 224), trước 489. Đột biến: tắt nhánh tra theo bước → 2 test đỏ (câu
+trả lời đổi theo bước · gói webhook chỉ mang nguyên nhân của bước hiện tại).
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

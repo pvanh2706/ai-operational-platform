@@ -39,7 +39,20 @@ public sealed record WebhookPayload(
     bool DaQuaCongChe)
 {
     public const string PhienBanHienTai = "1";
+
+    /// <summary>
+    /// Thêm 2026-10-10 (P5): case đang ở BƯỚC nào của quy trình đã duyệt. Chỉ có mặt khi case khớp được một
+    /// quy trình — thiếu ô này KHÔNG phải "quy trình rỗng". Thêm ô nên giữ phiên bản "1" (`docs/19` §6).
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(
+        Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public WebhookQuyTrinh? QuyTrinh { get; init; }
 }
+
+/// <param name="TraTheo"><c>buoc</c> = hướng dẫn tra theo bước hiện tại · <c>nhom</c> = rơi về mức nhóm.</param>
+public sealed record WebhookQuyTrinh(string Ten, int PhienBan, WebhookBuoc? BuocHienTai, bool DaXongHet, string TraTheo);
+
+public sealed record WebhookBuoc(string Ma, string NoiDung, string? NoiXem);
 
 public sealed record WebhookCase(string KhoaNguon, string TieuDe);
 
@@ -63,10 +76,15 @@ public sealed record WebhookCase(string KhoaNguon, string TieuDe);
 /// Có hạn và thu hồi được (`D5-3`). <c>null</c> nghĩa là chưa phát được link — thường vì
 /// thiếu <c>Link:PublicBaseUrl</c>; khi đó tóm tắt vẫn đi, chỉ mất đường đọc đầy đủ.
 /// </param>
+/// <param name="TicketDanChung">
+/// Thêm 2026-10-10 (P5, ô `I`): ticket nào chống lưng hướng dẫn này. Chỉ khoá nguồn. Rỗng nghĩa là chưa
+/// nối được dẫn chứng nào (bản ghi nạp trước P3, hoặc ticket trích không có trong kho).
+/// </param>
 public sealed record WebhookHuongDan(
     Guid Id,
     string TenNguyenNhan,
     string TrangThai,
     string TomTat,
     string? Link,
-    DateTimeOffset? LinkHetHanLuc);
+    DateTimeOffset? LinkHetHanLuc,
+    IReadOnlyList<string> TicketDanChung);

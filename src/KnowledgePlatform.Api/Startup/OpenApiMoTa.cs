@@ -166,7 +166,11 @@ public static partial class OpenApiMoTa
                 "⚠ Đây CŨNG là cửa cho loại tín hiệu THỨ BA của Kênh 1 — *người dùng hỏi về tài " +
                 "liệu* (`F2-1`). Cố ý không có endpoint riêng: một cửa cho mọi câu hỏi nghĩa là " +
                 "một cổng KHÔNG BIẾT. ⚠ Nội dung trả về KHÔNG đi qua cổng che — chỉ gói webhook " +
-                "và trang /xem đi qua (ghi rõ 2026-10-10; câu cũ ở đây ngụ ý ngược lại)."),
+                "và trang /xem đi qua (ghi rõ 2026-10-10; câu cũ ở đây ngụ ý ngược lại). " +
+                "🎯 `maTicket` là một case ĐÃ CÓ (khoá đầy đủ hoặc mã trần) thì câu trả lời đi theo BƯỚC HIỆN " +
+                "TẠI của quy trình đã duyệt — ô `quyTrinh`, `traTheo: buoc|nhom`; chưa có quy trình thì trả theo " +
+                "nhóm và `lyDoKhongCoQuyTrinh` nói vì sao. Mỗi phát biểu kèm `danChung`: khoá nguồn của mẩu và " +
+                "ticket, KHÔNG nội dung."),
 
             ["PUT /internal/webhook"] = new(NhomTichHop,
                 "Khai báo nơi nhận kết quả trả về",

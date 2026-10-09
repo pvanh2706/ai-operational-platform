@@ -91,6 +91,9 @@ public sealed class XemLinkHandler(AppDbContext db, LinkTokenContext linkContext
                 "Bản tri thức này đang được xem lại nên tạm thời không mở được. Hỏi lại sau khi nó được duyệt.");
         }
 
+        // Ô `I` (P5): mỗi phát biểu kèm dẫn chứng TRỎ VỀ NGUỒN — khoá nguồn, không nội dung mẩu.
+        var danChung = await DanChungDauRa.ChuanBiAsync(db, [record], ct);
+
         try
         {
             return new XemKetQua(
@@ -100,9 +103,9 @@ public sealed class XemLinkHandler(AppDbContext db, LinkTokenContext linkContext
                 TenNguyenNhan: Che(record.CauseName),
                 TrangThai: record.DisplayState,
                 PhamViXem: record.VisibilityScope?.ToWire(),
-                CachNhanRa: Che(record, AssertionKind.Recognition),
-                CachXuLy: Che(record, AssertionKind.Handling),
-                DieuKienApDung: Che(record, AssertionKind.Applicability),
+                CachNhanRa: Che(record, AssertionKind.Recognition, danChung),
+                CachXuLy: Che(record, AssertionKind.Handling, danChung),
+                DieuKienApDung: Che(record, AssertionKind.Applicability, danChung),
                 DaQuaCongChe: congChe.DaQuaCongChe);
         }
         catch (EgressBlockedException e)
@@ -117,11 +120,11 @@ public sealed class XemLinkHandler(AppDbContext db, LinkTokenContext linkContext
 
     private string Che(string? s) => congChe.CheDuongRa(s).Text;
 
-    private PhatBieu[] Che(KnowledgeRecord r, AssertionKind kind) =>
+    private PhatBieu[] Che(KnowledgeRecord r, AssertionKind kind, Func<Assertion, IReadOnlyList<DanChungRef>> danChung) =>
     [
         .. r.Assertions
             .Where(a => a.Kind == kind && a.IsCurrent)
-            .Select(a => new PhatBieu(Che(a.Content), a.Verification.ToString(), a.Origin.ToString()))
+            .Select(a => new PhatBieu(Che(a.Content), a.Verification.ToString(), a.Origin.ToString(), danChung(a)))
     ];
 }
 

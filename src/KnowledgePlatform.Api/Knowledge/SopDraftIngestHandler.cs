@@ -196,7 +196,7 @@ public sealed class SopDraftIngestHandler(AppDbContext db, ITenantContext tenant
         CancellationToken ct)
     {
         var maCase = mapped.TrichDan.Select(t => t.MaCase).Distinct(StringComparer.Ordinal).ToList();
-        var (caseTheoMa, khongGiai, moHo) = await GiaiMaCaseAsync(maCase, ct);
+        var (caseTheoMa, khongGiai, moHo) = await Signals.TraCaseTheoMa.GiaiNhieuAsync(db, maCase, ct);
 
         var caseIds = caseTheoMa.Values.Distinct().ToList();
         var mauTheoCase = caseIds.Count == 0
@@ -278,57 +278,6 @@ public sealed class SopDraftIngestHandler(AppDbContext db, ITenantContext tenant
 
     private static string TenRecordCua(SopMappingResult mapped, Assertion a) =>
         mapped.Records.First(r => r.Id == a.KnowledgeRecordId).CauseName;
-
-    /// <summary>
-    /// Mã ticket → id case. Khớp chính xác, rồi khớp đuôi <c>:mã</c> (một câu <c>LIKE ANY</c>).
-    /// </summary>
-    private async Task<(Dictionary<string, Guid> TheoMa, IReadOnlyList<string> KhongGiai, IReadOnlyList<string> MoHo)>
-        GiaiMaCaseAsync(IReadOnlyList<string> ma, CancellationToken ct)
-    {
-        var theoMa = new Dictionary<string, Guid>(StringComparer.Ordinal);
-        if (ma.Count == 0) return (theoMa, [], []);
-
-        var chinhXac = await db.Cases
-            .Where(c => ma.Contains(c.SourceReference))
-            .Select(c => new { c.SourceReference, c.Id })
-            .ToListAsync(ct);
-
-        foreach (var c in chinhXac) theoMa[c.SourceReference] = c.Id;
-
-        var conLai = ma.Where(m => !theoMa.ContainsKey(m)).ToList();
-        var khongGiai = new List<string>();
-        var moHo = new List<string>();
-
-        if (conLai.Count > 0)
-        {
-            var mau = conLai.Select(m => "%:" + ThoatLike(m)).ToArray();
-
-            var theoDuoi = await db.Cases
-                .Where(c => mau.Any(p => EF.Functions.Like(c.SourceReference, p)))
-                .Select(c => new { c.SourceReference, c.Id })
-                .ToListAsync(ct);
-
-            foreach (var m in conLai)
-            {
-                var khop = theoDuoi.Where(c => c.SourceReference.EndsWith(":" + m, StringComparison.Ordinal)).ToList();
-
-                switch (khop.Count)
-                {
-                    case 1: theoMa[m] = khop[0].Id; break;
-                    case 0: khongGiai.Add(m); break;
-                    default: moHo.Add(m); break;
-                }
-            }
-        }
-
-        return (theoMa, khongGiai, moHo);
-    }
-
-    /// <summary>Thoát ký tự đặc biệt của LIKE (PostgreSQL dùng <c>\</c> làm ký tự thoát mặc định).</summary>
-    private static string ThoatLike(string s) =>
-        s.Replace("\\", "\\\\", StringComparison.Ordinal)
-         .Replace("%", "\\%", StringComparison.Ordinal)
-         .Replace("_", "\\_", StringComparison.Ordinal);
 }
 
 /// <summary>

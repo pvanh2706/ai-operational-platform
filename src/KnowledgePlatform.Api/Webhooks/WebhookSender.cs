@@ -128,7 +128,8 @@ public sealed class WebhookSender(
                 TrangThai: h.TrangThai,
                 TomTat: TomTat(h),
                 Link: link.Phat ? link.Url : null,
-                LinkHetHanLuc: link.Phat ? link.HetHanLuc : null));
+                LinkHetHanLuc: link.Phat ? link.HetHanLuc : null,
+                TicketDanChung: TicketDanChung(h)));
         }
 
         return new WebhookPayload(
@@ -141,8 +142,31 @@ public sealed class WebhookSender(
             NguonDinhTuyen: traLoi.NguonDinhTuyen,
             LyDoKhongBiet: traLoi.LyDoKhongBiet,
             HuongDan: huongDan,
-            DaQuaCongChe: congChe.DaQuaCongChe);
+            DaQuaCongChe: congChe.DaQuaCongChe)
+        {
+            QuyTrinh = traLoi.QuyTrinh is { } q
+                ? new WebhookQuyTrinh(
+                    Che(q.Ten), q.PhienBan,
+                    q.BuocHienTai is { } b ? new WebhookBuoc(b.Ma, Che(b.NoiDung), b.NoiXem is null ? null : Che(b.NoiXem)) : null,
+                    q.DaXongHet, q.TraTheo)
+                : null,
+        };
     }
+
+    /// <summary>
+    /// Ô `I` trong gói: TICKET nào chống lưng hướng dẫn này — thứ bên nhận nhận ra được trong hệ thống của
+    /// mình. Chỉ khoá nguồn, không nội dung (`D3-1`: tóm tắt + link; bản đầy đủ đọc qua link).
+    /// </summary>
+    private static IReadOnlyList<string> TicketDanChung(HuongDan h) =>
+    [
+        .. h.CachNhanRa.Concat(h.CachXuLy)
+            .SelectMany(p => p.DanChung ?? [])
+            .Select(d => d.KhoaNguonCase)
+            .Where(k => k is not null)
+            .Select(k => k!)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+    ];
 
     /// <summary>
     /// Tóm tắt = bước xử lý đầu tiên, đã che và đã cắt.
