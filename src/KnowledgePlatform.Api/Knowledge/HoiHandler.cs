@@ -53,7 +53,7 @@ public sealed class HoiHandler(AppDbContext db, IDinhTuyenNhom dinhTuyen)
 
         // Chỉ record ĐÃ DUYỆT. `Active` là trạng thái duy nhất mà `Approve()` đặt được.
         var records = await db.KnowledgeRecords
-            .Include(r => r.Assertions)
+            .KemDanChung()
             .Where(r => r.Lifecycle == StoredLifecycleState.Active)
             .Where(r => r.Assertions.Any(a =>
                 a.Kind == AssertionKind.Applicability && a.Content == nhanNhom))

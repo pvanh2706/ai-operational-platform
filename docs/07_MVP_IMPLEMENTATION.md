@@ -537,6 +537,44 @@ xoá gì trên `C:`.
 
 ✅ 439/439 test (214 + 27 + 198). Đột biến: cho `CongChe` bỏ qua cờ → đúng 2 test "cờ bật" đỏ.
 
+### P3 ✅ — ô H: dẫn chứng thật cho từng phát biểu (2026-10-10)
+
+`assertion_evidence` có 0 dòng KHÔNG phải vì chưa ai nạp: bản nháp mang mã ticket ở mọi nhánh
+và mọi bước sửa, và `SopDraftToKnowledge` dùng nó để chấm mức kiểm chứng rồi VỨT.
+
+```text
+Domain     SopMappingResult.TrichDan — (phát biểu, mã case, chungCu, ghi chú). CauseExists trích
+           HỢP các nhánh, không trùng; nhãn nhóm không trích gì.
+nạp        mã → case: khớp CHÍNH XÁC, rồi khớp đuôi ":mã" (một câu LIKE ANY). Khớp >1 case =
+           maMoHo, KHÔNG tự chọn. Không khớp = maKhongGiaiDuoc, VẪN nạp.
+           case → MỌI mẩu chưa rút lại (AR-m). Bản nháp trích TICKET, chọn mẩu là đoán thay model.
+           evidence-noi-ro / bước sửa → Support · toi-suy-ra → ContextFor (chungCu chỉ chọn quan hệ)
+điền bù    nạp lại bản nháp thì nối thêm vào record ĐÃ CÓ, chỉ ở phát biểu AI còn hiệu lực chưa có
+           liên kết nào. Nạp lần ba: 0.
+lưu gốc    sop_draft_goc (RLS, unique theo hash) — lần sửa phép map sau KHÔNG phải nói lại câu
+           "8 record cũ không điền bù được".
+DB         khoá ngoại GHÉP (TenantId, EvidenceItemId) → evidence_item, RESTRICT. RLS WITH CHECK chỉ
+           kiểm dòng đang ghi, không kiểm dòng nó trỏ tới.
+V3         mẩu chống lưng bị RÚT SAU lần duyệt cuối → NEEDS_REVIEW; duyệt lại xoá được cờ.
+bản B      ReviseAssertion chép liên kết, ghi chú "kế thừa từ bản A".
+đọc        GET /knowledge/{id}: mỗi phát biểu kèm danChung (khoá nguồn mẩu, quan hệ, ghi chú,
+           daRutLai) — KHÔNG kèm nội dung mẩu.
+```
+
+🛑 **Luật hỏng im lặng nhất của phase này** là luật SUY RA: `NeedsReview` đọc `EvidenceItem.RetractedAt`
+qua navigation, nên chỗ đọc nào quên nạp tầng đó thì luật trả `false`. Năm chỗ tự viết `Include` được
+thay bằng MỘT extension `KemDanChung`. Đột biến: bỏ tầng nạp mẩu khỏi extension → đúng test NEEDS_REVIEW
+qua HTTP đỏ. Có thêm một test Domain GHIM chiều hỏng đó (thiếu navigation → `false`).
+
+⚠ Một kỳ vọng của chính tôi sai, sửa trong cùng phase: `ON DELETE RESTRICT` báo `23001`
+(*restrict_violation*), không phải `23503`. Database đang làm đúng việc của nó.
+
+⚠ **CHƯA kiểm trên dữ liệu thật.** Mọi số ở đây đo trên vật liệu test. Bản nháp thật
+(`docs/ket-qua-phan-tich/may-sinh-*.json`) trích mã TRẦN trong khi `kp_dev` lưu `jira:ES-…` — đúng ca
+khớp đuôi được thiết kế cho, nhưng chưa chạy. Để vào phép kiểm đầu-cuối cuối lộ trình.
+
+✅ 460/460 test (223 + 30 + 207), trước 439.
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

@@ -202,4 +202,34 @@ public sealed class ReviseAssertionTests
         Assert.Equal("chị Lan (support)", banB.ActorLabel);
         Assert.Null(banA.ActorLabel);
     }
+
+    /// <summary>
+    /// Bản B KẾ THỪA dẫn chứng của bản A (P3, `IM-49` lựa chọn 5). Người sửa NỘI DUNG; mẩu nguồn không đổi.
+    /// Không chép thì bản người sửa thành một phát biểu không có nguồn — và V3 không thấy mẩu nguồn bị rút.
+    /// </summary>
+    [Fact]
+    public void Ban_sua_KE_THUA_dan_chung_cua_ban_goc()
+    {
+        var record = KnowledgeBuilder.NewRecord();
+        var banA = record.NewAssertion(kind: AssertionKind.Handling, origin: Origin.AiInference);
+        var mauId = Guid.CreateVersion7();
+        banA.EvidenceLinks.Add(new AssertionEvidence
+        {
+            TenantId = record.TenantId,
+            AssertionId = banA.Id,
+            EvidenceItemId = mauId,
+            Relation = EvidenceRelation.Support,
+            Note = "ticket ES-1 · bước sửa S1",
+        });
+
+        var banB = record.ReviseAssertion(banA.Id, "bản B", Origin.HumanAssessment, VerificationLevel.Supported);
+
+        var lk = Assert.Single(banB.EvidenceLinks);
+        Assert.Equal(mauId, lk.EvidenceItemId);
+        Assert.Equal(banB.Id, lk.AssertionId);
+        Assert.Equal(EvidenceRelation.Support, lk.Relation);
+        Assert.Contains("kế thừa từ bản A", lk.Note);
+        Assert.Single(banA.EvidenceLinks);   // bản A KHÔNG mất liên kết của nó
+    }
 }
+

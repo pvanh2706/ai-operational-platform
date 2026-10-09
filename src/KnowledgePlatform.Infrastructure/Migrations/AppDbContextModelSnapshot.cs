@@ -253,6 +253,8 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.HasIndex("AssertionId", "EvidenceItemId")
                         .IsUnique();
 
+                    b.HasIndex("TenantId", "EvidenceItemId");
+
                     b.ToTable("assertion_evidence", "kp");
                 });
 
@@ -424,6 +426,39 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.ToTable("luot_soan_nhap", "kp");
                 });
 
+            modelBuilder.Entity("KnowledgePlatform.Domain.Sop.SopDraftGoc", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("NapLuc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nhom")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("NoiDung")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Hash")
+                        .IsUnique();
+
+                    b.ToTable("sop_draft_goc", "kp");
+                });
+
             modelBuilder.Entity("KnowledgePlatform.Domain.Tenancy.ApiKey", b =>
                 {
                     b.Property<Guid>("Id")
@@ -587,6 +622,15 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                         .HasForeignKey("AssertionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("KnowledgePlatform.Domain.Evidence.EvidenceItem", "EvidenceItem")
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EvidenceItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EvidenceItem");
                 });
 
             modelBuilder.Entity("KnowledgePlatform.Domain.Knowledge.KnowledgeLinkToken", b =>

@@ -41,7 +41,7 @@ public sealed class KnowledgeApprovalHandler(AppDbContext db, IOptions<TenancyOp
         }
 
         var record = await db.KnowledgeRecords
-            .Include(r => r.Assertions)
+            .KemDanChung()
             .FirstOrDefaultAsync(r => r.Id == id, ct);
 
         if (record is null)

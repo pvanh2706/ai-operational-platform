@@ -1,3 +1,4 @@
+using KnowledgePlatform.Domain.Evidence;
 using KnowledgePlatform.Domain.Tenancy;
 
 namespace KnowledgePlatform.Domain.Knowledge;
@@ -99,6 +100,16 @@ public sealed class AssertionEvidence : ITenantScoped
     public required Guid AssertionId { get; init; }
 
     public required Guid EvidenceItemId { get; init; }
+
+    /// <summary>
+    /// Mẩu được trích. Navigation để các luật SUY RA đọc được trạng thái của mẩu nguồn — cụ thể
+    /// là `V3`: mẩu chống lưng bị NGƯỜI GỬI RÚT LẠI sau lần duyệt cuối → <c>NEEDS_REVIEW</c>.
+    ///
+    /// 🛑 Luật đó HỎNG IM LẶNG nếu nơi đọc quên nạp navigation này: <c>null</c> đọc ra thành
+    /// "không có mẩu nào bị rút". Nên mọi nơi đọc tri thức để trả lời phải đi qua MỘT extension
+    /// nạp chung (<c>KemDanChung</c> ở tầng Infrastructure), không tự viết <c>Include</c>.
+    /// </summary>
+    public EvidenceItem? EvidenceItem { get; init; }
 
     /// <summary>Evidence chống lưng, phản bác, hay chỉ là ngữ cảnh (K-B9).</summary>
     public required EvidenceRelation Relation { get; init; }

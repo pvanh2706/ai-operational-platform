@@ -88,6 +88,7 @@ public static class SopDraftToKnowledge
         }
 
         var records = new List<KnowledgeRecord>();
+        var trichDan = new List<TrichDanCase>();
         var buocSuaMoCoi = new List<string>();
         var nhanhTroLacLoi = new List<string>();
 
@@ -104,7 +105,7 @@ public static class SopDraftToKnowledge
                 buocSuaMoCoi.Add(buocSua.Ma);
             }
 
-            records.Add(DungRecord(draft, buocSua, nguon, tenantId));
+            records.Add(DungRecord(draft, buocSua, nguon, tenantId, trichDan));
         }
 
         // Nhánh trỏ tới mã không tồn tại ở đâu cả — bịa đích. `G6`/`AP3`.
@@ -116,14 +117,47 @@ public static class SopDraftToKnowledge
             }
         }
 
-        return new SopMappingResult(records, buocSuaMoCoi, nhanhTroLacLoi);
+        return new SopMappingResult(records, buocSuaMoCoi, nhanhTroLacLoi, trichDan);
+    }
+
+    /// <summary>
+    /// Ghi lại "phát biểu này dựa trên ticket nào" — thứ bản nháp CÓ mà trước 2026-10-10 bị vứt.
+    ///
+    /// 🛑 Vì sao đây là lỗi chứ không phải chi tiết: <c>assertion_evidence</c> có 0 dòng vì đúng
+    /// chỗ này. Bản nháp mang danh sách <c>case</c> ở mọi nhánh và mọi bước sửa, nhưng phép map
+    /// cũ chỉ dùng nó để chấm mức kiểm chứng rồi bỏ. Hệ quả dây chuyền: `/hoi` không trỏ được về
+    /// nguồn, lời khai `xacNhanDuLieuThuongMai` không đối chiếu được, V3 không biết mẩu nguồn bị
+    /// rút. Bản nháp gốc cũng không được lưu, nên 8 record cũ ở `kp_dev` KHÔNG điền bù được.
+    ///
+    /// ⚠ Hàm này chỉ ghi MÃ CASE. Mã case → mẩu evidence nào là việc của tầng có database
+    /// (<c>SopDraftIngestHandler</c>): Domain không biết case nào tồn tại.
+    /// </summary>
+    private static void GhiTrichDan(
+        List<TrichDanCase> dich,
+        SopDraft draft,
+        Assertion assertion,
+        IReadOnlyList<string> cases,
+        string? chungCu,
+        string nguon)
+    {
+        foreach (var ma in cases.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()))
+        {
+            // Cùng một phát biểu có thể trích một case qua hai nhánh — giữ MỘT dòng.
+            if (dich.Any(t => ReferenceEquals(t.Assertion, assertion) && t.MaCase == ma)) continue;
+
+            var loai = chungCu is null ? "bước sửa" : $"chungCu={chungCu}";
+            var ghiChu = $"ticket {ma} · {nguon} · {loai} · {cases.Count}/{draft.SoCaseDungSau} case của nhóm";
+
+            dich.Add(new TrichDanCase(assertion, ma, chungCu, ghiChu));
+        }
     }
 
     private static KnowledgeRecord DungRecord(
         SopDraft draft,
         SopFixStep buocSua,
         List<RecognitionSource> nguon,
-        Guid tenantId)
+        Guid tenantId,
+        List<TrichDanCase> trichDan)
     {
         var record = new KnowledgeRecord
         {
@@ -133,7 +167,7 @@ public static class SopDraftToKnowledge
         };
 
         // --- CauseExists: identity của record (T1) ---
-        record.Assertions.Add(new Assertion
+        var tonTai = new Assertion
         {
             TenantId = tenantId,
             KnowledgeRecordId = record.Id,
@@ -141,12 +175,20 @@ public static class SopDraftToKnowledge
             Content = record.CauseName,
             Origin = Origin.AiInference,
             Verification = MucKiemChung(nguon),
-        });
+        };
+        record.Assertions.Add(tonTai);
+
+        // Nguyên nhân tồn tại = mọi ticket mà một NHÁNH dẫn tới nó trích ra.
+        foreach (var src in nguon)
+        {
+            GhiTrichDan(trichDan, draft, tonTai, src.Nhanh.Case, src.Nhanh.ChungCu,
+                $"nhánh {src.Buoc.Ma}→{buocSua.Ma}");
+        }
 
         // --- Recognition: MỘT assertion cho MỖI nhánh (AP4) ---
         foreach (var src in nguon)
         {
-            record.Assertions.Add(new Assertion
+            var nhanRa = new Assertion
             {
                 TenantId = tenantId,
                 KnowledgeRecordId = record.Id,
@@ -154,11 +196,15 @@ public static class SopDraftToKnowledge
                 Content = $"{src.Buoc.CauHoi} — nơi xem: {src.Buoc.NoiXem} — quan sát: {src.Nhanh.QuanSat}",
                 Origin = Origin.AiInference,
                 Verification = MucKiemChungCuaNhanh(src.Nhanh),
-            });
+            };
+            record.Assertions.Add(nhanRa);
+
+            GhiTrichDan(trichDan, draft, nhanRa, src.Nhanh.Case, src.Nhanh.ChungCu,
+                $"nhánh {src.Buoc.Ma}→{buocSua.Ma}");
         }
 
         // --- Handling: T2, hành động đơn lẻ nằm trong record ---
-        record.Assertions.Add(new Assertion
+        var xuLy = new Assertion
         {
             TenantId = tenantId,
             KnowledgeRecordId = record.Id,
@@ -168,7 +214,10 @@ public static class SopDraftToKnowledge
             Verification = buocSua.Case.Count > 0
                 ? VerificationLevel.Supported
                 : VerificationLevel.Speculative,
-        });
+        };
+        record.Assertions.Add(xuLy);
+
+        GhiTrichDan(trichDan, draft, xuLy, buocSua.Case, chungCu: null, $"bước sửa {buocSua.Ma}");
 
         // --- Applicability: record này thuộc NHÓM nào (cầu nối với định tuyến) ---
         record.Assertions.Add(new Assertion
@@ -261,10 +310,24 @@ public static class SopDraftToKnowledge
 /// <param name="Records">Record đã dựng, còn ở <c>Draft</c>. Chưa ai duyệt.</param>
 /// <param name="BuocSuaMoCoi">Mã bước sửa mà KHÔNG nhánh nào trỏ tới — không bao giờ dùng được.</param>
 /// <param name="NhanhTroLacLoi">Mã đích mà nhánh trỏ tới nhưng không tồn tại trong bản nháp.</param>
+/// <param name="TrichDan">
+/// Phát biểu nào dựa trên TICKET nào — thứ bản nháp có sẵn mà phép map cũ vứt đi. Đây mới là
+/// MÃ CASE; nối sang mẩu evidence cụ thể là việc của tầng có database.
+/// </param>
 public sealed record SopMappingResult(
     IReadOnlyList<KnowledgeRecord> Records,
     IReadOnlyList<string> BuocSuaMoCoi,
-    IReadOnlyList<string> NhanhTroLacLoi)
+    IReadOnlyList<string> NhanhTroLacLoi,
+    IReadOnlyList<TrichDanCase> TrichDan)
 {
     public bool CoCanhBao => BuocSuaMoCoi.Count > 0 || NhanhTroLacLoi.Count > 0;
 }
+
+/// <summary>Một phát biểu trích một ticket.</summary>
+/// <param name="MaCase">Mã đúng như bản nháp viết — có thể TRẦN (<c>ES-9001</c>) hoặc có tiền tố nguồn.</param>
+/// <param name="ChungCu">
+/// <c>evidence-noi-ro</c> / <c>toi-suy-ra</c> của nhánh, hoặc <c>null</c> với bước sửa. Đây là LỜI
+/// MODEL TỰ KHAI, nên nó chỉ quyết định QUAN HỆ của liên kết (Support hay ContextFor), không bao giờ
+/// nâng mức kiểm chứng lên quá Supported.
+/// </param>
+public sealed record TrichDanCase(Assertion Assertion, string MaCase, string? ChungCu, string GhiChu);

@@ -77,7 +77,7 @@ public sealed class XemLinkHandler(AppDbContext db, LinkTokenContext linkContext
                  ?? throw new InvalidOperationException("Chưa có token nào được mở cho request này.");
 
         var record = await db.KnowledgeRecords
-            .Include(r => r.Assertions)
+            .KemDanChung()
             .FirstOrDefaultAsync(r => r.Id == id, ct);
 
         // RLS đã chặn record của tenant khác, nên tới đây null nghĩa là đã bị xoá.

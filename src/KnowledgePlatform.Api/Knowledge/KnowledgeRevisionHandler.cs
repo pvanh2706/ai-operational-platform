@@ -33,7 +33,7 @@ public sealed class KnowledgeRevisionHandler(AppDbContext db)
         ArgumentNullException.ThrowIfNull(yeuCau);
 
         var record = await db.KnowledgeRecords
-            .Include(r => r.Assertions)
+            .KemDanChung()
             .FirstOrDefaultAsync(r => r.Id == id, ct);
 
         if (record is null)
@@ -152,7 +152,7 @@ public sealed class KnowledgeRevisionHandler(AppDbContext db)
     public async Task<LichSuTriThuc?> DocAsync(Guid id, CancellationToken ct = default)
     {
         var record = await db.KnowledgeRecords
-            .Include(r => r.Assertions)
+            .KemDanChung()
             .FirstOrDefaultAsync(r => r.Id == id, ct);
 
         if (record is null) return null;
@@ -174,7 +174,8 @@ public sealed class KnowledgeRevisionHandler(AppDbContext db)
                     a.ActorLabel,
                     a.IsCurrent,
                     a.ReplacedByAssertionId,
-                    a.CreatedAt))]);
+                    a.CreatedAt,
+                    DanChungMau.Tu(a)))]);
     }
 }
 
@@ -200,6 +201,10 @@ public sealed record BanGhiDaSua(
     bool CanDuyetLai,
     IReadOnlyList<MotBanSua> DaSua);
 
+/// <param name="DanChung">
+/// Mẩu nào chống lưng phát biểu này (ô `H`, P3 2026-10-10). Trước P3 mảng này luôn rỗng vì
+/// <c>assertion_evidence</c> không có dòng nào.
+/// </param>
 public sealed record AssertionCoLichSu(
     Guid Id,
     string Kind,
@@ -209,7 +214,29 @@ public sealed record AssertionCoLichSu(
     string? NguoiGhi,
     bool ConHieuLuc,
     Guid? BiThayBoi,
-    DateTimeOffset LucTao);
+    DateTimeOffset LucTao,
+    IReadOnlyList<DanChungMau> DanChung);
+
+/// <summary>
+/// Một mẩu dẫn chứng của một phát biểu — TRỎ về nguồn, KHÔNG mang nội dung.
+///
+/// ⚠ Cố ý không trả <c>Content</c> của mẩu: đọc nội dung đi đường của nó
+/// (<c>GET /cases/{khoaNguon}/evidence</c>), nơi luật rút lại (`AR-m`) đã được thực thi. Trả nội
+/// dung ở đây là mở đường đọc thứ hai cho cùng một dữ liệu, và đường thứ hai là đường sẽ quên luật.
+/// </summary>
+/// <param name="DaRutLai">Người gửi đã rút mẩu này (`AR-m`). Nó vẫn hiện ra để thấy được VÌ SAO record cần duyệt lại.</param>
+public sealed record DanChungMau(Guid MauId, string? KhoaNguonMau, string QuanHe, string? GhiChu, bool DaRutLai)
+{
+    public static IReadOnlyList<DanChungMau> Tu(Assertion a) =>
+    [
+        .. a.EvidenceLinks.Select(l => new DanChungMau(
+            l.EvidenceItemId,
+            l.EvidenceItem?.SourceReference,
+            l.Relation.ToString(),
+            l.Note,
+            l.EvidenceItem?.RetractedAt is not null))
+    ];
+}
 
 public sealed record LichSuTriThuc(
     Guid Id,

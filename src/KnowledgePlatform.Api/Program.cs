@@ -599,9 +599,11 @@ app.MapPost("/knowledge/{id:guid}/approve", async (
         // (loại dữ liệu này không có hình dạng), còn gác ở tầng mẩu thì bắt người soát cả
         // những mẩu không bao giờ được dùng tới.
         //
-        // ⚠ Đây là LỜI KHAI, KHÔNG phải phép kiểm. Hệ thống không đối chiếu được, và hôm nay
-        //   còn không biết mẩu nguồn là những mẩu nào — `assertion_evidence` có 0 dòng. Ghi
-        //   thẳng ra đây để không ai đọc ô `true` thành "đã kiểm".
+        // ⚠ Đây là LỜI KHAI, KHÔNG phải phép kiểm. Hệ thống không đối chiếu được. Ghi thẳng ra
+        //   đây để không ai đọc ô `true` thành "đã kiểm".
+        //   (Câu cũ ở đây nói `assertion_evidence` có 0 dòng. Từ P3, 2026-10-10, bản nháp nạp MỚI
+        //   có liên kết, nên GET /knowledge/{id} chỉ ra được mẩu nguồn để người duyệt soát — nhưng
+        //   lời khai VẪN là lời khai.)
         if (yeuCau.XacNhanDuLieuThuongMai != true)
         {
             return Results.Problem(

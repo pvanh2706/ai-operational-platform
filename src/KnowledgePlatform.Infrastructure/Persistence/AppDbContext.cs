@@ -208,6 +208,19 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.HasIndex(x => new { x.TenantId, x.KhoaNguon }).IsUnique();
         });
 
+        // --- Bản nháp SOP GỐC (P3, 2026-10-10) — tenant-scoped, CÓ RLS. Xem SopDraftGoc ---
+        b.Entity<SopDraftGoc>(e =>
+        {
+            e.ToTable("sop_draft_goc");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Nhom).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Hash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.NoiDung).IsRequired();
+
+            // Nạp lại cùng một bản nháp KHÔNG sinh dòng thứ hai — cùng luật `IM-20`.
+            e.HasIndex(x => new { x.TenantId, x.Hash }).IsUnique();
+        });
+
         // --- Biên lai mỗi lượt gọi model (E3-1) — tenant-scoped, CÓ RLS ---
         b.Entity<LuotSoanNhap>(e =>
         {
@@ -385,6 +398,20 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.Property(x => x.Relation).HasConversion<string>().HasMaxLength(16).IsRequired();
             e.Property(x => x.Note).HasMaxLength(1024);
             e.HasIndex(x => new { x.AssertionId, x.EvidenceItemId }).IsUnique();
+
+            // 🛑 KHOÁ NGOẠI GHÉP (TenantId, EvidenceItemId) → evidence_item (TenantId, Id), có từ
+            //   2026-10-10 (P3). Hai lý do, lý do thứ hai mới là lý do thật:
+            //   1. Trước hôm nay bảng này KHÔNG có khoá ngoại sang evidence_item. Thực hành "xoá
+            //      evidence rồi nạp lại" (`IM-36`) chỉ an toàn vì có 0 liên kết — có liên kết rồi
+            //      thì xoá là để lại dòng mồ côi, im lặng. Restrict biến chuyện đó thành một lỗi.
+            //   2. RLS `WITH CHECK` chỉ kiểm TenantId của CHÍNH dòng đang ghi, không kiểm dòng nó
+            //      TRỎ TỚI. Khoá ngoại một cột thì một liên kết của khách A trỏ được vào mẩu của
+            //      khách B. Ghép cả TenantId vào khoá thì database tự chặn.
+            e.HasOne(x => x.EvidenceItem)
+                .WithMany()
+                .HasForeignKey(x => new { x.TenantId, x.EvidenceItemId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id })
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // =====================================================================

@@ -1,4 +1,5 @@
-﻿using KnowledgePlatform.Domain.Knowledge;
+﻿using KnowledgePlatform.Domain.Evidence;
+using KnowledgePlatform.Domain.Knowledge;
 
 namespace KnowledgePlatform.Domain.Tests;
 
@@ -11,8 +12,9 @@ namespace KnowledgePlatform.Domain.Tests;
 /// nếu nó sai thì hệ thống không crash, không báo, chỉ im lặng KHÔNG gắn cờ. Đó là
 /// đúng loại hỏng mà `AGENT.md` gọi là nguy hiểm nhất: hỏng mà vẫn trông như chạy.
 ///
-/// ⚠ Slice này mới có 3/5 trigger của `V3`. Hai trigger còn lại (quan hệ
-/// CONTRADICTS qua `L4`, và nguồn chống lưng bị đổi/xoá) chưa có vật liệu để kiểm.
+/// ⚠ Slice này có 3/5 trigger của `V3`, cộng MỘT PHẦN của trigger thứ tư (P3, 2026-10-10:
+/// mẩu chống lưng bị người gửi RÚT LẠI sau lần duyệt). Phần còn lại của trigger đó (mẩu bị
+/// sửa/xoá Ở NGUỒN) và trigger CONTRADICTS qua `L4` chưa có vật liệu để kiểm.
 /// Không test giả chúng ở đây — xem <see cref="Chua_du_nam_trigger_cua_V3"/>.
 /// </summary>
 public sealed class NeedsReviewTests
@@ -251,4 +253,93 @@ public sealed class NeedsReviewTests
             "này mới phủ 3 — trigger 'có quan hệ CONTRADICTS tới record khác' giờ đã có vật " +
             "liệu để kiểm. Viết nó, và cập nhật cả IsSuperseded (xem DisplayStateTests).");
     }
+
+    // =========================================================================
+    //  Trigger 4 (MỘT PHẦN, P3 2026-10-10) — mẩu chống lưng bị NGƯỜI GỬI rút lại
+    // =========================================================================
+
+    private static EvidenceItem MauCua(KnowledgeRecord record) => new()
+    {
+        TenantId = record.TenantId,
+        Content = "Da kiem room mapping",
+        SourceReference = $"jira:ES-1#comment-{Guid.CreateVersion7():N}",
+    };
+
+    private static void NoiDanChung(Assertion a, EvidenceItem mau) =>
+        a.EvidenceLinks.Add(new AssertionEvidence
+        {
+            TenantId = a.TenantId,
+            AssertionId = a.Id,
+            EvidenceItemId = mau.Id,
+            Relation = EvidenceRelation.Support,
+            EvidenceItem = mau,
+        });
+
+    /// <summary>
+    /// 🛑 Mẩu chống lưng bị rút SAU lần duyệt thì người duyệt CHƯA thấy điều đó — record phải tự gắn cờ.
+    /// </summary>
+    [Fact]
+    public void Mau_chong_lung_bi_rut_SAU_lan_duyet_thi_gan_co()
+    {
+        var record = KnowledgeBuilder.NewRecord();
+        var a = record.NewAssertion();
+        var mau = MauCua(record);
+        NoiDanChung(a, mau);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
+        Assert.False(record.NeedsReview);
+
+        Thread.Sleep(5);
+        mau.RutLai("chị Lan", "người gửi nói gửi nhầm");
+
+        Assert.True(record.NeedsReview);
+        Assert.Equal("NEEDS_REVIEW", record.DisplayState);
+    }
+
+    /// <summary>
+    /// Duyệt lại sau khi mẩu bị rút = người duyệt ĐÃ thấy. Cờ phải xoá được — cờ không xoá được thì
+    /// thành vĩnh viễn và mất nghĩa.
+    /// </summary>
+    [Fact]
+    public void Duyet_lai_sau_khi_mau_bi_rut_thi_xoa_co()
+    {
+        var record = KnowledgeBuilder.NewRecord();
+        var a = record.NewAssertion();
+        var mau = MauCua(record);
+        NoiDanChung(a, mau);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
+        Thread.Sleep(5);
+        mau.RutLai("chị Lan", "gửi nhầm");
+        Assert.True(record.NeedsReview);
+
+        Thread.Sleep(5);
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
+
+        Assert.False(record.NeedsReview);
+    }
+
+    /// <summary>
+    /// ⚠ Luật này đọc navigation <c>EvidenceItem</c>. Không nạp nó thì luật trả <c>false</c> — IM LẶNG.
+    /// Test ghim đúng chiều hỏng đó, để ai đọc tới đây hiểu vì sao phải nạp qua <c>KemDanChung</c>.
+    /// </summary>
+    [Fact]
+    public void Thieu_navigation_EvidenceItem_thi_luat_IM_LANG_tra_false()
+    {
+        var record = KnowledgeBuilder.NewRecord();
+        var a = record.NewAssertion();
+        var mau = MauCua(record);
+        a.EvidenceLinks.Add(new AssertionEvidence
+        {
+            TenantId = a.TenantId,
+            AssertionId = a.Id,
+            EvidenceItemId = mau.Id,
+            Relation = EvidenceRelation.Support,
+            // EvidenceItem KHÔNG gán — đúng như một chỗ đọc quên Include.
+        });
+        record.Approve("an.pham", VisibilityScope.NoiBo, xacNhanDuLieuThuongMai: true);
+        Thread.Sleep(5);
+        mau.RutLai("chị Lan", "gửi nhầm");
+
+        Assert.False(record.NeedsReview);
+    }
 }
+

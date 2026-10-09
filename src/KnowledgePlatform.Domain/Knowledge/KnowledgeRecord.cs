@@ -87,18 +87,27 @@ public sealed class KnowledgeRecord : ITenantScoped
     /// Một tri thức có assertion vừa bị bác bỏ sẽ KHÔNG nằm im ở Active
     /// cho tới khi có người để ý.
     ///
-    /// ⚠ Slice này hiện thực 3 trong 5 trigger của V3. Hai trigger còn lại cần
-    /// thứ chưa có trong slice:
+    /// ⚠ Slice này hiện thực 3 trong 5 trigger của V3, cộng MỘT PHẦN của trigger thứ tư
+    /// (2026-10-10, P3): mẩu chống lưng bị NGƯỜI GỬI RÚT LẠI (`AR-m`) SAU lần duyệt cuối. Phần
+    /// còn thiếu của trigger đó — mẩu bị SỬA hay XOÁ Ở NGUỒN — chờ `AR-r` (4)(5). Trigger còn lại:
     ///   · quan hệ CONTRADICTS tới record khác  → cần L4 (KnowledgeRelation)
-    ///   · một nguồn chống lưng bị đổi/xoá      → cần theo dõi thay đổi nguồn
     /// Ghi rõ ở đây để không ai tưởng là đã đủ.
+    ///
+    /// 🛑 Vì sao so với LẦN DUYỆT CUỐI chứ không phải "có mẩu nào đã rút": người duyệt lại sau khi
+    /// mẩu bị rút là người đã thấy điều đó — duyệt lại phải XOÁ được cờ, nếu không thì cờ thành
+    /// vĩnh viễn và mất nghĩa.
+    ///
+    /// ⚠ Trigger này đọc <see cref="AssertionEvidence.EvidenceItem"/>. Nơi đọc quên nạp nó thì luật
+    /// trả <c>false</c> — im lặng. Xem chú thích ở navigation đó.
     /// </summary>
     public bool NeedsReview =>
         Lifecycle == StoredLifecycleState.Active &&
         Assertions.Any(a =>
             a.IsCurrent &&
             (a.Verification is VerificationLevel.Invalidated or VerificationLevel.Conflicting
-             || (LastApproval is not null && a.CreatedAt > LastApproval.ApprovedAt)));
+             || (LastApproval is not null && a.CreatedAt > LastApproval.ApprovedAt)
+             || (LastApproval is not null && a.EvidenceLinks.Any(l =>
+                    l.EvidenceItem?.RetractedAt is { } rut && rut > LastApproval.ApprovedAt))));
 
     /// <summary>
     /// SUPERSEDED suy ra từ quan hệ "A SUPERSEDES nó" (L4) — KHÔNG lưu.
@@ -186,6 +195,16 @@ public sealed class KnowledgeRecord : ITenantScoped
     /// </summary>
     public void Deprecate() => Lifecycle = StoredLifecycleState.Deprecated;
 
+    /// <summary>Trần cột <c>note</c> của <c>assertion_evidence</c> — xem <c>AppDbContext</c>.</summary>
+    private const int TranGhiChuLienKet = 1024;
+
+    private static string GhiChuKeThua(string? ghiChuCu)
+    {
+        const string hauTo = " · kế thừa từ bản A";
+        var ghiChu = string.IsNullOrWhiteSpace(ghiChuCu) ? "kế thừa từ bản A" : ghiChuCu + hauTo;
+        return ghiChu.Length <= TranGhiChuLienKet ? ghiChu : string.Concat(ghiChu.AsSpan(0, TranGhiChuLienKet - 1), "…");
+    }
+
     /// <summary>
     /// Nguời duyệt SỬA một phát biểu: bản gốc KHÔNG bị ghi đè, nó thôi còn hiệu lực và
     /// một bản mới mang origin CỦA NGƯỜI SỬA được thêm vào. Đây là vế B của `M2`.
@@ -259,6 +278,24 @@ public sealed class KnowledgeRecord : ITenantScoped
             ActorLabel = actorLabel,
         };
 
+        // Bản B KẾ THỪA dẫn chứng của bản A (`IM-49` lựa chọn 5): người sửa NỘI DUNG, mẩu nguồn
+        // không đổi. Không chép thì bản người sửa thành một phát biểu KHÔNG CÓ NGUỒN — và mọi cổng
+        // đọc dẫn chứng phía sau (V3 khi mẩu bị rút, dẫn chứng của /hoi) lặng lẽ bỏ qua nó.
+        //
+        // ⚠ Chép được 0 dòng nếu nơi gọi không nạp EvidenceLinks — và không có lỗi nào. Nơi gọi
+        // phải nạp qua extension chung (`KemDanChung`).
+        foreach (var lienKet in cu.EvidenceLinks)
+        {
+            moi.EvidenceLinks.Add(new AssertionEvidence
+            {
+                TenantId = TenantId,
+                AssertionId = moi.Id,
+                EvidenceItemId = lienKet.EvidenceItemId,
+                Relation = lienKet.Relation,
+                Note = GhiChuKeThua(lienKet.Note),
+            });
+        }
+
         Assertions.Add(moi);
         cu.ReplacedByAssertionId = moi.Id;
 
@@ -298,6 +335,12 @@ public sealed class KnowledgeApproval
     /// bản nháp SOP chưa nối assertion với evidence. Nên chưa có cách nào đối chiếu lời khai
     /// này với thực tế — kể cả muốn. Khi mắt xích đó có, chỗ này mới nâng được từ *khai* lên
     /// *đối chiếu được*, và đó là lúc phải quay lại sửa.
+    ///
+    /// 🔄 **2026-10-10 (P3): mắt xích ĐÃ CÓ cho bản nháp nạp MỚI** — mỗi phát biểu nối tới mẩu
+    /// evidence của ticket nó trích. Người duyệt giờ BIẾT phải soát những mẩu nào (GET
+    /// /knowledge/{id} chỉ ra). Nhưng ô này VẪN là lời khai: chưa có gì đối chiếu "đã soát" với
+    /// nội dung mẩu, và 8 record cũ ở <c>kp_dev</c> không điền bù được vì bản nháp gốc của chúng
+    /// không được lưu.
     ///
     /// ⚠ <c>NULL</c> = duyệt TRƯỚC khi có luật này (2026-09-16). KHÁC <c>false</c>, và đừng
     /// gộp: <c>false</c> nghĩa là có người được hỏi và nói chưa soát — thứ mà
