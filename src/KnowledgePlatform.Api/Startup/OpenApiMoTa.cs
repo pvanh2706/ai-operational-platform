@@ -109,6 +109,12 @@ public static partial class OpenApiMoTa
                 "Liệt kê tài liệu của khách hàng này",
                 "Chỉ siêu dữ liệu. Nội dung tải qua `/documents/{id}/tai`."),
 
+            ["GET /documents/{id}/chu"] = new(NhomKenh2,
+                "Đọc chữ trích được của một tài liệu",
+                "P9 (ô K): `trangThaiTrichChu` = `da-trich` · `chua-ho-tro` (PDF, ảnh — KHÔNG có OCR, N4-1) · " +
+                "`khong-giai-ma-duoc` (không phải UTF-8 — cố ý không đoán bảng mã) · `loi`. ⚠ Chữ trích ra KHÔNG phải " +
+                "tri thức (S6), và CHƯA qua cổng che nào."),
+
             ["GET /documents/{id}/tai"] = new(NhomKenh2,
                 "Tải nội dung một tài liệu",
                 "404 cho cả hai ca: không có tài liệu đó trong phạm vi khách hàng này, VÀ có dòng " +

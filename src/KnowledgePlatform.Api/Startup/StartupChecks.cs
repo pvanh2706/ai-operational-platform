@@ -1,3 +1,4 @@
+using KnowledgePlatform.Api.Documents;
 using KnowledgePlatform.Api.Signals;
 using KnowledgePlatform.Api.Knowledge;
 using KnowledgePlatform.Api.Tenancy;
@@ -32,6 +33,7 @@ public static class StartupChecks
         RequireConnectionString(config);
         RequireApiAuthDecision(tenancy, auth);
         RequireCongCheDecision(tenancy, sp.GetRequiredService<IOptions<CongCheOptions>>().Value);
+        RequireNguonQuetHopLe(tenancy, sp.GetRequiredService<IOptions<KenhHaiOptions>>().Value);
         CanhBaoDiaChiLink(sp.GetRequiredService<IOptions<LinkXemOptions>>().Value);
         await ResolveTenancyAsync(sp, tenancy, ct);
 
@@ -223,6 +225,50 @@ public static class StartupChecks
             "🛑 CongChe:TatTamVaChapNhanRuiRo = true — MỌI CỔNG CHE ĐANG TẮT (N1-2). " +
             "Mật khẩu/token trong dữ liệu sẽ đi NGUYÊN VĂN tới model, webhook, trang /xem, và vào kho. " +
             "Mẩu nạp lúc này mang dấu DaCheBenThuBa = false.");
+    }
+
+    /// <summary>
+    /// Nguồn quét thư mục của Kênh 2 (P9). Khai thiếu là KHÔNG KHỞI ĐỘNG — một job nền chạy sai cấu hình thì nó sai
+    /// IM LẶNG mỗi 5 phút, ở nơi không ai ngồi nhìn.
+    /// </summary>
+    private static void RequireNguonQuetHopLe(TenancyOptions tenancy, KenhHaiOptions kenhHai)
+    {
+        for (var i = 0; i < kenhHai.Nguon.Count; i++)
+        {
+            var n = kenhHai.Nguon[i];
+            var ten = $"KenhHai:Nguon:{i}";
+
+            if (string.IsNullOrWhiteSpace(n.ThuMuc) || !Directory.Exists(n.ThuMuc))
+            {
+                throw new InvalidOperationException($"{ten}:ThuMuc = \"{n.ThuMuc}\" — trống hoặc KHÔNG tồn tại.");
+            }
+
+            // AR-l: không mặc định, không tự điền hộ — cùng luật mọi đường nạp.
+            if (string.IsNullOrWhiteSpace(n.SubTenantCode) || !Domain.Evidence.SubTenantCodes.TryChuanHoa(n.SubTenantCode, out _))
+            {
+                throw new InvalidOperationException(
+                    $"{ten}:SubTenantCode bắt buộc (AR-l). Chưa biết thì khai \"{Domain.Evidence.SubTenantCodes.KhongXacDinh}\" — " +
+                    "\"chưa biết\" phải là một lời khai, không phải một ô bị bỏ quên.");
+            }
+
+            if (string.IsNullOrWhiteSpace(n.NguoiNap))
+            {
+                throw new InvalidOperationException($"{ten}:NguoiNap bắt buộc — tài liệu nạp vào kho phải có người chịu trách nhiệm.");
+            }
+
+            if (tenancy.Mode == TenancyMode.SharedMultiTenant && string.IsNullOrWhiteSpace(n.TenantKey))
+            {
+                throw new InvalidOperationException($"{ten}:TenantKey bắt buộc ở chế độ shared — thư mục này của khách nào?");
+            }
+
+            // 🛑 Bài học I2-1: bản dedicated của khách A KHÔNG được làm việc thay khách B.
+            if (tenancy.Mode == TenancyMode.DedicatedSingleTenant
+                && !string.IsNullOrWhiteSpace(n.TenantKey) && n.TenantKey != tenancy.TenantExternalKey)
+            {
+                throw new InvalidOperationException(
+                    $"{ten}:TenantKey = \"{n.TenantKey}\" nhưng bản deploy dedicated này phục vụ \"{tenancy.TenantExternalKey}\".");
+            }
+        }
     }
 
     private static async Task ResolveTenancyAsync(

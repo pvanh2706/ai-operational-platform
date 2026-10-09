@@ -312,7 +312,7 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >    P6  J  ghi lượt gợi ý theo 5 nấc L2 + API phản hồi; phản hồi sửa nhóm = vòng J→G   ✅ 2026-10-10
 >    P7  "nhận về là xử lý luôn": evidence mới đổi bước hiện tại → gửi lượt mới   ✅ 2026-10-10
 >    P8  định tuyến ticket MỚI bằng model (cờ riêng, N7-1) — chưa có credit để chạy thật   ✅ 2026-10-10 (code)
->    P9  Kênh 2: trích chữ không thêm thư viện + job quét thư mục
+>    P9  Kênh 2: trích chữ không thêm thư viện + job quét thư mục   ✅ 2026-10-10
 >    P10 tài liệu khớp code: README, docs/08 (đang trỏ file đã xoá), docs/19
 > ```
 > ⚠ **Sau P10, ô `A2` và `K` VẪN là `◐`** — chọn không thêm thư viện (`N4-1`) nghĩa là không có

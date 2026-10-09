@@ -50,6 +50,20 @@ public sealed class Document : ITenantScoped
     public required string NguoiNap { get; init; }
 
     public DateTimeOffset NapLuc { get; init; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Ô `K` — đã trích được chữ chưa (P9, 2026-10-10, <see cref="TrichChu"/>). <c>NULL</c> = nạp TRƯỚC P9, chưa ai thử;
+    /// KHÁC <c>chua-ho-tro</c> (đã thử, định dạng không đọc được). Không điền bù — cùng luật mọi ô "chưa ai hỏi".
+    /// </summary>
+    public string? TrangThaiTrichChu { get; init; }
+
+    /// <summary>
+    /// Chữ trích được. ⚠ KHÔNG phải tri thức (`S6`) — nó làm tài liệu đọc được, không làm hệ thống biết thêm gì.
+    /// ⚠ CHƯA qua cổng che nào: tài liệu chưa đi ra đâu ngoài đường đọc chính nó (như <c>/tai</c> trả file gốc).
+    /// </summary>
+    public string? NoiDungChu { get; init; }
+
+    public string? GhiChuTrichChu { get; init; }
 }
 
 /// <summary>

@@ -267,6 +267,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
             // Nạp lại cùng một file KHÔNG sinh bản thứ hai — cùng luật `IM-20` ở đường tín hiệu.
             e.HasIndex(x => new { x.TenantId, x.Hash }).IsUnique();
+
+            // P9: chữ trích được (ô K). NULL ở cả ba = nạp trước P9.
+            e.Property(x => x.TrangThaiTrichChu).HasMaxLength(32);
+            e.Property(x => x.GhiChuTrichChu).HasMaxLength(1024);
         });
 
         // --- Webhook: CÓ RLS (tenant-scoped) — khác hai bảng trên, xem WebhookEndpoint ---

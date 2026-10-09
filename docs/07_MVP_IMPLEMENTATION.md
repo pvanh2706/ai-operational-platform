@@ -712,6 +712,36 @@ câu §10.1 — agent không tự chọn.
 
 ✅ 526/526 test (244 + 33 + 249), trước 511. Đột biến: gỡ ngưỡng tin cậy → đúng test "dưới ngưỡng thì im lặng" đỏ.
 
+### P9 ✅ — Kênh 2: trích chữ + job quét thư mục, KHÔNG thêm thư viện (2026-10-10, `N4-1`)
+
+```text
+TrichChu (Domain)  txt · md · csv · json · xml · log → UTF-8 NGHIÊM (sai thì "khong-giai-ma-duoc", không đoán)
+                   html → bỏ thẻ / script / style, giải thực thể
+                   docx → ZIP → word/document.xml → w:t   (System.IO.Compression + XmlReader)
+                   pdf · ảnh → "chua-ho-tro" — KHÔNG OCR, KHÔNG đọc PDF
+an toàn .docx      DtdProcessing.Prohibit (XXE / entity bomb) · trần 50 MB sau giải nén (zip bomb)
+lúc nạp            trích từ ĐÚNG chuỗi byte vừa băm; trích hỏng KHÔNG chặn nạp, trạng thái nói vì sao
+đọc                GET /documents/{id}/chu
+job quét           QuetThuMucService — mỗi nguồn một scope, tenant đặt tường minh (khuôn webhook);
+                   nạp qua ĐÚNG DocumentHandler nên khử trùng theo hash + S6 áp nguyên
+cấu hình           KenhHai:Nguon[] {ThuMuc, SubTenantCode, NguoiNap, TenantKey} — thiếu là KHÔNG KHỞI ĐỘNG;
+                   dedicated khai khách khác cũng không khởi động (bài học I2-1)
+```
+
+⚠ **Lỗi của chính tôi, tìm ra khi đọc lại trước khi chạy test:** vòng đọc XML bản đầu dùng
+`while (reader.Read())` — mà `ReadElementContentAsString` đã đưa con trỏ tới nút KẾ TIẾP, nên Read() nhảy qua
+mất nó. Hai `w:t` liền nhau trong một run thì mất đoạn thứ hai, im lặng. Có test giữ, và đã chứng minh biết ĐỎ
+bằng cách tái tạo đúng lỗi đó.
+
+⚠ **A2 và K vẫn `◐`, đúng như `N4-1` đã nói trước:** Drive không có connector (thư mục Drive ĐỒNG BỘ VỀ MÁY là
+đường duy nhất), Jira vẫn quét bằng giao diện Python rồi đẩy vào Kênh 1, PDF/ảnh chưa đọc được.
+
+⚠ Chữ trích ra **CHƯA qua cổng che nào** — hôm nay nó không đi ra đâu ngoài chính đường đọc của nó (như `/tai`
+trả file gốc). Ngày nó đi vào bản nháp SOP thì PHẢI qua cổng che, y như evidence (`IM-47`).
+
+✅ 539/539 test (252 + 33 + 254), trước 526. Đột biến: tái tạo lỗi nhảy nút trong vòng đọc docx → đúng test đó đỏ;
+gỡ luật bắt buộc SubTenantCode của nguồn quét → đúng test "không khởi động" đỏ.
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

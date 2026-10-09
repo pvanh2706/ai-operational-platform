@@ -593,6 +593,12 @@ def kenh_hai() -> None:
     s, _ = goi("GET", "/documents/%s/tai" % b["id"])
     kiem("GET /documents/{id}/tai -> 200", s, 200)
 
+    # P9 (ô K): chữ trích được — file .txt thì phải ra đúng nội dung vừa nạp.
+    s, chu = goi("GET", "/documents/%s/chu" % b["id"])
+    kiem("GET /documents/{id}/chu -> 200", s, 200)
+    kiem("  ... trích đúng chữ của file .txt",
+         ((chu or {}).get("trangThaiTrichChu"), (chu or {}).get("noiDungChu")), ("da-trich", noi))
+
 
 def quy_trinh() -> None:
     """

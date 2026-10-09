@@ -64,6 +64,8 @@ builder.Services.Configure<KhoFileOptions>(
     builder.Configuration.GetSection(KhoFileOptions.SectionName));
 builder.Services.Configure<CongCheOptions>(
     builder.Configuration.GetSection(CongCheOptions.SectionName));
+builder.Services.Configure<KenhHaiOptions>(
+    builder.Configuration.GetSection(KenhHaiOptions.SectionName));
 
 // `N1-2` — MỘT cửa cho mọi lần che. Singleton vì nó chỉ đọc một cờ cấu hình, không chạm tenant.
 builder.Services.AddSingleton<CongChe>();
@@ -116,6 +118,12 @@ builder.Services.AddScoped<DocumentHandler>();
 builder.Services.AddScoped<KhopQuyTrinh>();
 builder.Services.AddScoped<QuyTrinhHandler>();
 builder.Services.AddScoped<XuLyNgay>();
+
+// P9 (2026-10-10): Kênh 2 — job quét thư mục. Hosted service LUÔN đăng ký; nó tự đọc cấu hình lúc chạy và không làm
+// gì khi không có nguồn nào (`IM-12`: không đọc cấu hình trước khi build).
+builder.Services.AddSingleton<DauVetQuet>();
+builder.Services.AddScoped<QuetThuMuc>();
+builder.Services.AddHostedService<QuetThuMucService>();
 
 // P6 (2026-10-10): ô J — lượt gợi ý + phản hồi. Taxonomy đọc MỘT lần (singleton, không chạm tenant).
 builder.Services.AddSingleton<TaxonomyNhom>();
@@ -877,6 +885,15 @@ app.MapPost("/documents", async (
 
 app.MapGet("/documents", async (DocumentHandler handler, CancellationToken ct) =>
         Results.Ok(await handler.LietKeAsync(ct)))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+// Ô K (P9): chữ trích được của tài liệu — "nội dung đọc được". ⚠ KHÔNG phải tri thức (S6).
+app.MapGet("/documents/{id:guid}/chu", async (Guid id, DocumentHandler handler, CancellationToken ct) =>
+        await handler.DocChuAsync(id, ct) is { } chu
+            ? Results.Ok(chu)
+            : Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Không thấy tài liệu này",
+                detail: $"Không có tài liệu {id} trong phạm vi của khách hàng này."))
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 

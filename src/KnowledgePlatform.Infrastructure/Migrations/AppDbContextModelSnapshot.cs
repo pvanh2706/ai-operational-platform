@@ -66,6 +66,10 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("GhiChuTrichChu")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
                     b.Property<string>("Hash")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -92,6 +96,9 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("NoiDungChu")
+                        .HasColumnType("text");
+
                     b.Property<string>("SubTenantCode")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -104,6 +111,10 @@ namespace KnowledgePlatform.Infrastructure.Migrations
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("TrangThaiTrichChu")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.HasKey("Id");
 

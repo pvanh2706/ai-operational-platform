@@ -8,12 +8,17 @@ using Microsoft.EntityFrameworkCore;
 namespace KnowledgePlatform.Api.Documents;
 
 /// <param name="TrungVoi">Id của tài liệu đã có cùng nội dung, nếu nạp trùng.</param>
+/// <param name="TrangThaiTrichChu">P9: <c>da-trich</c> · <c>chua-ho-tro</c> · <c>khong-giai-ma-duoc</c> · <c>loi</c>.</param>
 public sealed record KetQuaNapTaiLieu(
-    Guid Id, string TenKhaiBao, long KichThuoc, string Hash, bool DaCoTuTruoc, Guid? TrungVoi);
+    Guid Id, string TenKhaiBao, long KichThuoc, string Hash, bool DaCoTuTruoc, Guid? TrungVoi,
+    string? TrangThaiTrichChu = null, string? GhiChuTrichChu = null);
 
 public sealed record TomTatTaiLieu(
     Guid Id, string TenKhaiBao, string LoaiNoiDung, long KichThuoc,
-    string SubTenantCode, string NguoiNap, DateTimeOffset NapLuc);
+    string SubTenantCode, string NguoiNap, DateTimeOffset NapLuc, string? TrangThaiTrichChu);
+
+/// <summary>Chữ trích được của một tài liệu (ô `K`).</summary>
+public sealed record ChuTaiLieu(Guid Id, string TenKhaiBao, string? TrangThaiTrichChu, string? GhiChu, string? NoiDungChu);
 
 /// <summary>
 /// Kênh 2 — đường nạp/đồng bộ tài liệu (`AR5`).
@@ -48,8 +53,13 @@ public sealed class DocumentHandler(AppDbContext db, ITenantContext tenant, IKho
             // Nạp lại cùng một file KHÔNG phải lỗi — job đồng bộ chạy lại là chuyện thường,
             // cùng lý do `IM-20` ở đường tín hiệu. Trả lại bản đã có.
             return new KetQuaNapTaiLieu(
-                daCo.Id, daCo.TenKhaiBao, daCo.KichThuoc, daCo.Hash, DaCoTuTruoc: true, TrungVoi: daCo.Id);
+                daCo.Id, daCo.TenKhaiBao, daCo.KichThuoc, daCo.Hash, DaCoTuTruoc: true, TrungVoi: daCo.Id,
+                daCo.TrangThaiTrichChu, daCo.GhiChuTrichChu);
         }
+
+        // Ô K (P9): trích chữ NGAY lúc nạp, từ đúng chuỗi byte vừa băm. Trích hỏng KHÔNG chặn việc nạp — file gốc
+        // vẫn vào kho, và trạng thái nói rõ vì sao chưa đọc được (`N4-1`: không thêm thư viện).
+        var chu = TrichChu.Trich(tenKhaiBao, bo.ToArray());
 
         var maKho = await kho.LuuAsync(tenant.TenantId, bo, ct);
 
@@ -63,20 +73,31 @@ public sealed class DocumentHandler(AppDbContext db, ITenantContext tenant, IKho
             Hash = hash,
             SubTenantCode = subTenantCode,
             NguoiNap = nguoiNap,
+            TrangThaiTrichChu = chu.TrangThai,
+            NoiDungChu = chu.NoiDungChu,
+            GhiChuTrichChu = chu.GhiChu,
         };
 
         db.Set<Document>().Add(tl);
         await db.SaveChangesAsync(ct);
 
-        return new KetQuaNapTaiLieu(tl.Id, tl.TenKhaiBao, tl.KichThuoc, tl.Hash, DaCoTuTruoc: false, TrungVoi: null);
+        return new KetQuaNapTaiLieu(tl.Id, tl.TenKhaiBao, tl.KichThuoc, tl.Hash, DaCoTuTruoc: false, TrungVoi: null,
+            tl.TrangThaiTrichChu, tl.GhiChuTrichChu);
     }
 
     public async Task<IReadOnlyList<TomTatTaiLieu>> LietKeAsync(CancellationToken ct = default) =>
         await db.Set<Document>()
             .OrderByDescending(d => d.NapLuc)
             .Select(d => new TomTatTaiLieu(
-                d.Id, d.TenKhaiBao, d.LoaiNoiDung, d.KichThuoc, d.SubTenantCode, d.NguoiNap, d.NapLuc))
+                d.Id, d.TenKhaiBao, d.LoaiNoiDung, d.KichThuoc, d.SubTenantCode, d.NguoiNap, d.NapLuc, d.TrangThaiTrichChu))
             .ToListAsync(ct);
+
+    /// <summary>Chữ trích được (ô `K`). <c>null</c> = không có tài liệu đó trong phạm vi khách này.</summary>
+    public async Task<ChuTaiLieu?> DocChuAsync(Guid id, CancellationToken ct = default) =>
+        await db.Set<Document>()
+            .Where(d => d.Id == id)
+            .Select(d => new ChuTaiLieu(d.Id, d.TenKhaiBao, d.TrangThaiTrichChu, d.GhiChuTrichChu, d.NoiDungChu))
+            .FirstOrDefaultAsync(ct);
 
     /// <summary>Đọc lại nội dung. <c>null</c> nghĩa là không có — RLS đã lo phần của khách khác.</summary>
     public async Task<(Document Meta, Stream NoiDung)?> TaiAsync(Guid id, CancellationToken ct = default)
