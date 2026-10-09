@@ -313,10 +313,13 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >    P7  "nhận về là xử lý luôn": evidence mới đổi bước hiện tại → gửi lượt mới   ✅ 2026-10-10
 >    P8  định tuyến ticket MỚI bằng model (cờ riêng, N7-1) — chưa có credit để chạy thật   ✅ 2026-10-10 (code)
 >    P9  Kênh 2: trích chữ không thêm thư viện + job quét thư mục   ✅ 2026-10-10
->    P10 tài liệu khớp code: README, docs/08 (đang trỏ file đã xoá), docs/19
+>    P10 tài liệu khớp code: README, docs/08 (đang trỏ file đã xoá), docs/19   ✅ 2026-10-10
 > ```
 > ⚠ **Sau P10, ô `A2` và `K` VẪN là `◐`** — chọn không thêm thư viện (`N4-1`) nghĩa là không có
 > connector Drive/Jira trong host và không đọc PDF/ảnh. Không đánh `✅` cho chúng.
+> ✅ **Xong cả 11 phase 2026-10-10.** Chạy thật: 539 test · `kiem_dau_cuoi.py` 81 phép kiểm, 0 hỏng ·
+> `kiem_hai_khach.py` 31/31 · nạp lại bản nháp máy sinh vào `kp_dev` → 148 liên kết dẫn chứng. Chi tiết và
+> những gì VẪN chưa kiểm được: `07` §3 `IM-49` mục P10.
 > ⚠ Việc `a`–`d` của `AR-r` bên dưới **không bị bỏ**, chỉ lùi sau lộ trình này. Riêng `a` (che
 > credential lúc nạp) giờ đứng sau cờ của `N1-2`: cờ bật thì nó cũng tắt.
 

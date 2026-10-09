@@ -165,8 +165,9 @@ if (builder.Configuration.GetValue($"{WebhookOptions.SectionName}:BatVongQuet", 
     builder.Services.AddHostedService<WebhookSenderService>();
 }
 
-// AR3 — interface mỏng, một dòng để đổi bản hiện thực. Bản đang cắm KHÔNG gọi API và
-// KHÔNG định tuyến: nó tra bảng kết quả đã đo (`docs/13`). Xem DinhTuyenTraSan.
+// AR3 — interface mỏng, một dòng để đổi bản hiện thực. Tầng BẢNG ĐO dưới đây KHÔNG gọi API và
+// KHÔNG định tuyến: nó tra bảng kết quả đã đo (`docs/13`). Xem DinhTuyenTraSan. Bản thật sự cắm
+// vào IDinhTuyenNhom là DinhTuyenKho, đăng ký ở phía dưới.
 // Singleton vì nó chỉ đọc một file một lần rồi giữ trong bộ nhớ; không có trạng thái
 // theo request, và KHÔNG chạm tenant — nên nó không phải chỗ rò ranh giới.
 // Bảng đã đo: đọc file MỘT LẦN, nên singleton. Nó không chạm tenant.

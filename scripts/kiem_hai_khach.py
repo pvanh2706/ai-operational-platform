@@ -178,6 +178,12 @@ def nap_tri_thuc(k: Khach) -> None:
 
     k.record_id = b["nguyenNhan"][0]["id"]
 
+    # P4: bản nháp sinh MỘT quy trình DRAFT. Lấy id NGAY ở đây — bản đầu của đoạn này lấy nó SAU lượt duyệt tri
+    # thức, lúc `b` đã bị gán lại, nên id rỗng: POST /processes//approve ra 404 và GET /processes/ khớp nhầm route
+    # liệt kê ra 200. Không phải lỗi sản phẩm — nhưng đúng hình dạng "phép kiểm hỏng mà trông như sản phẩm hỏng".
+    k.quy_trinh_id = ((b.get("quyTrinh") or {}).get("id") or "")
+    kiem("[%s] bản nháp sinh một quy trình DRAFT" % k.ten, bool(k.quy_trinh_id), True)
+
     # 🛑 Ở chế độ SHARED, duyệt bị TỪ CHỐI bằng 409 — cổng `AR-l` (`IM-31`), CỐ Ý.
     #
     # Duyệt LÀ xuất bản, và đường rò của `AR-l` xảy ra ở khâu xuất bản chứ không ở khâu truy
@@ -194,7 +200,6 @@ def nap_tri_thuc(k: Khach) -> None:
 
     # P4 (2026-10-10): bản nháp vừa nạp sinh một quy trình DRAFT. Duyệt nó cũng là XUẤT BẢN, nên
     # cổng AR-l chặn y như duyệt tri thức — và phải nói rõ AR-l là lý do.
-    k.quy_trinh_id = ((b or {}).get("quyTrinh") or {}).get("id", "")
     s, b = goi("POST", "/processes/%s/approve" % k.quy_trinh_id,
                {"nguoiDuyet": "nghiem-thu", "phamViXem": "noi-bo",
                 "xacNhanDuLieuThuongMai": True}, khoa=k.khoa)

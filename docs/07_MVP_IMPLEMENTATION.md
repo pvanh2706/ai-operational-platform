@@ -742,6 +742,54 @@ trả file gốc). Ngày nó đi vào bản nháp SOP thì PHẢI qua cổng che
 ✅ 539/539 test (252 + 33 + 254), trước 526. Đột biến: tái tạo lỗi nhảy nút trong vòng đọc docx → đúng test đó đỏ;
 gỡ luật bắt buộc SubTenantCode của nguồn quét → đúng test "không khởi động" đỏ.
 
+### P10 ✅ — Tài liệu khớp code, và chạy thật từ đầu tới cuối (2026-10-10)
+
+```text
+kiem_dau_cuoi.py    81 phép kiểm, 0 hỏng — dedicated, app sống, mọi route trong hợp đồng (mục J)
+kiem_hai_khach.py   31/31 — shared, hai khách dựng từ 0; duyệt quy trình ở shared → 409
+nạp thật            bản nháp máy sinh (docs/ket-qua-phan-tich/may-sinh-*.json) vào kp_dev:
+                    assertion_evidence 0 → 148 · 0 mã không giải được · 0 mã mơ hồ
+                    tenant dev: 7/24 record CŨ được điền bù (khớp Kind + Content)
+```
+
+⚠ **Lỗi của chính tôi, trong phép kiểm, không phải sản phẩm:** đoạn P4 của `kiem_hai_khach.py` lấy id quy trình
+SAU lượt duyệt tri thức, lúc biến `b` đã bị gán lại — id rỗng, nên `POST /processes//approve` ra 404 và
+`GET /processes/` khớp nhầm route liệt kê ra 200. 5 phép kiểm đỏ, trông y như sản phẩm hỏng. Sửa: lấy id NGAY
+sau lượt nạp, và kiểm luôn rằng nó có mặt.
+
+Tài liệu sửa ở P10:
+
+```text
+README      sơ đồ luồng: D E F G H I J → ✅; A2 · K giữ ◐, phần thiếu ghi trong ô
+            C ⇢ G: hết là đường TẮT, giờ là đường LÙI · nhãn J ⇢ G: M3 / tầng 1, không phải M2
+            đầu file, "Đã build và chưa build", hình dạng dữ liệu (thêm sơ đồ quy trình + sổ gợi ý)
+docs/08     VẼ LẠI — bản 2026-08-25 tả khoá chung X-Signal-Key đã xoá từ 2026-09-16, 4 cửa khởi động
+            (nay 8), 4 endpoint (nay 33). Thêm §3 câu hỏi D → J, §4 Path A, §5 việc chạy nền
+docs/19     ô mới của gói webhook · §2.3 xác nhận bước · §3.5 phản hồi gợi ý · maGoi ≠ maLuotGoiY
+code        hai comment đã sai: CaseSignalHandler ("khớp quy trình… vẫn chưa build"),
+            Program.cs (gọi bảng đo là "bản đang cắm")
+```
+
+⚠ **Một câu trong README sai một nửa, tìm ra lúc đo lại cho P10:** dòng P3 ở "Rủi ro đang mở" ghi *"8 record cũ
+không điền bù được vì bản nháp gốc không được lưu"*. Đo trên `kp_dev`: nạp lại CÙNG bản nháp thì điền bù được —
+7/24 record cũ đã có dẫn chứng. Câu cũ giữ nguyên, thêm dòng đo bên dưới.
+
+⚠ **`docs/08` sai ba tuần mà không gì đỏ** — không test nào đọc nó, và quy tắc "sửa code thì mở file này ra" ở
+cuối file đã không được làm theo, kể cả bởi tôi ở P1–P9. Link tới file thì kiểm được bằng máy — đã chạy tay ở
+P10, 0 link chết trong README, `08`, `19` — nhưng link còn sống không nói được sơ đồ còn đúng, và bản cũ sai cả
+hai kiểu. Nên P10 không thêm cổng tự động; thêm vào quy tắc cuối file danh sách file nào đổi thì sơ đồ nào sai.
+
+**Vẫn KHÔNG kiểm được sau cả 11 phase** — nói lại ở đây cho đủ một chỗ:
+
+```text
+định tuyến bằng model     chưa gọi thật lần nào (không credit) — chỉ kiểm hình dạng bằng HttpClient giả;
+                          ngưỡng 0,9 chưa đo
+ACCEPTED / USED           là LỜI KHAI; không gì nối nó với kết luận thật của case
+dấu hiệu của bước         bước sinh từ bản nháp có 0 dấu hiệu — chất lượng dấu hiệu trên dữ liệu thật: chưa biết
+Drive · Jira trong host · PDF/OCR · MinIO · bên nhận webhook thật      không có
+chế độ shared             duyệt tri thức và quy trình vẫn 409 (AR-l) → D–F chỉ chạy ở dedicated
+```
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

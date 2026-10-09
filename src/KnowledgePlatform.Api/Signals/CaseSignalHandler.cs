@@ -10,8 +10,8 @@ namespace KnowledgePlatform.Api.Signals;
 /// <summary>
 /// Ô "Tìm hoặc tạo Case" của sơ đồ luồng tín hiệu.
 ///
-/// ⚠ **Response dừng ở đúng đây, cố ý.** Khớp quy trình đã duyệt và suy ra đang ở bước
-/// nào vẫn chưa build. Tra tri thức + trả gợi ý thì đã có từ `D1-1`, nhưng đi đường RIÊNG:
+/// ⚠ **Response dừng ở đúng đây, cố ý.** Khớp quy trình, suy ra bước hiện tại (P4/P5, 2026-10-10),
+/// tra tri thức và trả gợi ý (`D1-1`) đều đã có — nhưng đi đường RIÊNG:
 /// <see cref="XepHangGuiVeAsync"/> xếp hàng, vòng nền gửi sau — KHÔNG đi trong response.
 /// Trả về một gợi ý rỗng hay một trường <c>suggestions: []</c> ở đây sẽ làm bên gọi tưởng
 /// response là chỗ nhận kết quả. `G11`: không tự phỏng to một capability đã chốt.

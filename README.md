@@ -17,12 +17,14 @@ trong sơ đồ dưới.
 ## ⚠ Đọc mục này trước khi đọc bất cứ thứ gì khác
 
 ```
-Tài liệu thiết kế  ~17.000 dòng     27 quyết định domain + 35 quyết định khi code
-Code                 ~6.300 dòng     nền móng · host · nạp tín hiệu + evidence ·
-                                     vòng tri thức (nạp → duyệt → hỏi) · đường đọc
-Test                 ~6.000 dòng     302 test, chạy trên PostgreSQL THẬT
-Script vận hành      ~3.500 dòng     xuất Jira · kiểm corpus · dựng fixture ·
-                                     gói duyệt · diff(A,B) · quét credential
+Tài liệu thiết kế  ~20.000 dòng     27 quyết định domain + 49 mục IM khi code
+Code                ~14.000 dòng     nền móng · host · nạp tín hiệu + evidence ·
+                                     vòng tri thức (nạp → duyệt → hỏi) · quy trình +
+                                     bước hiện tại · webhook · sổ gợi ý · Kênh 2
+                                     (chưa tính ~14.600 dòng migration sinh tự động)
+Test                ~12.000 dòng     539 test, chạy trên PostgreSQL THẬT
+Script vận hành      ~5.800 dòng     xuất Jira · kiểm corpus · dựng fixture · gói duyệt ·
+                                     diff(A,B) · quét credential · kiểm đầu-cuối
 ```
 
 **Tài liệu mô tả toàn bộ tầm nhìn. Code hiện có là phần nền móng của slice đầu tiên.**
@@ -33,7 +35,17 @@ Script vận hành      ~3.500 dòng     xuất Jira · kiểm corpus · dựng 
 **Giai đoạn hiện tại:** Workstream 07 — MVP Implementation, slice **Path A**
 (gom nhiều case cũ thành một bản nháp quy trình, người sửa và duyệt).
 
-**Mốc mới nhất — 2026-09-04: đã chạm vào DỮ LIỆU VẬN HÀNH THẬT, và nó dạy bốn thứ mà
+**Mốc mới nhất — 2026-10-10: mọi ô của [sơ đồ luồng](#luồng-chạy-khi-có-một-tín-hiệu) đã có code**,
+trừ hai ô cố ý giữ `◐`: `A2` (không có connector Drive/Jira chạy trong host) và `K` (không đọc PDF/ảnh)
+— cả hai vì `N4-1`: không thêm thư viện. Đã chạy thật: 539 test · `kiem_dau_cuoi.py` 81 phép kiểm, 0 hỏng ·
+`kiem_hai_khach.py` 31/31 · nạp lại bản nháp máy sinh vào `kp_dev` ra **148** liên kết dẫn chứng.
+
+⚠ *"Có code"* chưa phải *"dùng được"*: định tuyến bằng model **chưa gọi thật lần nào** (không có credit),
+bước sinh từ bản nháp **chưa có dấu hiệu nào** nên chỉ xong bằng người xác nhận, và ở chế độ shared mọi lượt
+duyệt vẫn `409`. Và **có một cờ tắt mọi cổng che** (`N1-2`) — xem [Rủi ro đang mở](#rủi-ro-đang-mở).
+Chi tiết từng phase: `docs/07` §3 `IM-49`.
+
+**Mốc 2026-09-04: đã chạm vào DỮ LIỆU VẬN HÀNH THẬT, và nó dạy bốn thứ mà
 dữ liệu bịa không dạy được.** Trước hôm nay mọi thứ đều xanh trên vật liệu do chính bộ
 test dựng ra. Xuất 150 case Jira thật rồi nạp thử làm lộ ra: một **bug 500** ở đường nạp
 (mốc thời gian `+07:00` — cả 103 test cũ không thấy vì tay người viết test luôn viết
@@ -42,7 +54,7 @@ giới khách sạn không có nguồn nào để thực thi**, và **credential
 evidence**. Chi tiết ở [Rủi ro đang mở](#rủi-ro-đang-mở).
 
 ⚠ Điểm chung của cả bốn: chúng **không crash** và **không đỏ test nào**. Chúng chỉ sai
-im lặng — đúng loại lỗi mà cả dự án được dựng để chặn. Bộ test hiện có **302 test**, và
+im lặng — đúng loại lỗi mà cả dự án được dựng để chặn. Bộ test hiện có **539 test** (2026-10-10), và
 bài học đắt nhất hôm nay là *một bộ test tự cấp vật liệu cho mình chỉ kiểm được những
 hình dạng mà người viết nghĩ ra.*
 
@@ -214,14 +226,14 @@ có cách nào tự suy từ câu chữ — suy từ câu chữ là đoán, trá
 ### Chạy test
 
 ```bash
-dotnet test src/KnowledgePlatform.slnx     # 302 test, tự apply migration
+dotnet test src/KnowledgePlatform.slnx     # 539 test, tự apply migration
 ```
 
 Và một phép kiểm **thứ hai**, kiểm thứ khác hẳn — `dotnet test` **không thấy được** nó:
 
 ```bash
 dotnet run --project src/KnowledgePlatform.Api    # cửa sổ khác
-python scripts/kiem_dau_cuoi.py                   # gọi THẬT cả 22 endpoint
+python scripts/kiem_dau_cuoi.py                   # gọi THẬT mọi endpoint trong hợp đồng (33)
 python scripts/kiem_hai_khach.py                 # NGHIỆM THU I2-1: dựng 2 khách từ 0
 
 # VÒNG KHÔNG-CREDIT cho định tuyến: xuất -> dán cho một ngữ cảnh AI -> nạp về
@@ -297,28 +309,37 @@ Thông tin ở đây rải trong ba tài liệu khác nhau (`06` §1, `05` §5, 
 > *"Về đường tắt"* ngay dưới sơ đồ. Sai theo chiều này ít nguy hiểm hơn chiều ở đầu file,
 > nhưng nó vẫn làm người đọc đi build lại thứ đã có.
 
+> 🔄 **Cập nhật 2026-10-10 — kế hoạch P0–P10 (`IM-49`) làm nốt các ô.** `D` `E` `F` `J` `○→✅` ·
+> `G` `H` `I` `◐→✅`. `A2` và `K` **vẫn `◐`**, phần còn thiếu ghi ngay trong ô. Mũi tên `C ⇢ G` đổi
+> nghĩa: hết là *đường tắt*, giờ là *đường LÙI* khi nhóm chưa có quy trình được duyệt. Nhãn vòng `J ⇢ G`
+> sửa lại — bản cũ ghi *"thước đo tháng đầu"*, nhưng đó là `M2` (duyệt + diff A/B); thứ `J` đo là
+> `M3` / tầng 1 (`docs/02` §2.2).
+>
+> ⚠ `✅` ở `D`–`J` nghĩa là **có code chạy được và có test giữ**, ở chế độ **dedicated**. Ở chế độ shared,
+> duyệt tri thức VÀ duyệt quy trình đều `409` (`AR-l`), nên `D`–`F` không có gì để khớp.
+
 ```mermaid
 flowchart TD
     A["✅ 📥 KÊNH 1 — TÍN HIỆU SỰ KIỆN<br/>phần mềm của khách phát<br/>✅ có việc mới ở nguồn<br/>✅ đổi trạng thái — chỉ cập nhật Case, F1-1<br/>✅ người dùng hỏi — POST /hoi, F2-1"]
-    A2["◐ 📄 KÊNH 2 — NẠP / ĐỒNG BỘ DỮ LIỆU<br/>✅ khách tải tài liệu lên<br/>○ job quét Jira, Drive<br/>AR5 · 00 §7 — thuộc MVP"]
+    A2["◐ 📄 KÊNH 2 — NẠP / ĐỒNG BỘ DỮ LIỆU<br/>✅ khách tải tài liệu lên<br/>✅ job quét THƯ MỤC — KenhHai:Nguon<br/>○ connector Drive, Jira trong host<br/>Drive chỉ tới được qua thư mục đồng bộ về máy"]
     B["✅ Xác định tenant từ ngữ cảnh request<br/>KHÔNG từ hằng số toàn cục<br/>áp cho CẢ HAI kênh"]
-    K["◐ Tạo Document — vật chứa + nội dung đọc được<br/>✅ vật chứa · ○ nội dung đọc được<br/>chưa trích chữ, chưa OCR"]
+    K["◐ Tạo Document — vật chứa + nội dung đọc được<br/>✅ vật chứa<br/>✅ chữ: txt md csv json xml log html docx<br/>○ PDF, ảnh — không OCR, N4-1"]
     S6["🛑 S6 — ĐƯỜNG NÀY DỪNG Ở ĐÂY, CỐ Ý<br/>nạp tài liệu KHÔNG tự sinh tri thức<br/>Document = thứ tổ chức CÓ<br/>KnowledgeRecord = thứ tổ chức đã KHẲNG ĐỊNH<br/>→ tri thức chỉ đến từ Path A, sơ đồ bên dưới<br/>✅ có test giữ"]
     C["✅ Tìm hoặc tạo Case<br/>tín hiệu lặp lại KHÔNG sinh Case trùng<br/>case MỚI → xếp hàng gửi kết quả về, D1-1"]
-    D["○ Khớp với quy trình đã duyệt<br/>ProcessDefinition"]
-    E["○ Suy ra đang ở bước nào<br/>từ bằng chứng — KHÔNG lưu cờ tiến độ"]
-    F["○ Bước tiếp theo = bước chưa xong đầu tiên"]
-    G["◐ Tra tri thức theo CHỦ ĐỀ của bước đó<br/>không trỏ tới từng bản ghi cụ thể<br/>hôm nay: chủ đề = NHÓM định tuyến, KHÔNG qua bước"]
-    H["◐ Tri thức: nguyên nhân + các phát biểu<br/>mỗi phát biểu có nguồn gốc và mức tin riêng<br/>✅ có luồng ghi + đọc<br/>○ assertion_evidence: chưa đường nào ghi"]
-    I["◐ Trả gợi ý kèm dẫn chứng trỏ về nguồn<br/>✅ POST /hoi · webhook tóm tắt + link<br/>○ dẫn chứng: mã case rơi mất lúc chuyển bản nháp"]
-    J["○ Ghi lại — đã gợi ý gì, người có dùng không"]
+    D["✅ Khớp với quy trình đã duyệt<br/>ProcessDefinition ACTIVE của nhóm định tuyến<br/>lượt chạy giữ phiên bản nó bắt đầu, N6-1"]
+    E["✅ Suy ra đang ở bước nào<br/>từ bằng chứng — KHÔNG lưu cờ tiến độ<br/>dấu hiệu trong evidence · hoặc NGƯỜI xác nhận<br/>bước đổi → tự xếp hàng gửi lại, P7"]
+    F["✅ Bước tiếp theo = bước chưa xong đầu tiên<br/>PR1 — không có trường 'bước tiếp'"]
+    G["✅ Tra tri thức theo CHỦ ĐỀ của bước đó<br/>không trỏ tới từng bản ghi cụ thể<br/>bước không có tri thức riêng → rơi về NHÓM"]
+    H["✅ Tri thức: nguyên nhân + các phát biểu<br/>mỗi phát biểu có nguồn gốc và mức tin riêng<br/>✅ assertion_evidence ghi lúc nạp bản nháp, P3"]
+    I["✅ Trả gợi ý kèm dẫn chứng trỏ về nguồn<br/>POST /hoi · webhook tóm tắt + link<br/>dẫn chứng = khoá nguồn, KHÔNG nội dung"]
+    J["✅ Ghi lại — đã gợi ý gì, người có dùng không<br/>tự ghi RETRIEVED · SHOWN · OPENED<br/>ACCEPTED · USED = LỜI KHAI qua API"]
 
     A --> B
     A2 --> B
     B --> C --> D --> E --> F --> G --> H --> I --> J
     B --> K --> S6
-    C -.->|"đường TẮT đang chạy<br/>webhook → định tuyến nhóm<br/>bỏ qua D · E · F"| G
-    J -.->|"nạp lại cho thước đo tháng đầu<br/>và cho bộ eval"| G
+    C -.->|"đường LÙI<br/>nhóm chưa có quy trình được duyệt<br/>→ tri thức theo NHÓM"| G
+    J -.->|"nhomDung: định tuyến sai thì người khai nhóm đúng<br/>→ lần tra sau của case đi nhóm đó<br/>+ phễu 5 nấc cho M3 / tầng 1"| G
 ```
 
 **Về ô "tìm hoặc tạo Case" (`✅`)** — đường đi vào đã sống, nhưng nó **dừng ngay ở
@@ -333,14 +354,21 @@ sau đã tồn tại và chỉ đang không có gì trả về.
 > (webhook), không nằm trong response — nên response vẫn không được có trường đó.
 > Gửi lại cùng tín hiệu (`IM-40`) và tín hiệu đổi trạng thái (`IM-43`) thì **không** xếp hàng.
 
-**Về đường tắt `C ⇢ G` (`◐`)** — `D` `E` `F` chưa có một dòng code nào: không entity
-`ProcessDefinition`, không suy bước. Nên hôm nay tri thức được tra theo **NHÓM định tuyến**
-thay vì theo bước quy trình: ticket → nhóm → bản SOP **đã duyệt** của nhóm đó, kèm hai cửa
-*KHÔNG BIẾT*. Đó là đường của Path A (SOP theo nhóm nguyên nhân), không phải đường của sơ đồ
-này — đừng đọc ô `G` `◐` thành *"đã tra theo bước"*.
+**Về đường lùi `C ⇢ G`** — 🔄 **2026-10-10:** `D` `E` `F` đã có code (P4/P5). Câu hỏi đi qua quy trình
+khi case **đã có** và nhóm của nó có một quy trình **đã duyệt**; thiếu một trong hai thì tri thức trả theo
+NHÓM như trước, và câu trả lời nói vì sao (`lyDoKhongCoQuyTrinh`). Câu hỏi không gắn case nào thì luôn đi
+đường nhóm. Đoạn dưới giữ nguyên làm lịch sử — nó đúng tới 2026-10-09.
 
-⚠ Bộ định tuyến cắm hôm nay chỉ **tra bảng** (bảng đã đo + kết quả người vận hành nạp qua
-`--nap-dinh-tuyen`), không phân loại được ticket mới. Chỗ lệch khoá riêng của đường webhook
+> **(2026-10-09)** `D` `E` `F` chưa có một dòng code nào: không entity
+> `ProcessDefinition`, không suy bước. Nên hôm nay tri thức được tra theo **NHÓM định tuyến**
+> thay vì theo bước quy trình: ticket → nhóm → bản SOP **đã duyệt** của nhóm đó, kèm hai cửa
+> *KHÔNG BIẾT*. Đó là đường của Path A (SOP theo nhóm nguyên nhân), không phải đường của sơ đồ
+> này — đừng đọc ô `G` `◐` thành *"đã tra theo bước"*.
+
+⚠ Bộ định tuyến mặc định chỉ **tra bảng** (bảng đã đo + kết quả người vận hành nạp qua
+`--nap-dinh-tuyen`), không phân loại được ticket mới. 🔄 **2026-10-10 (P8):** có tầng model cho ticket
+ngoài bảng, nhưng **tắt mặc định** — phải có khoá VÀ `DinhTuyen:GoiModel=true`, có trần tháng và ngưỡng tin
+cậy 0,9 **chưa đo**. Chưa gọi thật lần nào. Chỗ lệch khoá riêng của đường webhook
 đã sửa 2026-10-10 — xem [Rủi ro đang mở](#rủi-ro-đang-mở).
 
 **Về ô tenant (`✅`)** — ô đã đi hết một vòng từ request xuống database:
@@ -415,7 +443,9 @@ cái đứng đầu mũi tên.
 
 ## Hình dạng dữ liệu
 
-Sáu bảng. Sơ đồ chỉ vẽ **quan hệ**, không liệt kê field — field thì đọc code, đó là bản thật.
+Sáu bảng LÕI của tri thức. Schema có **20** bảng (2026-10-10) — danh sách thật là `ToTable` trong
+[AppDbContext.cs](src/KnowledgePlatform.Infrastructure/Persistence/AppDbContext.cs). Sơ đồ chỉ vẽ **quan hệ**,
+không liệt kê field — field thì đọc code, đó là bản thật.
 
 ```mermaid
 erDiagram
@@ -436,6 +466,25 @@ Hai chỗ không hiển nhiên:
 - **`evidence_item.ObservedInCaseId` được phép NULL, và điều đó quan trọng** — một email của
   senior hay một tin Zalo không thuộc case nào. Với thực tế 60% tri thức nằm rải rác thì đó
   không phải trường hợp hiếm.
+
+Quy trình và sổ gợi ý (thêm 2026-10-10, ô `D`–`F` và `J`):
+
+```mermaid
+erDiagram
+    process_definition ||--o{ process_step         : "các bước, theo thứ tự"
+    process_definition ||--o{ process_run          : "được chạy bởi"
+    canonical_case     ||--o{ process_run          : "tối đa MỘT lượt chưa bỏ"
+    process_step       |o--o{ evidence_item        : "được xác nhận bởi — CÓ THỂ NULL"
+    canonical_case     |o--o{ luot_goi_y           : "được gợi ý — CÓ THỂ NULL"
+    luot_goi_y         ||--o{ luot_goi_y_su_kien   : "các nấc L2, chỉ thêm"
+    luot_goi_y         |o--o{ knowledge_link_token : "link phát ra trong lượt"
+```
+
+- **`process_run` không có cột tiến độ** (`PR1`). Bước hiện tại SUY từ evidence mỗi lần đọc — kể cả lời xác
+  nhận của người, vốn là một mẩu `evidence_item` có tác giả chứ không phải một cờ. Rút mẩu đó lại là bước
+  tự thành chưa xong.
+- **`process_step` không trỏ tới bản ghi tri thức nào.** Nó mang một CHỦ ĐỀ; tri thức khớp qua assertion
+  `Applicability` (`L1`). Sửa tri thức không phải sửa quy trình, và ngược lại.
 
 **Một tri thức không phải một khối văn bản.** Nó là một nguyên nhân, gồm nhiều phát biểu, mỗi
 phát biểu tự mang nguồn gốc và mức tin riêng:
@@ -492,7 +541,7 @@ flowchart LR
     A["✅ ITenantContext<br/>tenant của request này"]
     B["✅ TenantConnectionInterceptor<br/>đặt app.current_tenant<br/>lên MỌI connection"]
     C["✅ Policy của Postgres<br/>tenant_isolation<br/>ENABLE + FORCE"]
-    D["✅ 302 test<br/>trên PostgreSQL thật<br/>role KHÔNG superuser"]
+    D["✅ 539 test<br/>trên PostgreSQL thật<br/>role KHÔNG superuser"]
     R --> M --> A --> B --> C
     D -.->|giữ cả chuỗi| A
 ```
@@ -567,11 +616,11 @@ tenant · canonical_case · evidence_item · knowledge_record · assertion · as
 
 *(Khối trên là 6 bảng ĐẦU TIÊN. Đếm lại 2026-10-09: schema có **13** bảng — danh sách thật
 là `ToTable` trong [AppDbContext.cs](src/KnowledgePlatform.Infrastructure/Persistence/AppDbContext.cs);
-bảng nào cần RLS thì `RlsGuard` tự suy từ model, không viết tay.)*
+bảng nào cần RLS thì `RlsGuard` tự suy từ model, không viết tay. Đếm lại 2026-10-10: **20**.)*
 
 Và một **project host** chạy được: `dotnet run`, cả hai chế độ deploy, trong đó có
 **đường nhận tín hiệu** tạo Case. *(Dòng này từng ghi "4 endpoint"; đếm lại trong
-`Program.cs` 2026-10-09 là **22** — danh sách thật: `GET /openapi/v1.json`.)*
+`Program.cs` 2026-10-09 là **22**, 2026-10-10 là **33** — danh sách thật: `GET /openapi/v1.json`.)*
 
 **Chưa có:**
 
@@ -590,19 +639,23 @@ Và một **project host** chạy được: `dotnet run`, cả hai chế độ d
 ✅ Hai loại tín hiệu còn lại của Kênh 1  XONG 2026-09-17 — POST /signals/case-status
                                       (F1-1) · người dùng hỏi = POST /hoi (F2-1). IM-43
 ◐ Kênh 2 — đường nạp/đồng bộ tài liệu  NẠP xong 2026-09-17 — POST /documents. IM-47
-     (AR5)                            Còn: job quét nguồn · trích chữ · cổng che ·
-                                      quét credential lúc nạp
+     (AR5)                            2026-10-10 (P9): trích chữ txt/md/csv/json/xml/log/
+                                      html/docx · job quét THƯ MỤC (KenhHai:Nguon)
+                                      Còn: PDF/ảnh · connector Drive/Jira trong host ·
+                                      cổng che cho chữ trích · quét credential lúc nạp
 ✅ Bảng Document                      XONG 2026-09-17 — kp.document, CÓ RLS; nội dung ở
                                       kho file, DB chỉ giữ metadata (AR5)
    (ba dòng trên sửa 2026-10-09 — trước đó chúng ghi "chưa có" dù code đã có 3 tuần)
-· Mắt xích assertion → evidence               → bảng có, KHÔNG đường nào ghi: mã case
-                                                 của bản nháp SOP rơi mất ở
-                                                 SopDraftToKnowledge. Chặn "dẫn chứng"
-                                                 của /hoi và việc đối chiếu lời khai AR-n
-· Ghi lại "đã gợi ý gì, người có dùng không"  → chưa có gì: webhook cố ý không lưu
-                                                 payload, /hoi không ghi, link không đếm
+✅ Mắt xích assertion → evidence     XONG 2026-10-10 (P3) — ghi lúc nạp bản nháp SOP,
+                                      bản nháp gốc lưu ở sop_draft_goc. /hoi, webhook,
+                                      /xem, GET /knowledge/{id} đều trả dẫn chứng
+✅ Ghi lại "đã gợi ý gì, có dùng không"  XONG 2026-10-10 (P6) — luot_goi_y + 5 nấc L2,
+                                      POST /goi-y/{id}/phan-hoi, GET /internal/goi-y/thong-ke
+✅ ProcessDefinition / ProcessRun     XONG 2026-10-10 (P4) — mở lại I1-1. Sinh DRAFT từ
+                                      bản nháp SOP; chỉ người duyệt mới thành ACTIVE
+✅ Định tuyến ticket MỚI bằng model   CODE 2026-10-10 (P8) — TẮT mặc định, chưa gọi thật
+   (bốn dòng trên trước đây ghi "chưa có" — sửa 2026-10-10, docs/07 §3 IM-49)
 · Phép ĐẾM diff(A,B) trên cả nhóm              → dữ liệu đã đủ (IM-32), thiếu phép đếm
-· ProcessDefinition / ProcessRun               → thiết kế xong, chưa code
 ✅ Xác thực người gọi (AR-e)          XONG 2026-09-16 — khoá API theo TỪNG khách,
                                       thu hồi riêng. docs/07 §3 IM-39
 ✅ Test cho phần tri thức             ĐÃ CÓ — AssertionTests · KnowledgeRecordLifecycleTests
@@ -627,7 +680,7 @@ Và một **project host** chạy được: `dotnet run`, cả hai chế độ d
 | 🛑 **Một trường phủ 100% với MỘT giá trị duy nhất — đã vấp HAI LẦN trong một ngày** | `machineReadability` = `High` ở **128/128** mẩu evidence, và `Mã khách sạn` của Jira = `-1.0` ở **32/32** case. Cùng một hình dạng lỗi, và nó **tệ hơn trường rỗng**: trường rỗng thì ai cũng thấy là thiếu, còn trường phủ-100%-một-giá-trị thì *trông như đã có dữ liệu* — mọi phép kiểm "trường này có được điền không?" đều trả lời CÓ. Ai viết `WHERE machineReadability = 'High'` rồi báo "đã lọc rồi" thì vừa lọc xong 100% dữ liệu. <br><br>→ **Luật đã rút ra:** với mọi trường dùng làm ranh giới hay bộ lọc, **đếm số giá trị PHÂN BIỆT, không đếm độ phủ.** Một giá trị = coi như rỗng. (`AR-k`, `AR-l`) |
 | 🛑 **Ranh giới khách sạn A ↔ khách sạn B chưa được thực thi, và hiện KHÔNG CÓ nguồn nào để thực thi** | **✅ Đây là QUYẾT ĐỊNH có ý thức từ 2026-09-07, không phải chỗ bị bỏ quên:** đã chốt nhánh *lùi* — nạp evidence không có sub-tenant, không thêm cột, và ghi rõ ở đây rằng ranh giới này **chưa được thực thi ở bất kỳ tầng nào**. Mở lại khi có một nguồn cho **≥2 giá trị phân biệt**, và phải mở lại **trước** lúc có luồng duyệt thật. <br><br>✅ **CHỐT 2026-09-15 nguồn để mở lại:** thêm một **trường BẮT BUỘC ở đường nạp** — bên gửi khai mã khách sạn. ✅ **ĐÃ CODE 2026-09-16** (`IM-35`): `subTenantCode` bắt buộc, bỏ trống là **400**, và ba trạng thái không gộp được — `NULL` (nạp trước luật) · `khong-xac-dinh` (đã hỏi, chưa biết) · `khong-thuoc-khach-san` (khẳng định không thuộc ai). <br><br>🛑 **CÓ TRƯỜNG KHÔNG PHẢI CÓ DỮ LIỆU — đo ngay hôm code xong trên `kp_dev`: 137/145 mẩu CHƯA KHAI.** Và mâu thuẫn đáng biết: nguồn mà quyết định chọn (*bên gửi khai*) **không tồn tại** cho connector Jira — `customfield_12710` là hằng số `-1.0` — nên lô export từ nguồn này có **0 giá trị phân biệt**. Đường nạp vì thế tự ĐẾM số giá trị phân biệt và **nói thẳng ra**, còn `GET /internal/sub-tenant-coverage` trả lời điều kiện mở lại kèm ô `canTro`. <br><br>⚠ **Cổng 409 KHÔNG được gỡ:** chế độ shared vẫn **TỪ CHỐI DUYỆT** — xem `IM-31`. Đó là TRÁNH, không phải GIẢI. <br><br>Hôm nay `tenant` = ezCloud, nên mọi khách sạn nằm chung một kho. Đã chốt rằng đây LÀ ranh giới bảo mật, nhưng đo trên Jira thật thì không trường nào dùng được: `Mã khách sạn` là hằng số `-1.0`, `Tên khách sạn / Resort` thì 25/32 rỗng và phần còn lại ghi tên **team**. <br><br>⚠ **RLS không cứu được kiểu rò này** — rò xảy ra ở khâu **xuất bản SOP**, không ở khâu truy vấn hàng: Path A gom evidence của nhiều khách sạn (đúng quyền, RLS xanh) rồi sinh một bản nháp được duyệt và hiện cho mọi người. Dữ liệu đi qua ranh giới bằng cửa chính. <br><br>⚠ Và ĐỪNG suy sub-tenant từ tiêu đề: chỉ 8/32 case có mã trong tiêu đề, và tên trong tiêu đề lệch với thân bài (`ES-346622` ghi "Mariha" nhưng email là `mirahhotel.sales@`). (`AR-l`) |
 | ⚠ **Dữ liệu của BÊN THỨ BA: luật che mới chỉ biết MỘT hình dạng, và nó đo trên n=1** | ✅ **ĐÃ CODE 2026-09-16** (`AR-n` B2a, `IM-37`): `ThirdPartyRedactor` che khối `<NMua>` ở khâu **NẠP**, trước khi nội dung chạm database. Che theo **CẤU TRÚC** (vị trí trong cây XML) chứ không theo từ khoá — chuỗi `MST` trần xuất hiện ở 10/345 mẩu và phần lớn là **MST của chính khách sạn**, một định danh công khai cần GIỮ. <br><br>✅ **Che định danh, GIỮ số tiền** — có lý do đo được: nhóm SOP dày nhất (*Lệch cấu hình tiền/thuế*, 8 case, 63 mẩu) chẩn đoán bằng cách so từng cột tiền. Che số tiền cho "an toàn" là lần thứ **BA** một bộ lọc hợp lý vứt đúng phần có giá trị. <br><br>🛑 **Rủi ro còn lại:** trên **873 mẩu thật**, khối `<NMua>` xuất hiện ở **đúng MỘT mẩu**. Đủ để chứng minh loại dữ liệu này tồn tại, **không đủ** để nói luật phủ được bao nhiêu. Hình dạng thứ hai sẽ tới và nó sẽ không mang thẻ `NMua`. → Đừng đọc `thirdPartyRedacted: 0` thành *"mẩu này sạch"*; nó chỉ nghĩa là luật không thấy gì. (`AR-n`) |
-| ⚠ **Dữ liệu THƯƠNG MẠI chỉ được chặn bằng một LỜI KHAI** | ✅ **ĐÃ CODE 2026-09-16** (`AR-n` B2b): duyệt mà thiếu `xacNhanDuLieuThuongMai` là **400**, và lời khai được **lưu cùng lượt duyệt**. <br><br>🛑 **Nhưng đó là LỜI KHAI, không phải phép kiểm.** Giá hợp đồng theo năm, hạn hợp đồng và ý định rời bỏ của một khách hàng (`ES-346608#comment-803265`) **không có hình dạng nào** để bắt bằng regex — đó chính là lý do nhánh này chọn NGƯỜI. Hệ thống không đối chiếu được, và **hôm nay còn không biết mẩu nguồn là những mẩu nào**: `assertion_evidence` có **0 dòng**. <br><br>→ Chỉ nâng được từ *khai* lên *đối chiếu được* khi có mắt xích assertion → evidence. (`AR-n`) <br><br>🔄 **2026-10-10 (P3): mắt xích đã có cho bản nháp nạp MỚI** — `GET /knowledge/{id}` chỉ ra mẩu nguồn của từng phát biểu, nên người duyệt biết phải soát mẩu nào. Lời khai **vẫn là lời khai**; 8 record cũ ở `kp_dev` không điền bù được vì bản nháp gốc của chúng không được lưu. |
+| ⚠ **Dữ liệu THƯƠNG MẠI chỉ được chặn bằng một LỜI KHAI** | ✅ **ĐÃ CODE 2026-09-16** (`AR-n` B2b): duyệt mà thiếu `xacNhanDuLieuThuongMai` là **400**, và lời khai được **lưu cùng lượt duyệt**. <br><br>🛑 **Nhưng đó là LỜI KHAI, không phải phép kiểm.** Giá hợp đồng theo năm, hạn hợp đồng và ý định rời bỏ của một khách hàng (`ES-346608#comment-803265`) **không có hình dạng nào** để bắt bằng regex — đó chính là lý do nhánh này chọn NGƯỜI. Hệ thống không đối chiếu được, và **hôm nay còn không biết mẩu nguồn là những mẩu nào**: `assertion_evidence` có **0 dòng**. <br><br>→ Chỉ nâng được từ *khai* lên *đối chiếu được* khi có mắt xích assertion → evidence. (`AR-n`) <br><br>🔄 **2026-10-10 (P3): mắt xích đã có cho bản nháp nạp MỚI** — `GET /knowledge/{id}` chỉ ra mẩu nguồn của từng phát biểu, nên người duyệt biết phải soát mẩu nào. Lời khai **vẫn là lời khai**; 8 record cũ ở `kp_dev` không điền bù được vì bản nháp gốc của chúng không được lưu. <br><br>🔄 **Đo 2026-10-10 sau khi nạp lại bản nháp máy sinh:** câu trên sai một nửa — nạp lại CÙNG bản nháp thì điền bù được (khớp Kind + Content). Tenant dev: **7/24** record cũ đã có dẫn chứng, 17 record cũ còn lại vẫn chưa có; tổng `assertion_evidence` = 148. |
 | ⚠ **Dấu "người gửi đã rút lại" có chỗ chứa rồi, nhưng CHƯA AI ĐÁNH DẤU CÁI NÀO** | ✅ **ĐÃ CODE 2026-09-16** (`AR-m`, `IM-35`): ba cột + `POST /evidence/rut-lai`, và **chỉ người** đặt được — hợp đồng tín hiệu không mang ba trường đó nên connector không có đường nào tự suy từ câu chữ. <br><br>🛑 **Rủi ro còn lại nằm đúng ở chỗ đó:** tín hiệu này chỉ tồn tại khi có người bỏ công đánh dấu, và hôm nay **số mẩu được đánh dấu là 0**. Ca `ES-346661` vẫn nằm trong corpus không mang dấu hiệu gì. <br><br>⚠ Hôm nay chưa hỏng vì đoạn sai và câu đính chính nằm CHUNG một mẩu 1 916 ký tự, nên model đọc mẩu đó thấy luôn câu đính chính. Đó là **may**, không phải thiết kế — và cái may đó hết hiệu lực đúng vào ngày pipeline cắt transcript thành nhiều mẩu, thứ mà `AR-h` đang tạo áp lực phải làm (mẩu dài đè bẹp xếp hạng **29:1**). <br><br>✅ Điều ĐÃ đổi: giờ **mới được phép** chốt cách cắt transcript. Trước 2026-09-16 thì không, vì cắt rồi không ghép lại được. (`AR-m`) |
 | ⚠ **"Đã xong" đi NGƯỢC với hàm lượng tri thức — bộ lọc tự nhiên nhất sẽ vứt đúng phần có giá trị** | Corpus 12 tháng có **100% case đã đóng** mà chỉ **1,6 mẩu dùng được mỗi case** — mỏng hơn corpus 4 ngày (2,5) vốn chỉ 22% đã đóng, và 25% case có **0** mẩu dùng được. Trên corpus nhỏ đã đọc kỹ: cả 7/7 case đã đóng chỉ ghi *hết triệu chứng* ("Done nhé" — 23 ký tự; một case đóng bằng đúng một tấm ảnh), còn nguyên nhân thật nằm ở case **CÒN MỞ**. <br><br>Lý do chạm vào **tiền đề sản phẩm**, không phải chất lượng corpus: bước kết luận không biến mất, nó **xảy ra ở nơi khác** — 6 case chuyển sang phiên remote desktop, 2 case "gọi khách không được", 1 case ghi thẳng *"như đã trao đổi qua điện thoại"*. Chính các mẩu credential ở trên là **biên lai** của những lần chẩn đoán không để lại chữ nào trong ticket. Trong 128 mẩu, Kibana — bước 1 của quy trình 5 bước — được nhắc **0 lần**. |
 | ✅ ~~Đường nhận tín hiệu chỉ có một cái chốt tạm~~ — **ĐÃ THAY 2026-09-16** | Nó là endpoint **ghi**: không xác thực thì bất kỳ ai cũng bơm được Case giả vào dữ liệu khách hàng — không crash, không báo, chỉ làm sai kho tri thức và sai thước đo tháng đầu. Hiện có một khoá dùng chung (`Ingest:SignalApiKey`), và **thiếu nó là không start được**. Nhưng khoá dùng chung không phân biệt được khách A với khách B, không thu hồi theo từng khách, không chống replay. Nó là cái chốt trong lúc chờ `AR-e`, không phải câu trả lời. <br><br>✅ **ĐÃ CODE 2026-09-16** (`IM-39`): khoá dùng chung bị XOÁ, thay bằng `Authorization: Bearer kp_<id>_<secret>` — khoá theo TỪNG khách, thu hồi riêng, có tác dụng ngay không cần restart (đã đo trên app sống). <br><br>⚠ **Còn lại:** chưa chống replay, chưa giới hạn tần suất. `C1-1` chọn *"rẻ nhất mà giải đúng vấn đề"* và hai thứ đó không nằm trong vấn đề nó giải. |

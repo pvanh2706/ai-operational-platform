@@ -83,6 +83,11 @@ Chưa biết thì khai `khong-xac-dinh`; việc nội bộ không thuộc khách
 `khong-thuoc-khach-san`. Bỏ trống là `400` — sản phẩm cố ý **không tự điền hộ**, vì *"chưa
 biết"* và *"chưa ai hỏi"* là hai chuyện khác nhau và về sau không dựng lại được.
 
+Từ 2026-10-10: một lô evidence làm case **bước sang bước khác** của quy trình đã duyệt sẽ sinh **một** lượt
+gửi về, `suKien: "buoc-hien-tai-doi"`, mang tri thức của bước MỚI (§3.1). Không sinh gì khi: case chưa từng
+được trả lời theo quy trình (chưa có lượt chạy) · case đã xong ở nguồn · đã có một lượt đang chờ gửi cho case ·
+cùng bước đó đã được báo một lần. Gửi lại cùng lô không đẻ lượt thứ hai.
+
 ### 2.1 Báo việc ở nguồn đổi trạng thái
 
 ```bash
@@ -111,6 +116,24 @@ thiết kế.
 ### 2.2 Người dùng hỏi về tài liệu
 
 Không có endpoint riêng. Dùng `POST /hoi` — một cửa cho mọi câu hỏi, một cổng KHÔNG BIẾT.
+
+Từ 2026-10-10: nếu `maTicket` là một case bạn đã gửi (khoá đầy đủ `jira:ES-1` hoặc mã trần `ES-1`), câu
+trả lời đi theo **bước hiện tại** của quy trình đã duyệt cho case đó — ô `quyTrinh`. Case đã có mà không khớp
+được quy trình thì ô `lyDoKhongCoQuyTrinh` nói vì sao (`nhom-chua-co-quy-trinh-duoc-duyet`,
+`dinh-tuyen-khong-biet`, `luot-chay-da-bi-bo`) và tri thức trả theo cả nhóm như trước. Mỗi câu trả lời mang
+`maLuotGoiY` để bạn báo lại nó có được dùng không (§3.5).
+
+### 2.3 Báo đã làm một bước của quy trình
+
+```bash
+curl -X POST https://<host>/quy-trinh/xac-nhan-buoc \
+  -H "Authorization: Bearer kp_..." -H "Content-Type: application/json" \
+  -d '{"khoaNguon":"jira:ES-12345","maBuoc":"K1","nguoiXacNhan":"chị Lan","subTenantCode":"khong-xac-dinh"}'
+```
+
+Lời xác nhận được lưu như một **mẩu evidence có tác giả**, không phải một cờ — bạn rút lại được nó qua
+`POST /evidence/rut-lai` như mọi mẩu khác, và bước tự thành chưa xong. Bước cũng tự được coi là xong khi một
+mẩu bạn gửi qua `/signals/case-evidence` chứa *dấu hiệu* của bước đó. `subTenantCode` bắt buộc như mọi đường nạp.
 
 ---
 
@@ -146,7 +169,7 @@ X-KP-Delivery: 01a0aa95-53a5-72db-8dcc-23be22c888a1
   "case": { "khoaNguon": "jira:ES-12345", "tieuDe": "Không phát hành được hoá đơn" },
   "bietTraLoi": true,
   "nhom": "Lệch cấu hình tiền/thuế",
-  "nguonDinhTuyen": "noi-ro-trong-mo-ta",
+  "nguonDinhTuyen": "tra-san:noi-ro-trong-mo-ta",
   "lyDoKhongBiet": null,
   "huongDan": [
     {
@@ -155,10 +178,33 @@ X-KP-Delivery: 01a0aa95-53a5-72db-8dcc-23be22c888a1
       "trangThai": "ACTIVE",
       "tomTat": "Vào Cấu hình > Ký hiệu, thêm ký hiệu TRƯỚC rồi mới phát hành…",
       "link": "https://<host>/xem/kpl_<id>_<secret>",
-      "linkHetHanLuc": "2026-10-01T09:12:03Z"
+      "linkHetHanLuc": "2026-10-01T09:12:03Z",
+      "ticketDanChung": ["jira:ES-11873", "jira:ES-12011"]
     }
-  ]
+  ],
+  "daQuaCongChe": true,
+  "quyTrinh": {
+    "ten": "Quy trình cho nhóm: Lệch cấu hình tiền/thuế",
+    "phienBan": 2,
+    "buocHienTai": { "ma": "K2", "noiDung": "So từng cột tiền trên ba màn", "noiXem": "Màn hoá đơn" },
+    "daXongHet": false,
+    "traTheo": "buoc"
+  },
+  "maLuotGoiY": "01a0aa96-...",
+  "suKien": "case-moi"
 }
+```
+
+Các ô thêm ngày 2026-10-10 (thêm ô ⇒ `phienBan` giữ `"1"`, §6):
+
+```text
+ticketDanChung   ticket nào chống lưng hướng dẫn này — chỉ khoá nguồn, không nội dung. Rỗng = chưa nối được.
+daQuaCongChe     false = bản deploy đang tắt tạm cổng che: tóm tắt NGUYÊN VĂN, có thể chứa mật khẩu.
+quyTrinh         case đang ở bước nào của quy trình đã duyệt. VẮNG MẶT khi chưa có quy trình — vắng KHÔNG
+                 phải "quy trình rỗng". traTheo: buoc = hướng dẫn theo bước · nhom = theo cả nhóm.
+maLuotGoiY       mã để báo lại gợi ý có được dùng không (§3.5). KHÁC maGoi — xem §3.3.
+suKien           case-moi = có việc mới ở nguồn · buoc-hien-tai-doi = mẩu bạn vừa gửi làm case bước sang
+                 bước khác; gói này mang tri thức của bước MỚI.
 ```
 
 ### 3.2 Kiểm chữ ký — **bắt buộc**
@@ -198,6 +244,10 @@ mọi mã khác / timeout   sản phẩm thử lại, giãn dần: 1 · 2 · 4 �
 sau 6 lượt              bỏ cuộc, ghi lại lý do. Bạn sẽ KHÔNG nhận được gói đó nữa.
 ```
 
+⚠ **`maGoi` ≠ `maLuotGoiY`.** `maGoi` là khoá chống trùng của lượt GỬI — giữ nguyên qua mọi lần thử lại.
+`maLuotGoiY` đổi theo từng lần thử, vì mỗi lần thử dựng lại câu trả lời từ kho mới nhất. Khử trùng bằng
+`maGoi`; báo lại bằng `maLuotGoiY` của gói bạn đã thật sự xử lý.
+
 ⚠ **Trả `2xx` NGAY, xử lý sau.** Sản phẩm chờ tối đa 20 giây. Nếu bạn xử lý đồng bộ và chậm
 hơn thế, gói sẽ bị coi là thất bại và gửi lại — bạn sẽ xử lý hai lần cùng một việc.
 
@@ -215,6 +265,23 @@ nhom-chua-co-sop-duoc-duyet    xác định được nhóm, nhưng nhóm đó ch
 Hai thứ này rất khác nhau về việc phải làm tiếp, nên đừng gộp chúng vào một nhánh `else`.
 
 🛑 **Hôm nay `bietTraLoi: false` là trạng thái THƯỜNG GẶP**, không phải ngoại lệ. Xem §5.
+
+### 3.5 Báo lại gợi ý có được dùng không
+
+```bash
+curl -X POST https://<host>/goi-y/<maLuotGoiY>/phan-hoi \
+  -H "Authorization: Bearer kp_..." -H "Content-Type: application/json" \
+  -d '{"nac":"used","datDuoc":true,"nguoiKhai":"chị Lan","ghiChu":"đúng bệnh"}'
+```
+
+```text
+nac          accepted (đồng ý với gợi ý) | used (đã dùng để xử lý). Ba nấc kia sản phẩm tự ghi.
+datDuoc      BẮT BUỘC true/false — "không dùng" và "chưa nói" phải khác nhau.
+nguoiKhai    BẮT BUỘC. Là LỜI KHAI: sản phẩm biết request thuộc công ty nào, chưa biết người nào.
+nhomDung     tuỳ chọn — định tuyến SAI thì khai nhóm ĐÚNG (phải có trong taxonomy). Lần hỏi sau của
+             chính case đó đi theo nhóm này. Case đang chạy quy trình của nhóm CŨ thì lượt chạy đó bị
+             BỎ, ghi tên người khai — response báo id lượt chạy vừa bỏ (`daSuaDinhTuyen.daBoLuotChay`).
+```
 
 ---
 
@@ -249,7 +316,9 @@ Ghi ra vì đọc thiếu phần này sẽ dẫn tới kỳ vọng sai:
    sẽ nhận `bietTraLoi: false`. Đó là hệ thống chạy đúng, không phải hỏng.
 
 🛑 KHÔNG hứa định tuyến chính xác.
-   Bản đang chạy tra một bảng kết quả đã đo sẵn. Ticket nằm ngoài bảng -> `dinh-tuyen-khong-biet`.
+   Bản mặc định tra bảng kết quả đã đo sẵn + kết quả người vận hành nạp. Ticket ngoài cả hai ->
+   `dinh-tuyen-khong-biet`. Bản deploy CÓ THỂ bật định tuyến bằng model cho ticket mới (`nguonDinhTuyen`
+   bắt đầu bằng `model:`) — độ chính xác của nó và ngưỡng tin cậy đều CHƯA ĐO.
 
 🛑 KHÔNG hứa thứ tự gói.
    Hàng đợi có thử lại, nên gói của case B có thể tới trước case A. Dùng `case.khoaNguon`
@@ -258,9 +327,9 @@ Ghi ra vì đọc thiếu phần này sẽ dẫn tới kỳ vọng sai:
 🛑 KHÔNG hứa đúng-một-lần.
    Hứa là ÍT NHẤT MỘT LẦN. Khử trùng bằng `maGoi` là việc của bên nhận.
 
-⚠ Ở chế độ nhiều khách dùng chung, DUYỆT tri thức đang bị từ chối bằng `409` (ranh giới
-  giữa các cơ sở của cùng một khách chưa thực thi được). Nghĩa là kho sẽ rỗng cho tới khi
-  điều đó được giải. Chi tiết: `docs/07` §5 `AR-l`.
+⚠ Ở chế độ nhiều khách dùng chung, DUYỆT tri thức VÀ DUYỆT QUY TRÌNH đang bị từ chối bằng `409`
+  (ranh giới giữa các cơ sở của cùng một khách chưa thực thi được). Nghĩa là kho và quy trình sẽ
+  rỗng cho tới khi điều đó được giải. Chi tiết: `docs/07` §5 `AR-l`.
 ```
 
 ---
