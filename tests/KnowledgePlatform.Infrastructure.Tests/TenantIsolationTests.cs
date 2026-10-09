@@ -262,6 +262,7 @@ public sealed class TenantIsolationTests : IClassFixture<TestDatabaseFixture>
         Assert.Equal(
             ["assertion", "assertion_evidence", "canonical_case", "dinh_tuyen_da_nap",
              "document", "evidence_item", "knowledge_record", "luot_soan_nhap",
+             "process_definition", "process_run", "process_step",
              "sop_draft_goc", "webhook_delivery", "webhook_endpoint"],
             db.TenantScopedTables);
 

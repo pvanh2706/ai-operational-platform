@@ -2,6 +2,7 @@ using KnowledgePlatform.Domain.Cases;
 using KnowledgePlatform.Domain.Documents;
 using KnowledgePlatform.Domain.Evidence;
 using KnowledgePlatform.Domain.Knowledge;
+using KnowledgePlatform.Domain.Process;
 using KnowledgePlatform.Domain.Sop;
 using KnowledgePlatform.Domain.Tenancy;
 using KnowledgePlatform.Domain.Webhooks;
@@ -330,6 +331,85 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             // chấn mà `IM-22` ghi lại về biểu thức policy).
             e.Property(x => x.RetractedReason).HasMaxLength(1024);
             e.Property(x => x.RetractedBy).HasMaxLength(256);
+
+            // --- P4: origin của mẩu + lời xác nhận bước quy trình (N2-1) ---
+            //
+            // ⚠ NULL được ở CẢ HAI cột, và NULL có nghĩa riêng: mẩu nạp trước luật / mẩu không phải lời
+            //   xác nhận. Không điền bù — cùng bài học subTenantCode.
+            e.Property(x => x.Origin).HasConversion<string>().HasMaxLength(32);
+
+            // Restrict: bước đã có người xác nhận thì không xoá được — bước của quy trình ACTIVE vốn bất
+            // biến (N5-1), nên chỉ đụng tới khi ai đó cố xoá tay dưới database.
+            e.HasOne<ProcessStep>()
+                .WithMany()
+                .HasForeignKey(x => x.XacNhanProcessStepId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // --- P4 (2026-10-10, mở lại I1): quy trình · bước · lượt chạy — cả ba tenant-scoped, CÓ RLS ---
+        b.Entity<ProcessDefinition>(e =>
+        {
+            e.ToTable("process_definition");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Nhom).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Ten).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Lifecycle).HasConversion<string>().HasMaxLength(16).IsRequired();
+            e.Property(x => x.VisibilityScope).HasConversion(PhamViXemConverter).HasMaxLength(128);
+            e.Property(x => x.Origin).HasConversion<string>().HasMaxLength(32).IsRequired();
+            e.Property(x => x.ActorLabel).HasMaxLength(256);
+
+            // Cùng hình dạng lượt duyệt với knowledge_record — `05` §5: Process dùng CHUNG nhân.
+            e.OwnsOne(x => x.LastApproval, a =>
+            {
+                a.Property(p => p.ApprovedByActor).HasColumnName("approved_by_actor").HasMaxLength(256);
+                a.Property(p => p.ApprovedAt).HasColumnName("approved_at");
+                a.Property(p => p.VisibilityScopeBefore).HasConversion(PhamViXemConverter).HasColumnName("visibility_before").HasMaxLength(128);
+                a.Property(p => p.VisibilityScopeAfter).HasConversion(PhamViXemConverter).HasColumnName("visibility_after").HasMaxLength(128);
+                a.Property(p => p.Reason).HasColumnName("approval_reason").HasMaxLength(1024);
+                a.Property(p => p.CommercialDataConfirmed).HasColumnName("commercial_data_confirmed");
+            });
+
+            e.HasMany(x => x.Buoc)
+                .WithOne()
+                .HasForeignKey(s => s.ProcessDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => new { x.TenantId, x.Nhom, x.PhienBan }).IsUnique();
+
+            // 🛑 Một nhóm có TỐI ĐA MỘT quy trình ACTIVE. Chốt ở database chứ không chỉ ở handler: duyệt hai
+            //   phiên bản cùng lúc là kiểm-rồi-ghi không nguyên tử, và hai bản ACTIVE thì ô D không biết khớp bản nào.
+            e.HasIndex(x => new { x.TenantId, x.Nhom }).IsUnique().HasFilter("\"Lifecycle\" = 'Active'");
+
+            // Một bản nháp SOP sinh ĐÚNG MỘT quy trình — nạp lại bản nháp không đẻ phiên bản mới.
+            e.HasIndex(x => new { x.TenantId, x.SopDraftGocId }).IsUnique().HasFilter("\"SopDraftGocId\" IS NOT NULL");
+        });
+
+        b.Entity<ProcessStep>(e =>
+        {
+            e.ToTable("process_step");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Ma).HasMaxLength(64).IsRequired();
+            e.Property(x => x.NoiDung).IsRequired();
+            e.Property(x => x.NoiXem).HasMaxLength(1024);
+            e.Property(x => x.ChuDe).HasMaxLength(1024).IsRequired();
+
+            e.HasIndex(x => new { x.ProcessDefinitionId, x.ThuTu }).IsUnique();
+            e.HasIndex(x => new { x.ProcessDefinitionId, x.Ma }).IsUnique();
+        });
+
+        b.Entity<ProcessRun>(e =>
+        {
+            e.ToTable("process_run");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AbandonedBy).HasMaxLength(256);
+            e.Property(x => x.AbandonReason).HasMaxLength(1024);
+
+            e.HasOne<CanonicalCase>().WithMany().HasForeignKey(x => x.CaseId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ProcessDefinition>().WithMany().HasForeignKey(x => x.ProcessDefinitionId).OnDelete(DeleteBehavior.Restrict);
+
+            // 🛑 Một case có TỐI ĐA MỘT lượt chạy CHƯA BỎ. Hai lượt mở cùng lúc thì "đang ở bước nào" có hai đáp án.
+            e.HasIndex(x => new { x.TenantId, x.CaseId }).IsUnique().HasFilter("\"AbandonedAt\" IS NULL");
+            e.HasIndex(x => new { x.TenantId, x.CaseId, x.ProcessDefinitionId });
         });
 
         // --- KnowledgeRecord + cụm assertion (§3C.5) ---

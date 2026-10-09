@@ -52,6 +52,19 @@ public static class SopDraftToKnowledge
     /// <summary>Nhãn nhóm dùng cho cả lúc GHI và lúc TRA. Một chỗ duy nhất biết cách ghép.</summary>
     public static string NhanNhom(string nhom) => NhanNhomPrefix + nhom;
 
+    /// <summary>Tiền tố của nhãn chủ đề THEO BƯỚC KIỂM — xem <see cref="NhanChuDe"/>.</summary>
+    public const string NhanChuDePrefix = "Áp dụng ở bước kiểm: ";
+
+    /// <summary>
+    /// Nhãn chủ đề của MỘT bước kiểm (L1, P4 2026-10-10) — để bước quy trình tra tri thức theo CHỦ ĐỀ chứ
+    /// không trỏ tới record cụ thể. Record nào có nhánh đi ra từ bước <paramref name="maBuoc"/> thì mang nhãn
+    /// này; bước đó của quy trình tra đúng nhãn này.
+    ///
+    /// ⚠ Là assertion chứ không phải cột — cùng lý do với <see cref="NhanNhom"/> (`AP1`, taxonomy lung lay).
+    /// Một chỗ ghép duy nhất cho cả lúc ghi (ở đây) lẫn lúc tra (<c>SopDraftToProcess</c>).
+    /// </summary>
+    public static string NhanChuDe(string nhom, string maBuoc) => $"{NhanChuDePrefix}{nhom} · {maBuoc}";
+
     /// <summary>
     /// Dựng record + assertion từ một bản nháp. KHÔNG chạm hạ tầng, KHÔNG ghi DB —
     /// cùng lý do với `IM-18`: luật domain phải test được mà không cần PostgreSQL.
@@ -229,6 +242,20 @@ public static class SopDraftToKnowledge
             Origin = Origin.AiInference,
             Verification = VerificationLevel.Speculative,
         });
+
+        // --- Applicability: chủ đề THEO BƯỚC KIỂM (L1, P4) — bước nào của quy trình nhận ra được nguyên nhân này ---
+        foreach (var ma in nguon.Select(s => s.Buoc.Ma).Distinct(StringComparer.Ordinal))
+        {
+            record.Assertions.Add(new Assertion
+            {
+                TenantId = tenantId,
+                KnowledgeRecordId = record.Id,
+                Kind = AssertionKind.Applicability,
+                Content = NhanChuDe(draft.Nhom, ma),
+                Origin = Origin.AiInference,
+                Verification = VerificationLevel.Speculative,
+            });
+        }
 
         // --- Applicability: AP1 — applicability là assertion, không phải field ---
         // Quyền cần có để LÀM được bước kiểm là một điều kiện áp dụng thật: `docs/11` §9.1

@@ -32,12 +32,9 @@ public sealed class KnowledgeApprovalHandler(AppDbContext db, IOptions<TenancyOp
         string? lyDo, CancellationToken ct = default)
     {
 
-        if (tenancy.Value.Mode == TenancyMode.SharedMultiTenant)
+        if (CongDuyetARl.LyDoChan(tenancy.Value, "tri thức") is { } chan)
         {
-            return KetQuaDuyet.BiChan(
-                "AR-l chưa giải: chế độ shared không được duyệt tri thức. " +
-                "Duyệt là XUẤT BẢN, và ranh giới khách sạn A ↔ B hiện chưa được thực thi ở tầng nào — " +
-                "RLS không cứu được kiểu rò này vì nó xảy ra ở khâu xuất bản, không ở khâu truy vấn.");
+            return KetQuaDuyet.BiChan(chan);
         }
 
         var record = await db.KnowledgeRecords

@@ -1,5 +1,6 @@
 using KnowledgePlatform.Api.Documents;
 using KnowledgePlatform.Api.Knowledge;
+using KnowledgePlatform.Api.QuyTrinh;
 using KnowledgePlatform.Api.Signals;
 using KnowledgePlatform.Api.Startup;
 using KnowledgePlatform.Api.Tenancy;
@@ -109,6 +110,10 @@ builder.Services.AddScoped<XemLinkHandler>();
 builder.Services.AddScoped<VongKhongCredit>();
 builder.Services.AddScoped<SoanNhapHandler>();
 builder.Services.AddScoped<DocumentHandler>();
+
+// P4 (2026-10-10, mở lại I1): quy trình — ô D/E/F của sơ đồ luồng tín hiệu.
+builder.Services.AddScoped<KhopQuyTrinh>();
+builder.Services.AddScoped<QuyTrinhHandler>();
 
 // `AR5` — file gốc ở kho, DB chỉ giữ metadata. Interface MỎNG theo khuôn `AR3`.
 //
@@ -1017,6 +1022,83 @@ app.MapGet("/internal/sub-tenant-coverage", async (
     .AddEndpointFilter<TenantEndpointFilter>();
 
 
+// =============================================================================
+//  QUY TRÌNH (Capability 2) — ô D/E/F của sơ đồ. Mở lại `I1` ngày 2026-10-10 (`docs/18` NHÓM N).
+//
+//  ⚠ Mọi đường ở đây đi qua cặp filter khoá + tenant như mọi endpoint GHI/ĐỌC dữ liệu khách.
+//  ⚠ Khoá nguồn nằm trong THÂN ở hai đường GHI (tiền lệ `AR-m`): khoá có `/` và `#` thì đi
+//    đường dẫn là mất nửa sau. Đường ĐỌC giữ khuôn `GET /cases/{khoaNguon}/…` của `AR-g`.
+// =============================================================================
+
+app.MapPost("/processes", async (YeuCauTaoQuyTrinh yc, QuyTrinhHandler h, CancellationToken ct) =>
+        TraVe(await h.TaoAsync(yc, ct), "Không tạo được quy trình"))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapGet("/processes", async (string? nhom, QuyTrinhHandler h, CancellationToken ct) =>
+        Results.Ok(await h.LietKeAsync(nhom, ct)))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapGet("/processes/{id:guid}", async (Guid id, QuyTrinhHandler h, CancellationToken ct) =>
+        await h.DocAsync(id, ct) is { } kq
+            ? Results.Ok(kq)
+            : Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Không thấy quy trình này",
+                detail: $"Không có quy trình {id} trong phạm vi của khách hàng này."))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapPut("/processes/{id:guid}/buoc", async (Guid id, YeuCauThayBuoc yc, QuyTrinhHandler h, CancellationToken ct) =>
+        TraVe(await h.ThayBuocAsync(id, yc, ct), "Không sửa được bước"))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+// Duyệt quy trình: CÙNG ba chốt với duyệt tri thức (S7 · AR-n · cổng AR-l), vì nó cũng là XUẤT BẢN.
+app.MapPost("/processes/{id:guid}/approve", async (Guid id, YeuCauDuyetQuyTrinh yc, QuyTrinhHandler h, CancellationToken ct) =>
+    {
+        if (string.IsNullOrWhiteSpace(yc.NguoiDuyet))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Thiếu người duyệt",
+                detail: "`nguoiDuyet` bắt buộc. D4: người công nhận, không phải AI.");
+        }
+
+        if (!VisibilityScopes.TryParse(yc.PhamViXem, out var phamVi))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Phạm vi xem không nằm trong tập đã chốt",
+                detail: $"Không nhận ra \"{yc.PhamViXem}\". Nhận: {VisibilityScopes.Allowed}.");
+        }
+
+        if (yc.XacNhanDuLieuThuongMai != true)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Chưa xác nhận đã soát dữ liệu thương mại",
+                detail: "`xacNhanDuLieuThuongMai` phải là true (AR-n) — duyệt quy trình cũng là XUẤT BẢN.");
+        }
+
+        return TraVe(await h.DuyetAsync(id, yc.NguoiDuyet, phamVi, true, yc.LyDo, ct), "Chưa duyệt được");
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+// CHỈ ĐỌC — không tạo lượt chạy nào. Chưa có lượt chạy thì nói sẽ khớp quy trình nào.
+app.MapGet("/cases/{khoaNguon}/quy-trinh", async (string khoaNguon, QuyTrinhHandler h, CancellationToken ct) =>
+        await h.TienDoAsync(khoaNguon, ct) is { } kq
+            ? Results.Ok(kq)
+            : Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Không thấy case nào mang khoá nguồn này",
+                detail: $"Không có Case nào mang khoá \"{khoaNguon}\". Khoá có dấu `/` thì phải mã hoá thành %2F."))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapPost("/quy-trinh/xac-nhan-buoc", async (YeuCauXacNhanBuoc yc, QuyTrinhHandler h, CancellationToken ct) =>
+        TraVe(await h.XacNhanBuocAsync(yc, ct), "Không ghi được lời xác nhận"))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapPost("/quy-trinh/bo", async (YeuCauBoLuotChay yc, QuyTrinhHandler h, CancellationToken ct) =>
+        TraVe(await h.BoAsync(yc, ct), "Không bỏ được lượt chạy"))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+
 // 🛑 Đối chiếu DANH SÁCH ROUTE THẬT với bảng mô tả — thêm endpoint mà quên viết hợp đồng
 //    thì KHÔNG KHỞI ĐỘNG ĐƯỢC. Phải đứng SAU mọi lệnh Map, nên nó không nằm chung với
 //    StartupChecks (chạy trước khi endpoint được khai báo).
@@ -1089,6 +1171,16 @@ static string? ValidateStatus(CaseStatusSignal s) => s switch
            "Bỏ trống thì hai chuyện khác hẳn nhau trông giống hệt: bên gửi CHƯA GỬI trạng " +
            "thái, và việc ở nguồn ĐÃ MỞ LẠI.",
     _ => null,
+};
+
+// Kết cục có tên → mã HTTP. Một chỗ duy nhất, để 400/404/409 không bị chọn bằng cách đọc chuỗi lỗi.
+static IResult TraVe<T>(KetQua<T> kq, string tieuDe) => kq.KetCuc switch
+{
+    KetCuc.Xong => Results.Ok(kq.GiaTri),
+    KetCuc.Sai => Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: tieuDe, detail: kq.Loi),
+    KetCuc.KhongThay => Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Không thấy",
+        detail: kq.Loi ?? "Không có trong phạm vi của khách hàng này."),
+    _ => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: tieuDe, detail: kq.Loi),
 };
 
 /// <summary>Thân của <c>POST /knowledge/soan-nhap</c>.</summary>

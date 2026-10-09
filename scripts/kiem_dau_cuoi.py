@@ -98,6 +98,7 @@ def _chuan_hoa(duong: str) -> str:
     d = re.sub(r"/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
                "/{id}", d)
     d = re.sub(r"^/cases/[^/]+/evidence$", "/cases/{khoaNguon}/evidence", d)
+    d = re.sub(r"^/cases/[^/]+/quy-trinh$", "/cases/{khoaNguon}/quy-trinh", d)
     return d
 
 
@@ -593,6 +594,75 @@ def kenh_hai() -> None:
     kiem("GET /documents/{id}/tai -> 200", s, 200)
 
 
+def quy_trinh() -> None:
+    """
+    Quy trình (P4, 2026-10-10 — mở lại I1): ô D/E/F của sơ đồ. Gọi THẬT cả 8 đường.
+
+    ⚠ Dùng nhóm và case RIÊNG có tiền tố của file này, KHÔNG đụng case thật trong kho: một lượt
+    chạy hay một lời xác nhận rơi vào case thật là dữ liệu vận hành bịa ra. Vì case riêng không
+    định tuyến được (không có trong bảng đo), đường xác nhận ở đây kiểm ĐÚNG cửa từ chối — chuỗi
+    đầy đủ (khớp → xác nhận → bước đổi) do bộ test C# `QuyTrinhTests` giữ.
+    """
+    muc("M · Quy trình  (8 endpoint · P4)")
+    nhom = f"{DAU}-{LAN}-quy-trinh"
+
+    s, b = goi("POST", "/processes", {
+        "nhom": nhom, "ten": "Quy trình kiểm đầu-cuối", "nguoiTao": "kiem-dau-cuoi",
+        "buoc": [{"ma": "K1", "noiDung": "Xem nhat ky ket noi", "dauHieu": ["nhat ky ket noi"]}],
+    })
+    if not kiem("POST /processes -> 200", s, 200):
+        print(f"       -> {json.dumps(b, ensure_ascii=False)[:400]}")
+        return
+    pid = b["id"]
+    kiem("  ... vào DRAFT", b.get("trangThai"), "DRAFT")
+
+    s, ds = goi("GET", "/processes?nhom=" + urllib.parse.quote(nhom))
+    kiem("GET /processes -> 200", s, 200)
+    kiem("  ... thấy đúng quy trình vừa tạo", any(x.get("id") == pid for x in (ds or [])), True)
+
+    s, b = goi("PUT", f"/processes/{pid}/buoc", {
+        "nguoiSua": "kiem-dau-cuoi",
+        "buoc": [{"ma": "K1", "noiDung": "Xem nhat ky ket noi", "dauHieu": ["nhat ky ket noi"]},
+                 {"ma": "XL", "noiDung": "Xu ly"}],
+    })
+    kiem("PUT /processes/{id}/buoc (DRAFT) -> 200", s, 200)
+
+    s, _ = goi("POST", f"/processes/{pid}/approve", {"nguoiDuyet": "kiem-dau-cuoi", "phamViXem": "noi-bo"})
+    kiem("POST /processes/{id}/approve  thiếu xác nhận -> 400 (AR-n)", s, 400)
+
+    s, b = goi("POST", f"/processes/{pid}/approve",
+               {"nguoiDuyet": "kiem-dau-cuoi", "phamViXem": "noi-bo", "xacNhanDuLieuThuongMai": True})
+    kiem("  ... khai đủ -> 200, ACTIVE", (s, (b or {}).get("trangThai")), (200, "ACTIVE"))
+
+    s, b = goi("GET", f"/processes/{pid}")
+    kiem("GET /processes/{id} -> 200", s, 200)
+
+    s, _ = goi("PUT", f"/processes/{pid}/buoc", {"nguoiSua": "x", "buoc": [{"ma": "K9", "noiDung": "y"}]})
+    kiem("  ... sửa bước khi ACTIVE -> 409 (N5-1)", s, 409)
+
+    ma_case = khoa("quy-trinh-case")
+    s, _ = goi("POST", "/signals/case-observed", [{"sourceReference": ma_case, "subject": "kiem quy trinh"}])
+    kiem("  (dựng case riêng)", s, 200)
+    _da_tao["case"] += 1
+
+    s, b = goi("GET", "/cases/" + urllib.parse.quote(ma_case, safe="") + "/quy-trinh")
+    kiem("GET /cases/{khoaNguon}/quy-trinh -> 200", s, 200)
+    kiem("  ... case không định tuyến được thì nói rõ, không đoán",
+         ((b or {}).get("coQuyTrinh"), (b or {}).get("lyDoKhongCo")), (False, "dinh-tuyen-khong-biet"))
+
+    s, _ = goi("POST", "/quy-trinh/xac-nhan-buoc",
+               {"khoaNguon": ma_case, "maBuoc": "K1", "nguoiXacNhan": "kiem-dau-cuoi"})
+    kiem("POST /quy-trinh/xac-nhan-buoc  thiếu subTenantCode -> 400 (AR-l)", s, 400)
+
+    s, _ = goi("POST", "/quy-trinh/xac-nhan-buoc",
+               {"khoaNguon": ma_case, "maBuoc": "K1", "nguoiXacNhan": "kiem-dau-cuoi",
+                "subTenantCode": "khong-xac-dinh"})
+    kiem("  ... case chưa khớp quy trình nào -> 409", s, 409)
+
+    s, _ = goi("POST", "/quy-trinh/bo", {"khoaNguon": ma_case, "nguoiBo": "kiem-dau-cuoi", "lyDo": "kiem"})
+    kiem("POST /quy-trinh/bo  không có lượt chạy mở -> 409", s, 409)
+
+
 def phu_hop_dong() -> None:
     """
     🛑 **Phép kiểm tự soi chính nó.** Đối chiếu những đường file này ĐÃ GỌI với hợp đồng
@@ -700,6 +770,7 @@ def main() -> int:
     duong_gui_ve()
     soan_nhap()
     kenh_hai()
+    quy_trinh()
     phu_hop_dong()
 
     print("\n" + "=" * 68)
@@ -714,7 +785,9 @@ def main() -> int:
         print("  đúng chỗ này là chỗ đã hỏng hai lần mà 302 test vẫn xanh (IM-36, IM-37).")
         return 1
 
-    print("\n✅ Cả 22 endpoint còn gọi được, và các cổng còn chặn đúng chỗ.")
+    # ⚠ Không ghim con số: câu cũ ở đây ghi "22 endpoint" và lỗi thời ngay khi có route mới.
+    #   Mục J đã đối chiếu với hợp đồng thật — đó mới là con số đúng.
+    print("\n✅ Mọi endpoint trong hợp đồng còn gọi được (mục J), và các cổng còn chặn đúng chỗ.")
     return 0
 
 

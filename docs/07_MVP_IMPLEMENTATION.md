@@ -575,6 +575,44 @@ khớp đuôi được thiết kế cho, nhưng chưa chạy. Để vào phép k
 
 ✅ 460/460 test (223 + 30 + 207), trước 439.
 
+### P4 ✅ — ô D/E/F: quy trình, lượt chạy, bước hiện tại (2026-10-10)
+
+```text
+Domain/Process   ProcessDefinition (DRAFT/ACTIVE/DEPRECATED, phạm vi xem, origin, lượt duyệt —
+                 CHUNG nhân với Knowledge) · ProcessStep (thứ tự, mã, nội dung, dấu hiệu, chủ đề)
+                 · ProcessRun (case, định nghĩa, lúc bắt đầu, ĐÃ BỎ chưa — KHÔNG cột tiến độ)
+E + F            TienDoQuyTrinh.SuyRa — hàm THUẦN. Bước xong ⟸ mẩu chứa dấu hiệu (không dấu,
+                 không hoa thường) HOẶC lời xác nhận trỏ đúng bước. Bước hiện tại = bước chưa
+                 xong ĐẦU TIÊN. Mỗi bước xong kèm căn cứ: mẩu nào, bằng cách nào.
+D                KhopQuyTrinh: định tuyến case → quy trình ACTIVE của nhóm → tìm/tạo lượt chạy.
+                 Case đang có lượt chạy thì GIỮ nó (N6-1). Lượt bị bỏ thì KHÔNG tự dựng lại.
+sinh từ Path A   bản nháp SOP → quy trình DRAFT, đúng một lần theo sop_draft_goc. Bước = bước
+                 kiểm + "XL" + "XN". Nhánh ở lại Knowledge (PR2).
+chủ đề (L1)      record mang Applicability "Áp dụng ở bước kiểm: <nhóm> · <mã>" — CÙNG một hàm
+                 ghép nhãn cho cả lúc ghi và lúc bước tra, nên lệch nhau là không thể.
+xác nhận         POST /quy-trinh/xac-nhan-buoc → một mẩu EVIDENCE (Origin = UserConfirmed,
+                 XacNhanProcessStepId), subTenantCode bắt buộc. Rút lại được như mọi mẩu.
+DB               một nhóm ≤ 1 bản ACTIVE · một case ≤ 1 lượt chạy mở · một bản nháp ≤ 1 quy trình
+                 — cả ba là unique index có điều kiện, không chỉ là kiểm ở handler
+duyệt            cùng ba chốt với duyệt tri thức; cổng AR-l tách ra CongDuyetARl dùng chung
+```
+
+⚠ **Hai lượt ghi trong một giao dịch, ở hai chỗ, và cùng một lý do:** thay bước (xoá cũ rồi thêm
+mới) và duyệt phiên bản mới (rút bản cũ rồi bật bản mới). Một lượt `SaveChanges` không hứa thứ tự
+giữa các lệnh, và cả hai chỗ đều có unique index sẽ nổ nếu thứ tự sai.
+
+⚠ **Bước sinh từ bản nháp KHÔNG có dấu hiệu nào** — `SopDraft` không có trường đó. Chúng chỉ xong
+bằng lời xác nhận cho tới khi người duyệt thêm dấu hiệu lúc còn DRAFT. Response nói rõ ở cả lúc nạp
+lẫn lúc đọc quy trình. Không tự đoán dấu hiệu từ `noiXem`: đoán là bước xong GIẢ.
+
+⚠ Namespace phía API là `QuyTrinh`, không phải `Process`: `LenhDinhTuyen` gọi `Process.Start`, và
+một namespace `KnowledgePlatform.Api.Process` sẽ che tên đó ở mọi file trong `KnowledgePlatform.Api.*`.
+
+✅ 489/489 test (240 + 30 + 219), trước 460. Đột biến: gỡ luật "lượt bị bỏ thì không dựng lại" →
+đúng test đó đỏ. `kiem_dau_cuoi.py` mục M gọi thật cả 8 route mới; `kiem_hai_khach.py` thêm hai phép
+(duyệt quy trình ở shared → 409 AR-l · khoá A đọc quy trình của B → 404). Hai script này CHƯA chạy —
+để vào phép kiểm đầu-cuối cuối lộ trình.
+
 ---
 
 ## `IM-48` · Cổng credential kêu 45 lần, đúng 9 lần — và chủ dự án chọn nạp cả lô

@@ -152,6 +152,7 @@ class Khach:
         self.khoa = ""
         self.tenant_id = ""
         self.record_id = ""
+        self.quy_trinh_id = ""
 
 
 def dung_khach(k: Khach) -> None:
@@ -191,6 +192,15 @@ def nap_tri_thuc(k: Khach) -> None:
     kiem("[%s] duyệt ở chế độ shared -> 409 (cổng AR-l)" % k.ten, s, 409)
     kiem("[%s]   ... và nói rõ AR-l là lý do" % k.ten, "AR-l" in json.dumps(b, ensure_ascii=False), True)
 
+    # P4 (2026-10-10): bản nháp vừa nạp sinh một quy trình DRAFT. Duyệt nó cũng là XUẤT BẢN, nên
+    # cổng AR-l chặn y như duyệt tri thức — và phải nói rõ AR-l là lý do.
+    k.quy_trinh_id = ((b or {}).get("quyTrinh") or {}).get("id", "")
+    s, b = goi("POST", "/processes/%s/approve" % k.quy_trinh_id,
+               {"nguoiDuyet": "nghiem-thu", "phamViXem": "noi-bo",
+                "xacNhanDuLieuThuongMai": True}, khoa=k.khoa)
+    kiem("[%s] duyệt QUY TRÌNH ở chế độ shared -> 409 (cổng AR-l)" % k.ten, s, 409)
+    kiem("[%s]   ... và nói rõ AR-l là lý do" % k.ten, "AR-l" in json.dumps(b, ensure_ascii=False), True)
+
     s, b = goi("GET", "/internal/tenant-boundary", khoa=k.khoa)
     if kiem("[%s] đọc được ranh giới của chính mình -> 200" % k.ten, s, 200):
         k.tenant_id = (b or {}).get("tenantId", "")
@@ -203,6 +213,9 @@ def cach_ly(a: Khach, b: Khach) -> None:
 
     s, _ = goi("GET", "/knowledge/%s" % b.record_id, khoa=a.khoa)
     kiem("khoá A KHÔNG đọc được tri thức của B -> 404", s, 404)
+
+    s, _ = goi("GET", "/processes/%s" % b.quy_trinh_id, khoa=a.khoa)
+    kiem("khoá A KHÔNG đọc được QUY TRÌNH của B -> 404", s, 404)
 
     s, body = goi("GET", "/internal/webhook", khoa=a.khoa)
     kiem("khoá A đọc cấu hình đích -> thấy của CHÍNH MÌNH", (body or {}).get("url"), a.dich)

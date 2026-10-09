@@ -124,6 +124,24 @@ public sealed class EvidenceItem : ITenantScoped
     public bool? DaCheBenThuBa { get; init; }
 
     /// <summary>
+    /// Mẩu này hình thành bằng cách nào (`PR1`, `v0.2` §9: origin nằm trên evidence). Thêm 2026-10-10 (P4).
+    ///
+    /// ⚠ CHỈ đường xác nhận bước của quy trình đặt ô này (<see cref="Knowledge.Origin.UserConfirmed"/>). Đường
+    /// nạp tín hiệu công khai KHÔNG nhận nó từ bên gửi — một connector tự khai "đây là sự thật hệ thống" là
+    /// đúng loại lời khai không kiểm được. <c>NULL</c> = chưa ai nói, KHÁC mọi giá trị.
+    /// </summary>
+    public Knowledge.Origin? Origin { get; init; }
+
+    /// <summary>
+    /// Mẩu này là LỜI XÁC NHẬN "đã làm bước X" của quy trình (`N2-1`) — trỏ tới đúng bước, không trỏ tới mã bước
+    /// (mã trùng nhau giữa các phiên bản).
+    ///
+    /// 🛑 Đây KHÔNG phải cờ tiến độ (PR1 cấm): nó là một mẩu evidence có tác giả, có thời điểm, rút lại được
+    /// (`AR-m`) như mọi mẩu khác. Tiến độ vẫn SUY RA từ nó, không đọc thẳng.
+    /// </summary>
+    public Guid? XacNhanProcessStepId { get; init; }
+
+    /// <summary>
     /// Người đánh dấu một mẩu là ĐÃ BỊ NGƯỜI GỬI RÚT LẠI.
     ///
     /// 🛑 **KHÔNG có đường nào cho máy gọi hàm này.** `B1-1` chọn ít tín hiệu mà mỗi cái đều

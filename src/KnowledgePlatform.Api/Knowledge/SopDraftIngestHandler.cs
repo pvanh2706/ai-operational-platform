@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using KnowledgePlatform.Domain.Knowledge;
+using KnowledgePlatform.Domain.Process;
 using KnowledgePlatform.Domain.Sop;
 using KnowledgePlatform.Domain.Tenancy;
 using KnowledgePlatform.Infrastructure.Persistence;
@@ -52,6 +53,7 @@ public sealed class SopDraftIngestHandler(AppDbContext db, ITenantContext tenant
         ArgumentNullException.ThrowIfNull(draft);
 
         var banGoc = await LuuBanGocAsync(draft, ct);
+        var quyTrinh = await SinhQuyTrinhAsync(draft, banGoc, ct);
         var mapped = SopDraftToKnowledge.Map(draft, tenant.TenantId);
 
         // Tra một lượt cho cả lô, không phải một câu mỗi record.
@@ -106,8 +108,44 @@ public sealed class SopDraftIngestHandler(AppDbContext db, ITenantContext tenant
                 r.DisplayState,
                 r.Assertions.Count)).ToList(),
             DanChung: danChung,
-            BanNhapGoc: banGoc);
+            BanNhapGoc: banGoc,
+            QuyTrinh: quyTrinh);
     }
+
+    /// <summary>
+    /// P4 (2026-10-10): bản nháp SOP sinh MỘT quy trình ở DRAFT (`S4` quy tắc 1, `05`:197-198). Đúng một lần
+    /// theo bản nháp gốc — nạp lại không đẻ phiên bản mới (unique index trên <c>SopDraftGocId</c>).
+    ///
+    /// ⚠ Bản nháp nạp TRƯỚC P4 đã có dòng <c>sop_draft_goc</c> (P3) mà chưa có quy trình — nạp lại thì sinh
+    /// bù, đúng như dẫn chứng được điền bù.
+    /// </summary>
+    private async Task<QuyTrinhNhap> SinhQuyTrinhAsync(SopDraft draft, BanNhapGocDaLuu banGoc, CancellationToken ct)
+    {
+        var daCo = await db.Set<ProcessDefinition>()
+            .Where(d => d.SopDraftGocId == banGoc.Id)
+            .Select(d => new { d.Id, d.PhienBan, d.Lifecycle, SoBuoc = d.Buoc.Count })
+            .FirstOrDefaultAsync(ct);
+
+        if (daCo is not null)
+        {
+            return new QuyTrinhNhap(daCo.Id, daCo.PhienBan, daCo.Lifecycle.ToString().ToUpperInvariant(),
+                daCo.SoBuoc, DaCoTuTruoc: true, CanhBaoBuocChuaCoDauHieu);
+        }
+
+        var phienBan = (await db.Set<ProcessDefinition>()
+            .Where(d => d.Nhom == draft.Nhom)
+            .MaxAsync(d => (int?)d.PhienBan, ct) ?? 0) + 1;
+
+        var dn = SopDraftToProcess.Dung(draft, tenant.TenantId, banGoc.Id, phienBan);
+        db.Set<ProcessDefinition>().Add(dn);
+
+        return new QuyTrinhNhap(dn.Id, dn.PhienBan, dn.Lifecycle.ToString().ToUpperInvariant(),
+            dn.Buoc.Count, DaCoTuTruoc: false, CanhBaoBuocChuaCoDauHieu);
+    }
+
+    private const string CanhBaoBuocChuaCoDauHieu =
+        "Quy trình sinh từ bản nháp nằm ở DRAFT và CHƯA có dấu hiệu nào cho bước nào (bản nháp không có " +
+        "trường đó) — chỉ xong được bằng lời xác nhận. Thêm dấu hiệu bằng PUT /processes/{id}/buoc, rồi duyệt.";
 
     /// <summary>Lưu bản nháp gốc (dạng serialize chuẩn), đúng một lần theo hash. Xem <see cref="SopDraftGoc"/>.</summary>
     private async Task<BanNhapGocDaLuu> LuuBanGocAsync(SopDraft draft, CancellationToken ct)
@@ -312,7 +350,11 @@ public sealed record SopDraftIngestResult(
     IReadOnlyList<string> NhanhTroLacLoi,
     IReadOnlyList<NguyenNhanDaTao> NguyenNhan,
     DanChungDaNoi DanChung,
-    BanNhapGocDaLuu BanNhapGoc);
+    BanNhapGocDaLuu BanNhapGoc,
+    QuyTrinhNhap QuyTrinh);
+
+/// <summary>Quy trình DRAFT mà bản nháp này sinh ra (P4). Nó KHÔNG chạy cho tới khi có người duyệt (`D4`).</summary>
+public sealed record QuyTrinhNhap(Guid Id, int PhienBan, string TrangThai, int SoBuoc, bool DaCoTuTruoc, string CanhBao);
 
 public sealed record NguyenNhanDaTao(Guid Id, string TenNguyenNhan, string TrangThai, int SoAssertion);
 

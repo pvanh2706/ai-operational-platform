@@ -34,6 +34,7 @@ public static partial class OpenApiMoTa
     private const string NhomHoi = "Hỏi & trả lời";
     private const string NhomTichHop = "Tích hợp";
     private const string NhomKenh2 = "Kênh 2 — tài liệu";
+    private const string NhomQuyTrinh = "Quy trình";
 
     /// <summary>Khoá là <c>"METHOD /đường/dẫn"</c>, đúng dạng route pattern của ASP.NET.</summary>
     public static IReadOnlyDictionary<string, MoTaEndpoint> Bang { get; } =
@@ -176,6 +177,49 @@ public static partial class OpenApiMoTa
             ["GET /internal/webhook"] = new(NhomTichHop,
                 "Đọc lại cấu hình nơi nhận",
                 "KHÔNG trả bí mật ký. Mất thì khai báo lại để sinh cái mới."),
+
+            // --- Quy trình (P4, 2026-10-10 — mở lại I1) ---
+
+            ["POST /processes"] = new(NhomQuyTrinh,
+                "Viết tay một quy trình (vào DRAFT)",
+                "Bước là danh sách TUYẾN TÍNH — không nhánh (PR2): \"thấy X thì là nguyên nhân Y\" là tri thức, " +
+                "không phải bước. Mỗi bước có `dauHieu` (cụm từ mà một mẩu evidence chứa thì coi như bước đã làm) " +
+                "và `chuDe` (tri thức bước này tra; bỏ trống = theo nhóm). Mỗi lần tạo là một PHIÊN BẢN mới của nhóm."),
+
+            ["GET /processes"] = new(NhomQuyTrinh,
+                "Liệt kê quy trình (lọc theo `nhom`)",
+                "Mọi phiên bản, cả DRAFT và DEPRECATED. Mỗi nhóm có TỐI ĐA MỘT bản ACTIVE."),
+
+            ["GET /processes/{id}"] = new(NhomQuyTrinh,
+                "Đọc một quy trình kèm các bước",
+                "`canhBao` nói bước nào chưa có dấu hiệu — bước đó chỉ xong được bằng lời xác nhận."),
+
+            ["PUT /processes/{id}/buoc"] = new(NhomQuyTrinh,
+                "Thay toàn bộ bước — CHỈ khi còn DRAFT",
+                "Bản ACTIVE BẤT BIẾN (N5-1, PROPOSED): sửa thì 409, muốn đổi thì tạo phiên bản mới. Đây là chỗ " +
+                "người duyệt thêm dấu hiệu cho quy trình sinh từ bản nháp SOP."),
+
+            ["POST /processes/{id}/approve"] = new(NhomQuyTrinh,
+                "Duyệt một quy trình",
+                "Cùng ba chốt với duyệt tri thức: `nguoiDuyet` + `phamViXem` (S7), `xacNhanDuLieuThuongMai` (AR-n), " +
+                "và chế độ shared TỪ CHỐI (AR-l). Duyệt bản mới thì bản ACTIVE cũ của cùng nhóm thành DEPRECATED; " +
+                "case đang chạy dở bản cũ VẪN chạy bản cũ (N6-1, PROPOSED)."),
+
+            ["GET /cases/{khoaNguon}/quy-trinh"] = new(NhomQuyTrinh,
+                "Case đang ở bước nào",
+                "CHỈ ĐỌC — không tạo gì. Tiến độ là PHÉP CHIẾU từ evidence, không có cờ nào được lưu (PR1): bước " +
+                "xong ⟸ một mẩu chứa dấu hiệu của bước, hoặc một lời xác nhận trỏ đúng bước. Mỗi bước xong kèm " +
+                "`canCu` — mẩu nào, bằng cách nào — để phản bác được. `coQuyTrinh: false` kèm `lyDoKhongCo`."),
+
+            ["POST /quy-trinh/xac-nhan-buoc"] = new(NhomQuyTrinh,
+                "Khai đã làm một bước",
+                "Lời khai được lưu thành một mẩu EVIDENCE có tác giả (N2-1), không phải cờ — rút lại được như mọi " +
+                "mẩu khác. `subTenantCode` BẮT BUỘC (AR-l). Case chưa có lượt chạy thì lượt chạy được tạo ở đây."),
+
+            ["POST /quy-trinh/bo"] = new(NhomQuyTrinh,
+                "Bỏ lượt chạy quy trình đang mở",
+                "CHỈ NGƯỜI, bắt buộc `nguoiBo` + `lyDo`. Bỏ rồi thì hệ thống KHÔNG tự dựng lại lượt chạy cho đúng " +
+                "cặp (case, quy trình) đó."),
         };
 
     /// <summary>Khoá tra bảng cho một route.</summary>
