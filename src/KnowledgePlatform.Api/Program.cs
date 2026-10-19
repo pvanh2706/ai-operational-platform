@@ -46,6 +46,10 @@ if (Console.IsOutputRedirected || Console.IsErrorRedirected)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// `O2-1` — máy dev đặt khoá model ở appsettings.Local.json (gốc repo). Chỉ Development, có cổng git,
+// và biến môi trường vẫn thắng. Đây là chỗ DUY NHẤT thêm nguồn cấu hình — xem CauHinhLocal.
+builder.Services.AddSingleton(CauHinhLocal.Nap(builder, args));
+
 builder.Services.Configure<TenancyOptions>(
     builder.Configuration.GetSection(TenancyOptions.SectionName));
 builder.Services.Configure<IngestOptions>(

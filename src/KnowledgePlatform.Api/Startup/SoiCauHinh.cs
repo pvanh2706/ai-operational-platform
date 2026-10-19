@@ -104,9 +104,23 @@ public static class SoiCauHinh
             vanDe.Add("cổng che đang tắt (N1-2)");
         }
 
+        // --- Khoá model (O2-1): CÓ hay KHÔNG, và từ đâu — không bao giờ in giá trị ---
+        Muc("Khoá Anthropic (O2-1)");
+        var coKhoa = KhoaAnthropic.Doc(cfg) is not null;
+        var local = services.GetService<NguonCauHinhLocal>();
+        if (local?.DuongDan is { } duongLocal) Console.WriteLine($"    đã nạp {duongLocal}");
+        if (local?.LyDoKhongNap is { } lyDo) Canh($"{CauHinhLocal.TenFile}: {lyDo}");
+        if (coKhoa)
+        {
+            Ok("CÓ khoá — soạn nháp (POST /knowledge/soan-nhap) gọi model thật, tính tiền.");
+        }
+        else
+        {
+            Console.WriteLine("    KHÔNG có khoá — dùng vòng xuất/nạp file (--xuat-dinh-tuyen, --xuat-soan-nhap, giao diện).");
+        }
+
         // --- Định tuyến ticket MỚI bằng model (P8, N7-1 PROPOSED) ---
         Muc("Định tuyến ticket mới bằng model (N7-1)");
-        var coKhoa = KhoaAnthropic.Doc(cfg) is not null;
         if (!dinhTuyen.GoiModel)
         {
             Console.WriteLine("    TẮT (DinhTuyen:GoiModel = false) — ticket ngoài bảng đo nhận KHÔNG BIẾT.");

@@ -16,6 +16,11 @@ namespace KnowledgePlatform.Api.Startup;
 ///
 /// ⚠ Khoá vẫn KHÔNG đi qua appsettings hay log: nó đến từ <see cref="IConfiguration"/>, nơi biến
 /// môi trường đã là một nguồn sẵn. Lớp này chỉ gom HAI tên về một chỗ.
+///
+/// 🔄 **2026-10-19 (`O2-1`):** câu trên giờ đúng cho mọi file appsettings ĐƯỢC GIT THEO DÕI — đó mới là lập
+/// luận gốc. Ở môi trường Development host nạp thêm <c>appsettings.Local.json</c> (đã .gitignore, có cổng
+/// <c>git check-ignore</c>) — xem <see cref="CauHinhLocal"/>. Giá trị mẫu của file đó bị coi là KHÔNG có khoá:
+/// chép file mẫu mà quên điền thì phải ra "chưa có credit", không phải một lượt gọi bị từ chối xác thực.
 /// </summary>
 public static class KhoaAnthropic
 {
@@ -33,6 +38,11 @@ public static class KhoaAnthropic
         var khoa = cfg[TenCauHinh];
         if (string.IsNullOrWhiteSpace(khoa)) khoa = cfg[TenMoiTruong];
 
-        return string.IsNullOrWhiteSpace(khoa) ? null : khoa.Trim();
+        if (string.IsNullOrWhiteSpace(khoa) || khoa.Contains(DauHieuGiaTriMau, StringComparison.Ordinal)) return null;
+
+        return khoa.Trim();
     }
+
+    /// <summary>Một mẩu của giá trị mẫu trong <c>appsettings.Local.example.json</c> — cùng chuỗi <c>SoanNhapRunner</c> kiểm.</summary>
+    public const string DauHieuGiaTriMau = "DAN-KHOA-CUA-BAN";
 }

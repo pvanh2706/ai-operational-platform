@@ -39,6 +39,14 @@ public sealed class KhoaAnthropicTests(ApiDatabaseFixture db) : IClassFixture<Ap
             ["ANTHROPIC_API_KEY"] = "",
         })));
 
+    /// <summary>`O2-1`: chép <c>appsettings.Local.example.json</c> mà quên điền → KHÔNG có khoá, không phải lượt gọi hỏng.</summary>
+    [Fact]
+    public void Gia_tri_MAU_cua_file_Local_bi_coi_la_khong_co_khoa() =>
+        Assert.Null(KhoaAnthropic.Doc(CauHinh(new()
+        {
+            ["Anthropic:ApiKey"] = "sk-ant-api03-DAN-KHOA-CUA-BAN-VAO-DAY",
+        })));
+
     private ISopDrafter BanDuocCam(ApiFactory app)
     {
         using var scope = app.Services.CreateScope();
