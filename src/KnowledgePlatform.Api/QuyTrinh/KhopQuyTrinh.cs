@@ -34,7 +34,14 @@ public sealed class KhopQuyTrinh(AppDbContext db, ITenantContext tenant, IDinhTu
     /// ⚠ Đúng định nghĩa `docs/13` §1 — thứ có mặt LÚC TICKET ĐẾN, không phải cả transcript (transcript chứa
     /// sẵn câu chẩn đoán; đưa vào là đưa đáp án vào đề). Lời xác nhận bước KHÔNG tính là mô tả.
     /// </summary>
-    public async Task<KetQuaDinhTuyen> DinhTuyenCaseAsync(CanonicalCase c, CancellationToken ct = default)
+    public async Task<KetQuaDinhTuyen> DinhTuyenCaseAsync(CanonicalCase c, CancellationToken ct = default) =>
+        await dinhTuyen.DinhTuyenAsync(await YeuCauAsync(c, ct), ct);
+
+    /// <summary>Như <see cref="DinhTuyenCaseAsync"/> nhưng KHÔNG gọi model, KHÔNG ghi biên lai — cho đường xem (`P2-1`).</summary>
+    public async Task<KetQuaDinhTuyen> XemDinhTuyenCaseAsync(CanonicalCase c, CancellationToken ct = default) =>
+        await dinhTuyen.XemAsync(await YeuCauAsync(c, ct), ct);
+
+    private async Task<YeuCauDinhTuyen> YeuCauAsync(CanonicalCase c, CancellationToken ct)
     {
         var moTa = await db.EvidenceItems
             .Where(e => e.ObservedInCaseId == c.Id && e.RetractedAt == null && e.XacNhanProcessStepId == null)
@@ -43,7 +50,7 @@ public sealed class KhopQuyTrinh(AppDbContext db, ITenantContext tenant, IDinhTu
             .Select(e => e.Content)
             .FirstOrDefaultAsync(ct);
 
-        return await dinhTuyen.DinhTuyenAsync(new YeuCauDinhTuyen(c.SourceReference, c.Subject, moTa), ct);
+        return new YeuCauDinhTuyen(c.SourceReference, c.Subject, moTa);
     }
 
     /// <param name="taoLuotChay">

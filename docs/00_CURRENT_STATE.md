@@ -303,10 +303,12 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > Console NỘI BỘ (không phải widget `AR2`/`D5-1`), build tĩnh do `ui_server.py` phục vụ (loopback), Vue 3 + Vite +
 > TS + Vue Flow + Router + Pinia. 🛑 Chỗ khó là DỮ LIỆU: host chưa có đường liệt kê case hay trả dòng thời gian
 > một case → `P2-1` thêm hai endpoint đọc `/internal/`.
+> ⚠ **Tìm ra ở P12-1, CHƯA sửa (câu sản phẩm):** `GET /cases/{k}/quy-trinh` ghi "CHỈ ĐỌC" nhưng khi bật
+> `GoiModel` thì một lượt GET vào case mới là một lượt gọi model tính tiền + một biên lai. Xem `07` §3 `IM-51`.
 > ```text
 >    P12-0  ghi quyết định (docs/18 P, file này)                                   ✅ 2026-10-19
->    P12-1  host: GET /internal/cases?tienTo= · GET /internal/cases/{k}/dong-chay
->           + test + OpenAPI + kiem_dau_cuoi mục J
+>    P12-1  host: GET /internal/cases?tienTo= · GET /internal/cases/{k}/dong-chay   ✅ 2026-10-19
+>           + test + OpenAPI + kiem_dau_cuoi mục C2 — 548 test · 87/0 · IM-51
 >    P12-2  dựng dự án Vue (Vite + TS), ui_server phục vụ bản build + chuyển tiếp /app/* sang app
 >    P12-3  màn Sơ đồ luồng (Vue Flow, ô A–J của README, tô sáng theo case) · Danh sách case · Dòng thời gian
 >    P12-4  chuyển trang giả lập (/gia-lap) sang console — trang HTML cũ giữ tới khi bản Vue chạy thật

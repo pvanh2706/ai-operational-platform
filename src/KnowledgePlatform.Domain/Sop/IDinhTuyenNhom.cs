@@ -17,6 +17,16 @@ namespace KnowledgePlatform.Domain.Sop;
 public interface IDinhTuyenNhom
 {
     Task<KetQuaDinhTuyen> DinhTuyenAsync(YeuCauDinhTuyen yeuCau, CancellationToken ct = default);
+
+    /// <summary>
+    /// Câu trả lời mà <see cref="DinhTuyenAsync"/> SẼ đưa ra, nhưng KHÔNG gây tác dụng phụ nào: không gọi model,
+    /// không ghi biên lai (`P2-1`, docs/18 nhóm P, 2026-10-19). Dùng cho đường XEM — một màn hình mở ra mà
+    /// tiêu tiền là một màn hình người ta sẽ sợ mở.
+    ///
+    /// Mặc định bằng chính <see cref="DinhTuyenAsync"/>: bản hiện thực nào không gọi gì tốn kém thì hai đường
+    /// trùng nhau. Bản nào có tầng tốn kém PHẢI ghi đè.
+    /// </summary>
+    Task<KetQuaDinhTuyen> XemAsync(YeuCauDinhTuyen yeuCau, CancellationToken ct = default) => DinhTuyenAsync(yeuCau, ct);
 }
 
 /// <summary>

@@ -35,6 +35,7 @@ public static partial class OpenApiMoTa
     private const string NhomTichHop = "Tích hợp";
     private const string NhomKenh2 = "Kênh 2 — tài liệu";
     private const string NhomQuyTrinh = "Quy trình";
+    private const string NhomConsole = "Console nội bộ";
 
     /// <summary>Khoá là <c>"METHOD /đường/dẫn"</c>, đúng dạng route pattern của ASP.NET.</summary>
     public static IReadOnlyDictionary<string, MoTaEndpoint> Bang { get; } =
@@ -198,6 +199,21 @@ public static partial class OpenApiMoTa
                 "`datDuoc` BẮT BUỘC (true/false), `nguoiKhai` BẮT BUỘC — đây là LỜI KHAI (N3-1). Ba nấc kia " +
                 "(RETRIEVED · SHOWN · OPENED) hệ thống tự ghi. `nhomDung` (E2-1): định tuyến sai thì khai nhóm ĐÚNG " +
                 "(phải có trong taxonomy) — lượt hỏi sau của chính case đó đi theo nhóm này."),
+
+            // --- Console nội bộ (P2-1, 2026-10-19) ---
+
+            ["GET /internal/cases"] = new(NhomConsole,
+                "Danh sách case — mới nạp trước",
+                "Lọc theo tiền tố khoá nguồn bằng `?tienTo=`, tối đa `?soLuong=` (mặc định 50, trần 200). Mỗi dòng kèm " +
+                "nhóm HIỆU LỰC và NGUỒN của nó (`nguoi-nap:` · `tra-san:` · `model:`), tính KHÔNG gọi model — " +
+                "`model:chua-goi` nghĩa là chưa ai hỏi ticket này từ khi bật định tuyến bằng model."),
+
+            ["GET /internal/cases/{khoaNguon}/dong-chay"] = new(NhomConsole,
+                "Dòng chảy của một case",
+                "Mọi thứ hệ thống đã làm với case: evidence (rút gọn; bản đủ ở `GET /cases/{khoaNguon}/evidence`), định " +
+                "tuyến hiệu lực + kết quả người nạp + MỌI biên lai model (kể cả lượt hỏng), lượt chạy quy trình + tiến độ, " +
+                "lượt gợi ý + các nấc, lượt gửi kết quả về. 🛑 KHÔNG tác dụng phụ: không gọi model, không ghi biên lai, " +
+                "không tạo lượt chạy. Trả DỮ KIỆN — cách vẽ thành sơ đồ là việc của giao diện."),
 
             ["GET /internal/goi-y/thong-ke"] = new(NhomHaTang,
                 "Phễu 5 nấc của các lượt gợi ý",

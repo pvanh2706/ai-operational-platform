@@ -432,6 +432,45 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-51` · Hai đường đọc cho console — và một đường "CHỈ ĐỌC" có sẵn đang tiêu tiền
+
+**Ngày 2026-10-19, P12-1.** Sinh từ `docs/18` NHÓM P (`P2-1`). Bước đầu của console Vue: host phải có dữ liệu
+để vẽ trước khi có giao diện để vẽ.
+
+```text
+GET /internal/cases?tienTo=&soLuong=          danh sách case, mới nạp trước, mỗi dòng kèm nhóm HIỆU LỰC + NGUỒN
+GET /internal/cases/{khoaNguon}/dong-chay     evidence · định tuyến (hiệu lực + người nạp + MỌI biên lai model)
+                                              · lượt chạy + tiến độ · lượt gợi ý + các nấc · lượt gửi về
+IDinhTuyenNhom.XemAsync                       đúng các tầng của /hoi, dừng TRƯỚC lượt gọi model và biên lai
+✅ 548 test (252 + 33 + 263), trước 543 · test "không gọi model" đã chứng minh biết ĐỎ bằng đột biến
+✅ kiem_dau_cuoi.py 87 phép kiểm, 0 sai (thêm mục C2) · kp_dev: 200 dòng trong 0,26 s, một dòng chảy 17 ms
+```
+
+### Ba lựa chọn kỹ thuật (`J1-1`)
+
+```text
+1  Trả DỮ KIỆN, không trả "ô nào đã qua". Tô ô A–J là cách VẼ; đưa nó vào hợp đồng là đóng băng một cách
+   vẽ thành thứ bên tích hợp phải giữ. Giao diện tự ánh xạ.
+2  Định tuyến xem bằng `XemAsync` — một phương thức MẶC ĐỊNH trên interface (= DinhTuyenAsync). Bản hiện
+   thực không có tầng tốn kém (bảng tra sẵn, bản giả trong test) không phải viết gì; DinhTuyenKho ghi đè.
+   Kết quả model ĐÃ LƯU vẫn được dùng, nên màn xem chỉ lệch /hoi đúng ở ticket chưa ai hỏi
+   (nguồn `model:chua-goi`).
+3  Evidence trả RÚT GỌN 280 ký tự. Bản đủ đã có đường riêng; nhân bản ra đây là thêm một chỗ dữ liệu khách đi
+   ra mà không thêm gì để nhìn. Đọc thô rồi ánh xạ trong bộ nhớ: enum.ToString() và đếm trên cột mảng không
+   chắc dịch được sang SQL — và một phép chiếu không dịch được chỉ nổ lúc chạy.
+```
+
+### 🛑 Tìm ra lúc viết, CHƯA sửa — cần chủ dự án quyết
+
+`GET /cases/{khoaNguon}/quy-trinh` mô tả trong hợp đồng là *"CHỈ ĐỌC — không tạo gì"*, nhưng nó đi qua định
+tuyến ĐẦY ĐỦ (`KhopQuyTrinh.DinhTuyenCaseAsync`). Khi `DinhTuyen:GoiModel = true`, một lượt GET vào case mà model
+chưa từng xếp là **một lượt gọi model tính tiền + một dòng biên lai**. Không tạo lượt chạy — nên câu "không tạo
+gì" chỉ sai một nửa, đúng loại sai không ai nhìn ra.
+Sửa bằng `XemDinhTuyenCaseAsync` là một dòng, nhưng nó ĐỔI THỨ HỆ THỐNG HỨA: bật model rồi thì đường đó sẽ trả
+`dinh-tuyen-khong-biet` cho case mới cho tới khi /hoi hoặc webhook hỏi nó. Theo `J1-1` đó là câu sản phẩm.
+
+---
+
 ## `IM-50` · Giả lập hai luồng — và năm chỗ chỉ lộ ra khi CHẠY trang thật
 
 **Ngày 2026-10-19.** Sinh từ `docs/18` NHÓM O (6/6). Câu hỏi gốc: *"hệ thống đã hoàn thiện chưa — test 2

@@ -132,6 +132,7 @@ builder.Services.AddHostedService<QuetThuMucService>();
 // P6 (2026-10-10): ô J — lượt gợi ý + phản hồi. Taxonomy đọc MỘT lần (singleton, không chạm tenant).
 builder.Services.AddSingleton<TaxonomyNhom>();
 builder.Services.AddScoped<GoiYHandler>();
+builder.Services.AddScoped<KnowledgePlatform.Api.DongChay.DongChayHandler>();
 
 // `AR5` — file gốc ở kho, DB chỉ giữ metadata. Interface MỎNG theo khuôn `AR3`.
 //
@@ -1147,6 +1148,30 @@ app.MapPost("/goi-y/{id:guid}/phan-hoi", async (Guid id, YeuCauPhanHoi yc, GoiYH
 
 app.MapGet("/internal/goi-y/thong-ke", async (DateTimeOffset? tu, GoiYHandler h, CancellationToken ct) =>
         Results.Ok(await h.ThongKeAsync(tu, ct)))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+
+// =============================================================================
+//  CONSOLE NỘI BỘ — hai đường ĐỌC để nhìn luồng chạy (`P2-1`, docs/18 nhóm P, 2026-10-19).
+//
+//  ⚠ KHÔNG tác dụng phụ: không gọi model, không ghi biên lai, không tạo lượt chạy — xem DongChayHandler.
+//  ⚠ Cùng cặp filter khoá + tenant như mọi đường đọc dữ liệu khách; RLS chặn ở tầng DB như mọi chỗ khác.
+//  ⚠ Khoá nguồn trong ĐƯỜNG DẪN theo khuôn `GET /cases/{khoaNguon}/…` của `AR-g` — có `/` thì mã hoá %2F.
+// =============================================================================
+
+app.MapGet("/internal/cases", async (string? tienTo, int? soLuong,
+        KnowledgePlatform.Api.DongChay.DongChayHandler h, CancellationToken ct) =>
+        Results.Ok(await h.LietKeAsync(tienTo, soLuong, ct)))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapGet("/internal/cases/{khoaNguon}/dong-chay", async (string khoaNguon,
+        KnowledgePlatform.Api.DongChay.DongChayHandler h, CancellationToken ct) =>
+        await h.DocAsync(khoaNguon, ct) is { } kq
+            ? Results.Ok(kq)
+            : Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Không thấy case nào mang khoá nguồn này",
+                detail: $"Không có Case nào mang khoá \"{khoaNguon}\". Khoá có dấu `/` thì phải mã hoá thành %2F."))
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 

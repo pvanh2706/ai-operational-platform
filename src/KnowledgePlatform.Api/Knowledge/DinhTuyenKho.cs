@@ -58,7 +58,20 @@ public sealed class DinhTuyenKho(
     /// <summary>Tiền tố nguồn cho kết quả do model trả (P8). Luôn kèm "ngưỡng chưa đo" cho tới khi có phép đo.</summary>
     public const string TienToModel = "model:";
 
-    public async Task<KetQuaDinhTuyen> DinhTuyenAsync(YeuCauDinhTuyen yeuCau, CancellationToken ct = default)
+    /// <summary>Tiền tố nguồn khi đường XEM dừng trước tầng model — model CHƯA được gọi cho ticket này.</summary>
+    public const string ModelChuaGoi = "model:chua-goi";
+
+    public Task<KetQuaDinhTuyen> DinhTuyenAsync(YeuCauDinhTuyen yeuCau, CancellationToken ct = default) =>
+        TraAsync(yeuCau, choGoiModel: true, ct);
+
+    /// <summary>
+    /// Đúng các tầng của <see cref="DinhTuyenAsync"/>, dừng TRƯỚC lượt gọi model và trước biên lai (`P2-1`). Kết quả model
+    /// ĐÃ LƯU vẫn được dùng — đó là thứ /hoi cũng dùng — nên màn xem và /hoi chỉ lệch nhau đúng ở ticket chưa ai hỏi.
+    /// </summary>
+    public Task<KetQuaDinhTuyen> XemAsync(YeuCauDinhTuyen yeuCau, CancellationToken ct = default) =>
+        TraAsync(yeuCau, choGoiModel: false, ct);
+
+    private async Task<KetQuaDinhTuyen> TraAsync(YeuCauDinhTuyen yeuCau, bool choGoiModel, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(yeuCau);
 
@@ -88,11 +101,11 @@ public sealed class DinhTuyenKho(
 
         if (string.IsNullOrWhiteSpace(yeuCau.TieuDe) && string.IsNullOrWhiteSpace(yeuCau.MoTa)) return tuBang;
 
-        return await QuaModelAsync(yeuCau, ma, ct) ?? tuBang;
+        return await QuaModelAsync(yeuCau, ma, choGoiModel, ct) ?? tuBang;
     }
 
     /// <summary>Tầng model. <c>null</c> = không có gì để nói thêm, dùng kết quả của bảng.</summary>
-    private async Task<KetQuaDinhTuyen?> QuaModelAsync(YeuCauDinhTuyen yeuCau, string? ma, CancellationToken ct)
+    private async Task<KetQuaDinhTuyen?> QuaModelAsync(YeuCauDinhTuyen yeuCau, string? ma, bool choGoiModel, CancellationToken ct)
     {
         if (taxonomy.Nhom is not { Count: > 0 } nhom)
         {
@@ -109,6 +122,13 @@ public sealed class DinhTuyenKho(
             .FirstOrDefaultAsync(ct);
 
         if (daLuu is not null) return DanhGia(daLuu, nhom, "model-da-luu");
+
+        if (!choGoiModel)
+        {
+            return KetQuaDinhTuyen.KhongXacDinh(ModelChuaGoi,
+                "Chưa có kết quả model đã lưu cho ticket này. Đường XEM không gọi model; lượt /hoi hoặc webhook kế tiếp " +
+                "sẽ gọi (DinhTuyen:GoiModel đang bật).");
+        }
 
         // --- Trần tháng, biên lai TRƯỚC khi gọi (cùng khuôn SoanNhapHandler) ---
         var bayGio = clock.GetUtcNow();

@@ -99,6 +99,7 @@ def _chuan_hoa(duong: str) -> str:
                "/{id}", d)
     d = re.sub(r"^/cases/[^/]+/evidence$", "/cases/{khoaNguon}/evidence", d)
     d = re.sub(r"^/cases/[^/]+/quy-trinh$", "/cases/{khoaNguon}/quy-trinh", d)
+    d = re.sub(r"^/internal/cases/[^/]+/dong-chay$", "/internal/cases/{khoaNguon}/dong-chay", d)
     return d
 
 
@@ -337,6 +338,31 @@ def duong_doc(ma_case: str) -> None:
     kiem("GET /internal/sub-tenant-coverage", s, 200)
     kiem("  ... có ô canTro (đừng đọc datDieuKienMoLai một mình)",
          isinstance(b, dict) and "canTro" in b, True)
+
+
+def console_noi_bo(ma_case: str) -> None:
+    """
+    Hai đường đọc của console nội bộ (`P2-1`, 2026-10-19). Gọi TRƯỚC mục rút lại để số mẩu còn nguyên.
+
+    ⚠ Không kiểm được ở đây chuyện "không gọi model": app chạy kiểm này có thể không bật model. Luật đó do test C#
+      `DongChayTests.Xem_KHONG_goi_model_va_KHONG_ghi_bien_lai` giữ, bằng một model giả đếm số lần bị gọi.
+    """
+    muc("C2 · Console nội bộ  (2 endpoint · P2-1)")
+    tien_to = f"{DAU}:{LAN}:"
+
+    s, b = goi("GET", "/internal/cases?tienTo=" + urllib.parse.quote(tien_to, safe=""))
+    kiem("GET /internal/cases?tienTo=", s, 200)
+    kiem("  ... thấy case vừa nạp, và chỉ case của lượt này",
+         (ma_case in [x.get("khoaNguon") for x in (b or [])],
+          all(x.get("khoaNguon", "").startswith(tien_to) for x in (b or []))), (True, True))
+
+    s, b = goi("GET", f"/internal/cases/{urllib.parse.quote(ma_case, safe='')}/dong-chay")
+    kiem("GET /internal/cases/{khoaNguon}/dong-chay", s, 200)
+    kiem("  ... đủ 2 mẩu evidence", len((b or {}).get("evidence", [])), 2)
+    kiem("  ... định tuyến mang NGUỒN", bool(((b or {}).get("dinhTuyen") or {}).get("nguon")), True)
+
+    s, _ = goi("GET", "/internal/cases/" + urllib.parse.quote(f"{DAU}:khong-bao-gio-ton-tai", safe="") + "/dong-chay")
+    kiem("  ... case không tồn tại -> 404", s, 404)
 
 
 def rut_lai(ma_ev: str) -> None:
@@ -797,6 +823,7 @@ def main() -> int:
     suc_khoe()
     ma_case, ma_ev = duong_nap()
     duong_doc(ma_case)
+    console_noi_bo(ma_case)
     rut_lai(ma_ev)
     rid = vong_tri_thuc()
     ben_gui_that()
