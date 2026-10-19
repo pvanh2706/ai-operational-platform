@@ -432,6 +432,35 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-55` · Một dòng bảng tra mã lỗi là một cách nhận ra — và bản nháp thật cũng đã thiếu
+
+**Ngày 2026-10-19.** `docs/18` `P6-1`, sinh từ lượt bấm thật của `IM-54`. `SopDraftToKnowledge.Map` dựng đường nhận ra
+CHỈ từ nhánh của `buocKiem`; dòng của `bangTraMaLoi` bị bỏ qua. Bản nháp dẫn tới bước sửa qua bảng (đúng như prompt
+dặn) → mọi bước sửa thành "KHÔNG CÓ ĐƯỜNG NHẬN RA", 0 assertion Recognition cho mã lỗi.
+
+```text
+RecognitionSource         gom nhánh VÀ dòng bảng về MỘT hình dạng — tên, mức kiểm chứng, trích dẫn, chủ đề theo
+                          bước, quyền cần: mỗi luật viết một lần cho cả hai
+dòng bảng × bước dẫn sang BANG   = một Recognition; mang chủ đề + quyền của bước đó (quy trình tra bước K1 thấy nó)
+không bước nào dẫn sang BANG     dòng vẫn là cách nhận ra, chỉ không gắn chủ đề theo bước
+✅ 554 test (257 + 33 + 264), trước 549 · 5 test mới, cả 5 ĐỎ khi bỏ vòng đọc bảng
+✅ nạp lại bản nháp NCC vào kp_gialap: 3 bản ghi tên theo NGUYÊN NHÂN, 0 mồ côi, 48 dẫn chứng (trước 15)
+```
+
+🛑 **Điều đáng nhớ hơn cái lỗi:** khi bỏ vòng đọc bảng, test chạy trên bản nháp **THẬT** của nhóm NCC
+(`may-sinh-ncc-tu-choi-payload.json`, 6 dòng bảng) cũng ĐỎ. Tức là trước `P6-1`, ngay bản nháp thật đang nằm trong `kp_dev`
+cũng có dòng bảng mà mã lỗi KHÔNG xuất hiện trong đường nhận ra nào — truy vấn "0 bản ghi mồ côi" ở `IM-54` chỉ chứng
+minh các bước sửa CÓ một nhánh nào đó, không chứng minh mọi mã lỗi đều nhận ra được. Lỗ này không tiềm ẩn như `IM-54`
+viết; nó đã ở trong kho dev, chỉ là không ai hỏi đúng câu.
+⚠ Bản ghi cũ KHÔNG tự sửa (append-only) — nạp lại bản nháp thì sinh bản ghi mới bên cạnh, bản cũ vẫn ACTIVE. Dọn bản
+cũ là việc của người duyệt (`M2`), không phải của phép map.
+
+Và vì sao hai nơi lệch nhau: `nhom_sop.py --kiem-cay` (Python) đã viết đúng *"Bảng tra: một DÒNG là một nhánh"* từ
+trước; phép map C# viết sau và chỉ đọc nhánh. Hai chỗ đọc cùng một bản nháp, hai sự thật — cùng hình dạng với lỗi
+hai-tên-một-khoá của `KhoaAnthropic`.
+
+---
+
 ## `IM-54` · Giả lập vào console — bản đồ lô, lượt bấm thật đầu tiên, và hai chỗ chỉ bấm thật mới thấy
 
 **Ngày 2026-10-19, P12-4.** Trang `/gia-lap` HTML (IM-50) chuyển sang `/console/gia-lap`, cùng các nút `/api/gl-*`.

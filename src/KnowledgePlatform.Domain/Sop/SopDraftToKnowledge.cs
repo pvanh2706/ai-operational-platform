@@ -22,6 +22,14 @@ namespace KnowledgePlatform.Domain.Sop;
 /// ⚠ `AP4` khớp chính xác ở đây: *"một cách nhận ra = MỘT assertion"*. Một nhánh của cây
 /// LÀ một cách nhận ra. Nên nhánh -> <see cref="AssertionKind.Recognition"/>, không gộp.
 ///
+/// 🔄 **2026-10-19 (`P6-1`): một DÒNG của <see cref="SopDraft.BangTraMaLoi"/> cũng là một cách nhận ra.** Trước đó
+/// phép map chỉ đọc nhánh của bước kiểm, nên bản nháp dẫn tới bước sửa QUA BẢNG TRA — đúng như prompt soạn nháp dặn
+/// (<i>"dùng bangTraMaLoi thay vì nhồi mọi thứ vào nhánh"</i>) — cho ra bản ghi "KHÔNG CÓ ĐƯỜNG NHẬN RA" ở mọi bước
+/// sửa. Tìm ra khi BẤM THẬT trang giả lập (`IM-54`). `nhom_sop.py --kiem-cay` vốn đã viết đúng điều này từ trước:
+/// <i>"Bảng tra: một DÒNG là một nhánh"</i> — hai chỗ đọc cùng một bản nháp đã nói hai điều khác nhau.
+/// Dòng bảng gắn với bước kiểm có nhánh trỏ sang <c>BANG</c>: bước đó là nơi người làm ĐỌC mã lỗi, nên bản ghi mang
+/// nhãn chủ đề của bước đó (L1) và quy trình tra đúng bước sẽ thấy nó.
+///
 /// 🛑 `D4` — MỌI assertion sinh ra ở đây đều mang <see cref="Origin.AiInference"/>, kể cả
 /// khi nhánh tự khai `evidence-noi-ro`. Nhãn `chungCu` nói bản nháp CÓ ticket chống lưng
 /// hay không; nó KHÔNG biến bản nháp thành lời của người. Record vì thế ra đời ở
@@ -73,30 +81,50 @@ public static class SopDraftToKnowledge
     {
         ArgumentNullException.ThrowIfNull(draft);
 
-        // Gom các nhánh trỏ tới từng bước sửa. Khoá = mã bước sửa.
+        // Gom các CÁCH NHẬN RA trỏ tới từng bước sửa — nhánh của bước kiểm + dòng của bảng tra. Khoá = mã bước sửa.
         var nhanhToiBuocSua = new Dictionary<string, List<RecognitionSource>>(StringComparer.Ordinal);
+
+        void Them(string dich, RecognitionSource nguon)
+        {
+            if (DichKhongPhaiNguyenNhan.Contains(dich)) return;
+
+            // Trỏ sang bước kiểm khác là bước TRUNG GIAN, không phải lá.
+            if (draft.BuocKiem.Any(b => string.Equals(b.Ma, dich, StringComparison.Ordinal))) return;
+
+            if (!nhanhToiBuocSua.TryGetValue(dich, out var ds))
+            {
+                ds = [];
+                nhanhToiBuocSua[dich] = ds;
+            }
+
+            ds.Add(nguon);
+        }
+
         foreach (var buoc in draft.BuocKiem)
         {
             foreach (var nhanh in buoc.Nhanh)
             {
-                if (DichKhongPhaiNguyenNhan.Contains(nhanh.DiToi))
-                {
-                    continue;
-                }
+                Them(nhanh.DiToi, RecognitionSource.TuNhanh(buoc, nhanh));
+            }
+        }
 
-                // Nhánh trỏ sang bước kiểm khác là bước TRUNG GIAN, không phải lá.
-                if (draft.BuocKiem.Any(b => string.Equals(b.Ma, nhanh.DiToi, StringComparison.Ordinal)))
-                {
-                    continue;
-                }
+        // `P6-1`: mỗi dòng bảng tra × mỗi bước kiểm dẫn sang bảng = một cách nhận ra. Không bước nào dẫn sang bảng
+        // (bản nháp thiếu nhánh BANG) thì dòng vẫn là một cách nhận ra — chỉ không gắn được chủ đề theo bước.
+        var buocDanSangBang = draft.BuocKiem
+            .Where(b => b.Nhanh.Any(n => string.Equals(n.DiToi, "BANG", StringComparison.Ordinal)))
+            .ToList();
 
-                if (!nhanhToiBuocSua.TryGetValue(nhanh.DiToi, out var ds))
-                {
-                    ds = [];
-                    nhanhToiBuocSua[nhanh.DiToi] = ds;
-                }
+        foreach (var dong in draft.BangTraMaLoi?.Dong ?? [])
+        {
+            if (buocDanSangBang.Count == 0)
+            {
+                Them(dong.DiToi, RecognitionSource.TuDongBang(null, dong));
+                continue;
+            }
 
-                ds.Add(new RecognitionSource(buoc, nhanh));
+            foreach (var buoc in buocDanSangBang)
+            {
+                Them(dong.DiToi, RecognitionSource.TuDongBang(buoc, dong));
             }
         }
 
@@ -191,14 +219,13 @@ public static class SopDraftToKnowledge
         };
         record.Assertions.Add(tonTai);
 
-        // Nguyên nhân tồn tại = mọi ticket mà một NHÁNH dẫn tới nó trích ra.
+        // Nguyên nhân tồn tại = mọi ticket mà một CÁCH NHẬN RA dẫn tới nó trích ra.
         foreach (var src in nguon)
         {
-            GhiTrichDan(trichDan, draft, tonTai, src.Nhanh.Case, src.Nhanh.ChungCu,
-                $"nhánh {src.Buoc.Ma}→{buocSua.Ma}");
+            GhiTrichDan(trichDan, draft, tonTai, src.Case, src.ChungCu, $"{src.NhanNguon}→{buocSua.Ma}");
         }
 
-        // --- Recognition: MỘT assertion cho MỖI nhánh (AP4) ---
+        // --- Recognition: MỘT assertion cho MỖI cách nhận ra — nhánh hoặc dòng bảng tra (AP4, P6-1) ---
         foreach (var src in nguon)
         {
             var nhanRa = new Assertion
@@ -206,14 +233,13 @@ public static class SopDraftToKnowledge
                 TenantId = tenantId,
                 KnowledgeRecordId = record.Id,
                 Kind = AssertionKind.Recognition,
-                Content = $"{src.Buoc.CauHoi} — nơi xem: {src.Buoc.NoiXem} — quan sát: {src.Nhanh.QuanSat}",
+                Content = src.NoiDung,
                 Origin = Origin.AiInference,
-                Verification = MucKiemChungCuaNhanh(src.Nhanh),
+                Verification = MucKiemChungCuaNhanh(src.ChungCu, src.Case),
             };
             record.Assertions.Add(nhanRa);
 
-            GhiTrichDan(trichDan, draft, nhanRa, src.Nhanh.Case, src.Nhanh.ChungCu,
-                $"nhánh {src.Buoc.Ma}→{buocSua.Ma}");
+            GhiTrichDan(trichDan, draft, nhanRa, src.Case, src.ChungCu, $"{src.NhanNguon}→{buocSua.Ma}");
         }
 
         // --- Handling: T2, hành động đơn lẻ nằm trong record ---
@@ -244,7 +270,7 @@ public static class SopDraftToKnowledge
         });
 
         // --- Applicability: chủ đề THEO BƯỚC KIỂM (L1, P4) — bước nào của quy trình nhận ra được nguyên nhân này ---
-        foreach (var ma in nguon.Select(s => s.Buoc.Ma).Distinct(StringComparer.Ordinal))
+        foreach (var ma in nguon.Select(s => s.MaBuoc).OfType<string>().Distinct(StringComparer.Ordinal))
         {
             record.Assertions.Add(new Assertion
             {
@@ -261,7 +287,7 @@ public static class SopDraftToKnowledge
         // Quyền cần có để LÀM được bước kiểm là một điều kiện áp dụng thật: `docs/11` §9.1
         // đã đo ca nguyên nhân nhóm 1 chặn bước kiểm nhóm 2.
         foreach (var quyen in nguon
-            .Select(s => s.Buoc.QuyenCan)
+            .Select(s => s.QuyenCan)
             .Where(q => !string.IsNullOrWhiteSpace(q))
             .Distinct(StringComparer.Ordinal))
         {
@@ -287,15 +313,15 @@ public static class SopDraftToKnowledge
     private static string DatTenNguyenNhan(SopDraft draft, SopFixStep buocSua, List<RecognitionSource> nguon)
     {
         var tot = nguon
-            .OrderByDescending(s => string.Equals(s.Nhanh.ChungCu, "evidence-noi-ro", StringComparison.Ordinal))
-            .ThenByDescending(s => s.Nhanh.Case.Count)
+            .OrderByDescending(s => string.Equals(s.ChungCu, "evidence-noi-ro", StringComparison.Ordinal))
+            .ThenByDescending(s => s.Case.Count)
             .FirstOrDefault();
 
         // Bước sửa mồ côi: không quan sát nào dẫn tới nó. Ghi rõ trong chính tên, để ai đọc
         // kho tri thức cũng thấy — thay vì đặt một cái tên nghe bình thường.
         var ten = tot is null
             ? $"[{draft.Nhom} · {buocSua.Ma}] KHÔNG CÓ ĐƯỜNG NHẬN RA — {buocSua.Viec}"
-            : tot.Nhanh.QuanSat;
+            : tot.QuanSat;
 
         // ⚠ Cột `cause_name` có trần 512 (AppDbContext). Cắt Ở ĐÂY chứ không để DB văng
         // lỗi: `quanSat` do MODEL sinh, độ dài không ai kiểm soát được. Cắt có dấu "…" để
@@ -312,19 +338,45 @@ public static class SopDraftToKnowledge
     private static VerificationLevel MucKiemChung(List<RecognitionSource> nguon) =>
         nguon.Count == 0
             ? VerificationLevel.Speculative
-            : nguon.Max(s => MucKiemChungCuaNhanh(s.Nhanh));
+            : nguon.Max(s => MucKiemChungCuaNhanh(s.ChungCu, s.Case));
 
     /// <summary>
     /// ⚠ Trần là <see cref="VerificationLevel.Supported"/>, KHÔNG BAO GIỜ là `Verified`.
     /// `chungCu` là thứ MODEL TỰ KHAI, và `SopDraft` đã ghi rõ điều đó. Một phát biểu do
     /// máy sinh, tự khai là có nguồn, mà được gắn `Verified` thì cái thang `V1` mất nghĩa.
     /// </summary>
-    private static VerificationLevel MucKiemChungCuaNhanh(SopBranch nhanh) =>
-        string.Equals(nhanh.ChungCu, "evidence-noi-ro", StringComparison.Ordinal) && nhanh.Case.Count > 0
+    private static VerificationLevel MucKiemChungCuaNhanh(string chungCu, IReadOnlyList<string> cases) =>
+        string.Equals(chungCu, "evidence-noi-ro", StringComparison.Ordinal) && cases.Count > 0
             ? VerificationLevel.Supported
             : VerificationLevel.Speculative;
 
-    private sealed record RecognitionSource(SopCheckStep Buoc, SopBranch Nhanh);
+    /// <summary>
+    /// MỘT cách nhận ra một nguyên nhân — từ nhánh của bước kiểm, hoặc từ một dòng bảng tra (`P6-1`). Gom về một hình
+    /// dạng để mọi luật phía sau (tên, mức kiểm chứng, trích dẫn, chủ đề theo bước, quyền cần) chỉ viết MỘT lần.
+    /// </summary>
+    /// <param name="MaBuoc">Bước kiểm nơi người làm nhận ra — <c>null</c> khi dòng bảng không có bước nào dẫn sang.</param>
+    /// <param name="QuanSat">Ứng viên làm TÊN nguyên nhân (`T1`: tên là bệnh, không phải cách chữa).</param>
+    /// <param name="NhanNguon">Nhãn trong ghi chú trích dẫn: <c>nhánh K1</c> / <c>bảng tra E0042</c>.</param>
+    private sealed record RecognitionSource(
+        string? MaBuoc, string? QuyenCan, string NoiDung, string QuanSat,
+        IReadOnlyList<string> Case, string ChungCu, string NhanNguon)
+    {
+        public static RecognitionSource TuNhanh(SopCheckStep buoc, SopBranch nhanh) => new(
+            buoc.Ma, buoc.QuyenCan,
+            $"{buoc.CauHoi} — nơi xem: {buoc.NoiXem} — quan sát: {nhanh.QuanSat}",
+            nhanh.QuanSat, nhanh.Case, nhanh.ChungCu, $"nhánh {buoc.Ma}");
+
+        public static RecognitionSource TuDongBang(SopCheckStep? buoc, SopErrorCodeRow dong)
+        {
+            var tra = $"tra bảng mã lỗi: {dong.Ncc} trả \"{dong.MaLoi}\" — trường bị từ chối: {dong.TruongBiTuChoi}";
+            return new(
+                buoc?.Ma, buoc?.QuyenCan,
+                buoc is null ? $"Tra bảng mã lỗi: {dong.Ncc} trả \"{dong.MaLoi}\" — trường bị từ chối: {dong.TruongBiTuChoi}"
+                             : $"{buoc.CauHoi} — nơi xem: {buoc.NoiXem} — {tra}",
+                $"{dong.Ncc} từ chối trường {dong.TruongBiTuChoi} — mã lỗi \"{dong.MaLoi}\"",
+                dong.Case, dong.ChungCu, $"bảng tra {dong.MaLoi}");
+        }
+    }
 }
 
 /// <summary>

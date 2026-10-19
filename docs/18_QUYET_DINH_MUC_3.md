@@ -37,7 +37,7 @@ NHÓM N  hoàn thiện sơ đồ luồng        ✅ 4/7 CHỐT 2026-10-10   · 3
         (thêm 2026-10-10, sinh từ việc MỞ LẠI I1)
 NHÓM O  giả lập 2 luồng + 2 cách gán AI ✅ 6/6 CHỐT 2026-10-19   · O5 sinh ra lúc đọc code
         (thêm 2026-10-19, từ câu hỏi "đã hoàn thiện chưa / test bằng dữ liệu giả")
-NHÓM P  giao diện Vue 3 — luồng chạy    ✅ 5/5 CHỐT 2026-10-19   · console nội bộ, KHÔNG phải widget
+NHÓM P  giao diện Vue 3 — luồng chạy    ✅ 6/6 CHỐT 2026-10-19   · console nội bộ, KHÔNG phải widget
 ```
 
 🛑 **20/20 KHÔNG nghĩa là hết chặn.** Ba thứ còn chặn và **không thứ nào gỡ được bằng một
@@ -695,6 +695,18 @@ Câu này **sinh ra lúc code P12-1** (`07` §3 `IM-51`), chủ dự án chọn 
 
 ⚠ Hệ quả cho bên tích hợp: bật model rồi thì đường này KHÔNG còn là cách "đánh thức" định tuyến cho một case.
 Muốn case được xếp nhóm thì hỏi `/hoi` (hoặc chờ webhook) — đó vốn là hai đường được thiết kế để tiêu tiền.
+
+## P6 · `SopDraftToKnowledge` bỏ qua `bangTraMaLoi` → bản ghi "KHÔNG CÓ ĐƯỜNG NHẬN RA" — xử lý thế nào?
+
+Câu này **sinh ra lúc BẤM THẬT trang giả lập** (P12-4, `07` §3 `IM-54`), chủ dự án chọn qua form cùng ngày. Bản
+nháp dẫn tới bước sửa QUA BẢNG TRA (đúng như prompt soạn nháp dặn) cho ra 3/3 bản ghi mồ côi, 0 assertion Recognition
+cho mã lỗi. `kp_dev` chưa bị — bản nháp máy sinh thật tình cờ chép dòng bảng sang nhánh.
+
+- [x] **P6-1 — Sửa ánh xạ** (đề xuất). Mỗi dòng bảng tra = một cách nhận ra (assertion Recognition) cho bước sửa nó
+      trỏ tới — đúng `AP4` đang áp cho nhánh, và đúng câu `nhom_sop.py` đã viết từ trước: *"Bảng tra: một DÒNG là
+      một nhánh"*. Bản ghi cũ KHÔNG tự đổi (append-only); nạp lại bản nháp thì sinh bản ghi mới.
+- [ ] **P6-2 — Sửa prompt**, bắt model chép dòng bảng sang nhánh.
+- [ ] **P6-3 — Để sau.**
 
 ⚠ `AGENT.md` §10.1: thư viện lớn là câu BẮT BUỘC hỏi — bốn thư viện trên (Vue, Vite, Vue Flow, Router+Pinia,
 cộng TypeScript) là toàn bộ phạm vi đã được chốt. Thêm thư viện thứ năm (biểu đồ, bộ component…) là hỏi lại.

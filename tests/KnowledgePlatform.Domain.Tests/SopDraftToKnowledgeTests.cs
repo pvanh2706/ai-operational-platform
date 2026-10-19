@@ -396,4 +396,133 @@ public sealed class SopDraftToKnowledgeTests
         Assert.All(kq.Records, r => Assert.Equal(StoredLifecycleState.Draft, r.Lifecycle));
     }
 
+    // =========================================================================
+    //  P6-1 — một DÒNG bảng tra mã lỗi là một cách nhận ra (2026-10-19)
+    // =========================================================================
+
+    /// <summary>Nhóm dạng BẢNG TRA (topology nhóm 2): một bước đọc mã lỗi → BANG; mỗi dòng bảng → một bước sửa.</summary>
+    private static SopDraft NhapBang(bool coNhanhSangBang = true) => new()
+    {
+        Nhom = "NCC từ chối payload",
+        SoCaseDungSau = 3,
+        TrieuChungVao = [new SopSymptom("NCC trả lỗi khi phát hành", ["ES-1", "ES-2", "ES-3"])],
+        BuocKiem =
+        [
+            new SopCheckStep
+            {
+                Ma = "K1",
+                CauHoi = "NCC trả mã lỗi gì?",
+                NoiXem = "Thông báo lỗi trên màn phát hành",
+                QuyenCan = "Xem nhật ký phát hành",
+                Nhanh = coNhanhSangBang
+                    ? [new SopBranch("Có mã lỗi", "BANG", ["ES-1", "ES-2", "ES-3"], "evidence-noi-ro")]
+                    : [new SopBranch("Không phải ca này", "NGOAI-PHAM-VI", [], "toi-suy-ra")],
+            },
+        ],
+        BangTraMaLoi = new SopErrorCodeTable(
+        [
+            new SopErrorCodeRow("VNPT", "E0042", "MST người mua", "S1", ["ES-1", "ES-2"], "evidence-noi-ro"),
+            new SopErrorCodeRow("VNPT", "E0107", "CCCD người mua", "S2", ["ES-3"], "toi-suy-ra"),
+        ]),
+        BuocSua =
+        [
+            new SopFixStep("S1", "Sửa MST trong hồ sơ khách", ["ES-1", "ES-2"]),
+            new SopFixStep("S2", "Chuyển hộ chiếu sang đúng trường", ["ES-3"]),
+        ],
+        PhanBoBuocKiemDuocGhiLai = new SopDistribution(
+            new SopDistributionBucket(3, ["ES-1", "ES-2", "ES-3"]),
+            new SopDistributionBucket(0, []), new SopDistributionBucket(0, []),
+            new SopDistributionBucket(0, []), new SopDistributionBucket(0, [])),
+    };
+
+    /// <summary>
+    /// 🛑 Đúng ca tìm ra khi bấm thật trang giả lập (`IM-54`): trước `P6-1`, cả hai bước sửa ra "KHÔNG CÓ ĐƯỜNG NHẬN
+    /// RA" và 0 assertion Recognition — vì phép map chỉ đọc nhánh, mà nhánh duy nhất trỏ sang <c>BANG</c>.
+    /// </summary>
+    [Fact]
+    public void Dong_bang_tra_la_mot_cach_nhan_ra_va_khong_con_mo_coi()
+    {
+        var kq = SopDraftToKnowledge.Map(NhapBang(), Tenant);
+
+        Assert.Empty(kq.BuocSuaMoCoi);
+        Assert.Empty(kq.NhanhTroLacLoi);
+        Assert.Equal(2, kq.Records.Count);
+        Assert.DoesNotContain(kq.Records, r => r.CauseName.Contains("KHÔNG CÓ ĐƯỜNG NHẬN RA"));
+
+        var s1 = kq.Records.Single(r => r.CauseName.Contains("E0042"));
+        var nhanRa = Assert.Single(s1.Assertions, a => a.Kind == AssertionKind.Recognition);
+        Assert.Contains("E0042", nhanRa.Content);
+        Assert.Contains("MST người mua", nhanRa.Content);
+        Assert.Contains("NCC trả mã lỗi gì?", nhanRa.Content);   // vẫn nói NƠI người làm đọc mã lỗi
+        Assert.Equal(VerificationLevel.Supported, nhanRa.Verification);
+
+        // Dòng `toi-suy-ra` thì KHÔNG được nâng lên Supported — cùng luật với nhánh.
+        var s2 = kq.Records.Single(r => r.CauseName.Contains("E0107"));
+        Assert.Equal(VerificationLevel.Speculative,
+            s2.Assertions.Single(a => a.Kind == AssertionKind.Recognition).Verification);
+    }
+
+    /// <summary>
+    /// Dòng bảng mang CHỦ ĐỀ của bước dẫn sang bảng (L1) và QUYỀN của bước đó — nếu không, quy trình tra đúng bước K1
+    /// sẽ không thấy các nguyên nhân mà chính K1 là nơi nhận ra.
+    /// </summary>
+    [Fact]
+    public void Dong_bang_mang_chu_de_va_quyen_cua_buoc_dan_sang_bang()
+    {
+        var s1 = SopDraftToKnowledge.Map(NhapBang(), Tenant).Records.Single(r => r.CauseName.Contains("E0042"));
+        var apDung = s1.Assertions.Where(a => a.Kind == AssertionKind.Applicability).Select(a => a.Content).ToList();
+
+        Assert.Contains(SopDraftToKnowledge.NhanChuDe("NCC từ chối payload", "K1"), apDung);
+        Assert.Contains("Cần quyền: Xem nhật ký phát hành", apDung);
+    }
+
+    /// <summary>Dòng bảng trích ĐÚNG ticket của dòng đó, kèm chungCu của dòng — cùng luật trích dẫn với nhánh.</summary>
+    [Fact]
+    public void Dong_bang_trich_dung_ticket_cua_dong()
+    {
+        var kq = SopDraftToKnowledge.Map(NhapBang(), Tenant);
+        var s1 = kq.Records.Single(r => r.CauseName.Contains("E0042"));
+        var nhanRa = s1.Assertions.Single(a => a.Kind == AssertionKind.Recognition);
+
+        var trich = kq.TrichDan.Where(t => ReferenceEquals(t.Assertion, nhanRa)).ToList();
+
+        Assert.Equal(["ES-1", "ES-2"], trich.Select(t => t.MaCase).Order());
+        Assert.All(trich, t => Assert.Equal("evidence-noi-ro", t.ChungCu));
+        Assert.All(trich, t => Assert.Contains("bảng tra E0042", t.GhiChu));
+    }
+
+    /// <summary>Bản nháp có bảng mà KHÔNG nhánh nào dẫn sang: dòng vẫn là cách nhận ra, chỉ không có chủ đề theo bước.</summary>
+    [Fact]
+    public void Bang_khong_co_nhanh_dan_sang_van_nhan_ra_nhung_khong_gan_chu_de()
+    {
+        var kq = SopDraftToKnowledge.Map(NhapBang(coNhanhSangBang: false), Tenant);
+        var s1 = kq.Records.Single(r => r.CauseName.Contains("E0042"));
+
+        Assert.Empty(kq.BuocSuaMoCoi);
+        Assert.StartsWith("Tra bảng mã lỗi", s1.Assertions.Single(a => a.Kind == AssertionKind.Recognition).Content);
+        Assert.DoesNotContain(s1.Assertions, a => a.Content.StartsWith(SopDraftToKnowledge.NhanChuDePrefix));
+    }
+
+    /// <summary>
+    /// Bản nháp THẬT của nhóm NCC (6 dòng bảng). Mọi bước sửa mà một dòng bảng trỏ tới phải có một Recognition
+    /// nhắc mã lỗi của dòng đó — trước `P6-1` điều này chỉ ĐÚNG TÌNH CỜ (model chép dòng sang nhánh).
+    /// </summary>
+    [Fact]
+    public void Ban_nhap_that_nhom_NCC_moi_dong_bang_co_duong_nhan_ra()
+    {
+        var duong = Path.Combine(TimGocRepo(), "docs", "ket-qua-phan-tich", "may-sinh-ncc-tu-choi-payload.json");
+        Assert.True(File.Exists(duong), $"thiếu bản nháp thật: {duong} — file này đi theo git, thiếu là hỏng");
+
+        var nhap = JsonSerializer.Deserialize<SopDraft>(File.ReadAllText(duong), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        Assert.NotNull(nhap.BangTraMaLoi);
+
+        var kq = SopDraftToKnowledge.Map(nhap, Tenant);
+
+        foreach (var dong in nhap.BangTraMaLoi!.Dong.Where(d => nhap.BuocSua.Any(s => s.Ma == d.DiToi)))
+        {
+            var buocSua = nhap.BuocSua.Single(s => s.Ma == dong.DiToi);
+            var record = kq.Records.Single(r => r.Assertions.Any(a => a.Kind == AssertionKind.Handling && a.Content == buocSua.Viec));
+            Assert.Contains(record.Assertions, a => a.Kind == AssertionKind.Recognition && a.Content.Contains(dong.MaLoi));
+        }
+    }
 }
