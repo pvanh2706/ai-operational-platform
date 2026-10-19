@@ -299,6 +299,20 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> 🔄 **CONSOLE VUE 3 ĐỂ NHÌN LUỒNG CHẠY — chốt 2026-10-19, CHƯA CODE.** Quyết định: `docs/18` NHÓM P (4/4).
+> Console NỘI BỘ (không phải widget `AR2`/`D5-1`), build tĩnh do `ui_server.py` phục vụ (loopback), Vue 3 + Vite +
+> TS + Vue Flow + Router + Pinia. 🛑 Chỗ khó là DỮ LIỆU: host chưa có đường liệt kê case hay trả dòng thời gian
+> một case → `P2-1` thêm hai endpoint đọc `/internal/`.
+> ```text
+>    P12-0  ghi quyết định (docs/18 P, file này)                                   ✅ 2026-10-19
+>    P12-1  host: GET /internal/cases?tienTo= · GET /internal/cases/{k}/dong-chay
+>           + test + OpenAPI + kiem_dau_cuoi mục J
+>    P12-2  dựng dự án Vue (Vite + TS), ui_server phục vụ bản build + chuyển tiếp /app/* sang app
+>    P12-3  màn Sơ đồ luồng (Vue Flow, ô A–J của README, tô sáng theo case) · Danh sách case · Dòng thời gian
+>    P12-4  chuyển trang giả lập (/gia-lap) sang console — trang HTML cũ giữ tới khi bản Vue chạy thật
+>    P12-5  chạy thật + tài liệu
+> ```
+
 > 🔄 **GIẢ LẬP HAI LUỒNG + HAI CÁCH GÁN AI — chốt 2026-10-19.** Quyết định: `docs/18` NHÓM O (6/6).
 > Câu hỏi gốc: *"đã hoàn thiện chưa — test 2 luồng bằng dữ liệu giả; có API token thì dùng, không có thì
 > xuất prompt ra file cho Claude/Codex rồi nạp lại"*. Trả lời ngắn: **cả hai cách ĐÃ có trong code**, nhưng

@@ -37,6 +37,7 @@ NHÓM N  hoàn thiện sơ đồ luồng        ✅ 4/7 CHỐT 2026-10-10   · 3
         (thêm 2026-10-10, sinh từ việc MỞ LẠI I1)
 NHÓM O  giả lập 2 luồng + 2 cách gán AI ✅ 6/6 CHỐT 2026-10-19   · O5 sinh ra lúc đọc code
         (thêm 2026-10-19, từ câu hỏi "đã hoàn thiện chưa / test bằng dữ liệu giả")
+NHÓM P  giao diện Vue 3 — luồng chạy    ✅ 4/4 CHỐT 2026-10-19   · console nội bộ, KHÔNG phải widget
 ```
 
 🛑 **20/20 KHÔNG nghĩa là hết chặn.** Ba thứ còn chặn và **không thứ nào gỡ được bằng một
@@ -627,3 +628,61 @@ duyệt bản nháp (`S7`/`AR-n`). Người nạp vẫn thắng model, như th�
 giả buộc phải rơi vào nhóm THẬT. Duyệt một quy trình giả cho nhóm X sẽ đẩy quy trình đang ACTIVE của nhóm X
 trong `kp_dev` sang DEPRECATED (`N6-1`), và SOP giả sẽ trả lời `/hoi` cho ticket fixture thật cùng nhóm.
 Không crash, không đỏ test nào — đúng loại hỏng im lặng dự án này dựng ra để chặn.
+
+---
+
+# NHÓM P — giao diện Vue 3 để nhìn luồng chạy và kết quả · ✅ 4/4 CHỐT 2026-10-19
+
+Sinh từ yêu cầu của chủ dự án ngày 2026-10-19, ngay sau nhóm O: *"mình muốn làm giao diện để nhìn rõ hơn luồng
+chạy và kết quả. Dùng vue3 (có thể cài thêm thư viện)"*. Chọn qua form, một lượt.
+
+**Đánh giá đưa ra TRƯỚC khi hỏi** (để người đọc sau thấy câu hỏi đứng trên cái gì):
+```text
+khớp       Vue3+TS đã chốt ở AR2 cho widget nhúng — không phải framework mới. Máy có Node 22 / npm 10.
+           Trang HTML thuần (scripts/giao-dien) in bảng từng bước, không vẽ được một ticket đi qua ô nào.
+chỗ khó    🛑 THIẾU DỮ LIỆU, không thiếu giao diện: host KHÔNG có đường liệt kê case, không trả biên lai
+           định tuyến của một case, không có lượt chạy / lượt gợi ý theo case (đã kiểm Program.cs).
+           Thêm đường đọc = thêm một đường dữ liệu khách đi ra — đúng thứ LenhDinhTuyen cố ý tránh.
+ranh giới  README: sản phẩm "không phải ứng dụng người dùng đăng nhập vào". Console nội bộ thì hợp lý;
+           không vạch ranh giới thì nó trôi thành giao diện sản phẩm trong khi D5-1 chưa chốt.
+chi phí    thêm bước build + node_modules + rủi ro chuỗi cung ứng, trong khi script hiện có cố ý chỉ dùng
+           thư viện chuẩn Python.
+hiển thị   màn nhiều ✅ dễ đọc thành "đã dùng được" — phải luôn hiện NGUỒN của kết quả (người nạp / bảng
+           đo / model) và chữ "chưa đo".
+```
+
+## P1 · Giao diện Vue này dùng để làm gì?
+
+- [x] **P1-1 — Console nội bộ** (đề xuất): người vận hành/dev xem luồng chạy + kết quả + chạy giả lập. Chỉ
+      nghe loopback. Tách hẳn khỏi widget sản phẩm — `D5-1` vẫn để ngỏ.
+- [ ] **P1-2 — Bắt đầu widget sản phẩm** (kéo theo `D5-1` phải chốt trước).
+- [ ] **P1-3 — Cả hai, chung codebase.**
+
+## P2 · Màn "luồng chạy" lấy dữ liệu từ đâu?
+
+- [x] **P2-1 — Endpoint đọc `/internal/` mới trên host** (đề xuất): danh sách case theo tiền tố + dòng thời
+      gian một case (evidence, tầng định tuyến + biên lai, lượt chạy, gợi ý, phản hồi). Có test, vào hợp
+      đồng OpenAPI, đi qua RLS như mọi đường khác.
+- [ ] **P2-2 — Chỉ endpoint có sẵn.**
+- [ ] **P2-3 — Python đọc thẳng DB** (thêm psycopg, đi vòng luật của host).
+
+⚠ **Hệ quả nói trước:** `P2-1` thêm một đường dữ liệu khách đi ra qua HTTP. Nó nằm sau cùng hai cửa của mọi
+endpoint (`ApiKeyEndpointFilter` → `TenantEndpointFilter`) và trả nội dung ĐÃ qua cổng che như
+`GET /cases/{k}/evidence`. `kiem_dau_cuoi.py` mục J đòi mọi thao tác trong hợp đồng đều được gọi — nên hai đường
+mới phải vào script đó cùng commit.
+
+## P3 · Chạy giao diện ở đâu?
+
+- [x] **P3-1 — Build tĩnh, `ui_server.py` phục vụ** (đề xuất) và chuyển tiếp API sang app. Giữ loopback-only,
+      host .NET không cần CORS. Lúc phát triển dùng Vite dev server có proxy.
+- [ ] **P3-2 — Host .NET phục vụ** (`UseStaticFiles`, lộ ra cùng chỗ với API).
+- [ ] **P3-3 — Vite dev server riêng.**
+
+## P4 · Thêm thư viện nào ngoài Vue 3 + Vite + TypeScript? (chọn nhiều)
+
+- [x] **P4-1 — Vue Flow** (`@vue-flow/core`) (đề xuất): sơ đồ luồng tương tác, tô sáng ô một ticket đã đi qua.
+- [ ] **P4-2 — Naive UI.**
+- [x] **P4-3 — Vue Router + Pinia.**
+
+⚠ `AGENT.md` §10.1: thư viện lớn là câu BẮT BUỘC hỏi — bốn thư viện trên (Vue, Vite, Vue Flow, Router+Pinia,
+cộng TypeScript) là toàn bộ phạm vi đã được chốt. Thêm thư viện thứ năm (biểu đồ, bộ component…) là hỏi lại.
