@@ -432,6 +432,52 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-53` · Ba màn chính của console — sơ đồ tô theo case, danh sách, dòng thời gian
+
+**Ngày 2026-10-19, P12-3.** Sinh từ `docs/18` NHÓM P. Dùng hai đường đọc của `IM-51`; mở bất cứ màn nào cũng KHÔNG
+gọi model, KHÔNG ghi gì.
+
+```text
+/console/                    danh sách case — lọc tiền tố + số dòng nằm trong QUERY STRING (Back về đúng bộ lọc,
+                             gửi link là người khác thấy đúng thứ mình thấy); mỗi dòng: nhóm hiệu lực + nhãn NGUỒN
+/console/case/<khoá>         sơ đồ luồng tô theo case (Vue Flow) · dòng thời gian gộp · định tuyến (người nạp +
+                             biên lai model) · quy trình (bước, căn cứ xong, lượt chạy) · gợi ý (phễu 5 nấc, lời
+                             khai) · gửi về · evidence
+src/soDo.ts                  HÀM THUẦN: dữ kiện → trạng thái 11 ô + 12 mũi tên; dữ kiện → dòng thời gian
+kiem/so-do.kiem.ts           npm run kiem:so-do — 10 phép kiểm trên dữ liệu THẬT của kp_gialap, không thêm thư viện
+✅ vue-tsc sạch · build 97 kB gzip (màn dòng chảy tải lười) · kiem:so-do 10/0, đột biến đường lùi → 7 sai
+✅ Edge headless chụp cả hai màn: ticket 001 sáng A → J, dòng thời gian đúng thứ tự đã đi ở IM-50
+```
+
+### Bốn lựa chọn (`J1-1`)
+
+```text
+1  Thêm ô `ĐT` (định tuyến nhóm) giữa C và D. README để nó ẩn trong D ("quy trình ACTIVE của nhóm định tuyến"),
+   nhưng đó là bước có AI — và là bước người ta mở console để xem nhất. Sơ đồ README KHÔNG đổi; đây là cách VẼ.
+2  Ô Kênh 2 (A2, K, S6) không có trên sơ đồ của một case — chúng không thuộc về case nào.
+3  Mỗi kết quả định tuyến luôn đi kèm nhãn NGUỒN (người nạp · bảng đo · model · model chưa hỏi); tầng model luôn
+   kèm chữ "ngưỡng chưa đo". Một nhóm không kèm nguồn là cách nhanh nhất để tưởng định tuyến "chạy rồi" (IM-45).
+4  Dòng thời gian xếp theo THỜI ĐIỂM (Date.parse), không theo chuỗi ISO: phần lẻ của giây dài ngắn khác nhau thì
+   so chuỗi xếp sai — đúng ở chỗ hai việc cách nhau vài phần trăm giây.
+```
+
+### Hai trạng thái "dừng" mà sơ đồ phân biệt — và vì sao phải phân biệt
+
+```text
+dừng ở ĐT   định tuyến KHÔNG BIẾT (006: tên nhóm AI viết tắt bị từ chối · 011: người nạp nói KHONG-BIET)
+dừng ở D    định tuyến ĐƯỢC, nhưng nhóm chưa có quy trình duyệt (004) — G vẫn sáng nếu có người hỏi, qua đường lùi
+```
+Hai ca này cần hai việc khác nhau (sửa định tuyến vs. duyệt một quy trình). Gộp chúng thành "không chạy" là bắt
+người xem tự chẩn đoán lại thứ hệ thống đã biết.
+
+⚠ Lỗi của CHÍNH script kiểm, bắt được lúc thử đột biến: dòng tổng "mọi bất biến" in `ok` cố định — ngay dưới bảy
+dòng SAI. Giờ nó đếm số dòng sai. Một dòng tổng nói xanh khi bên trên đỏ là thứ người ta đọc thay cho bên trên.
+
+⚠ **Chưa kiểm:** màn trên app dev (5119) với case Jira thật — mới thử bằng curl ở `IM-51`, chưa mở bằng trình
+duyệt; và bề ngang điện thoại (console nội bộ, ưu tiên thấp).
+
+---
+
 ## `IM-52` · Khung console Vue — và đường ống đi qua một trình duyệt thật
 
 **Ngày 2026-10-19, P12-2.** Sinh từ `docs/18` NHÓM P (`P1-1`, `P3-1`, `P4`). Bước này dựng ĐƯỜNG ỐNG, chưa dựng màn:

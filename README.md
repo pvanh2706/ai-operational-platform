@@ -157,7 +157,9 @@ scripts\giao-dien\run-ui.bat            # → http://127.0.0.1:8791/console
 # Phát triển: cd scripts/giao-dien/console && npm run dev   (→ 127.0.0.1:5173/console, vẫn cần run-ui.bat chạy)
 ```
 
-Console đọc app dev (5119) hoặc app giả lập (5120) qua `/app/<cổng>/…` — chọn ở góc phải. Chi tiết: `docs/07` §3 `IM-52`.
+Console đọc app dev (5119) hoặc app giả lập (5120) qua `/app/<cổng>/…` — chọn ở góc phải. Hai màn: **danh sách case**
+(nhóm hiệu lực + nguồn) và **dòng chảy một case** (sơ đồ luồng tô theo case, dòng thời gian, định tuyến, quy trình,
+gợi ý). Mở màn nào cũng KHÔNG gọi model. Chi tiết: `docs/07` §3 `IM-52`, `IM-53`.
 
 ### Giả lập hai luồng bằng dữ liệu bịa (2026-10-19, `docs/18` nhóm O)
 
