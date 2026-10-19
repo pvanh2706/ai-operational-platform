@@ -147,6 +147,30 @@ vẫn nằm ở `docs/13`, không nằm ở đây. Đầy đủ: [`docs/07`](doc
 Cái thứ ba là cái đáng xem. Nó đếm bằng **SQL thô cố ý không có điều kiện tenant** —
 nếu con số nhỏ hơn tổng số dòng thật trong bảng, nghĩa là database đang chặn hộ.
 
+### Giả lập hai luồng bằng dữ liệu bịa (2026-10-19, `docs/18` nhóm O)
+
+Đi hết **luồng xuôi** (tín hiệu → định tuyến → bước hiện tại → gợi ý → phản hồi) và **luồng ngược** (gom case
+→ soạn nháp SOP → duyệt) trên một database RIÊNG — không đụng `kp_dev`. Mỗi bước có AI chọn được:
+
+```text
+API   app tự gọi model bằng khoá trong appsettings.Local.json (chép từ appsettings.Local.example.json).
+      Định tuyến còn cần "DinhTuyen": { "GoiModel": true } trong cùng file — tính tiền MỖI ticket mới.
+file  xuất prompt ra file → Claude Code / Codex đọc, ghi JSON → nạp lại. Không cần khoá.
+```
+
+```bash
+# Một lần cho mỗi máy (đọc đầu file để biết hai lệnh tiếp theo: migrate + tạo khách gia-lap)
+psql -U postgres -h localhost -f scripts/gia-lap-db-setup.sql
+
+dotnet build src/KnowledgePlatform.Api
+scripts\giao-dien\run-gia-lap-app.bat     # app giả lập, cổng 5120 — in --kiem-cau-hinh trước khi chạy
+scripts\giao-dien\run-ui.bat              # cửa sổ khác → http://127.0.0.1:8791/gia-lap
+```
+
+⚠ Ticket bịa mang sẵn **nhóm đúng**, nên trang chấm được AI định tuyến đúng bao nhiêu. Con số đó đo trên 11
+ticket do chính người viết bộ đề soạn — nó nói *đường ống có chạy*, **không** nói độ chính xác định tuyến.
+Chi tiết: `docs/07` §3 `IM-50`.
+
 ### Gửi tín hiệu vào (Kênh 1)
 
 ```bash

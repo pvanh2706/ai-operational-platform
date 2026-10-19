@@ -306,13 +306,16 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > nối nhau — soạn nháp chỉ gom case NGƯỜI nạp, không gom case MODEL định tuyến (`O5`).
 > ```text
 >    P11-0  ghi quyết định (docs/18 O, file này)                                  ✅ 2026-10-19
->    P11-1  host đọc appsettings.Local.json (chỉ Development, có cổng git) — O2-1
->    P11-2  luồng ngược gom cả case model định tuyến qua ngưỡng — O5-1
->    P11-3  --xuat-dinh-tuyen lọc theo tiền tố khoá nguồn (không trộn ticket cũ)
->    P11-4  database kp_gialap + khách gia-lap + app thứ hai ở cổng 5120 — O6-1
->    P11-5  trang giả lập trên giao diện: chọn API/file, chạy xuôi + ngược — O4-2
->    P11-6  chạy thật đầu-cuối ở chế độ file; ghi lại cái gì CHƯA kiểm được
+>    P11-1  host đọc appsettings.Local.json (chỉ Development, có cổng git) — O2-1   ✅ 2026-10-19
+>    P11-2  luồng ngược gom cả case model định tuyến qua ngưỡng — O5-1                ✅ 2026-10-19
+>    P11-3  --xuat-dinh-tuyen lọc theo tiền tố khoá nguồn (không trộn ticket cũ)      ✅ 2026-10-19
+>    P11-4  database kp_gialap + khách gia-lap + app thứ hai ở cổng 5120 — O6-1       ✅ 2026-10-19
+>    P11-5  trang giả lập trên giao diện: chọn API/file, chạy xuôi + ngược — O4-2     ✅ 2026-10-19
+>    P11-6  chạy thật đầu-cuối ở chế độ file; ghi lại cái gì CHƯA kiểm được           ✅ 2026-10-19
 > ```
+> ✅ 543 test · `kiem_dau_cuoi.py` 81/0 · vòng file đi hết xuôi → ngược → duyệt → hỏi lại → xác nhận bước →
+> phản hồi. ⚠ **Nhánh API với khoá THẬT chưa chạy lượt nào** — tiêu tiền là quyết định của chủ dự án. Chi tiết
+> và năm chỗ chỉ lộ ra khi chạy trang thật: `07` §3 `IM-50`. Cách chạy: README §"Giả lập hai luồng".
 
 > 🔄 **HOÀN THIỆN MỌI Ô CỦA SƠ ĐỒ LUỒNG TÍN HIỆU — chốt 2026-10-10, MỞ LẠI `I1`.** Quyết định:
 > `docs/18` NHÓM N · lý do: `07` §5 `AR-s` · kỹ thuật: `07` §3 `IM-49`. Trước đó sơ đồ README có

@@ -54,5 +54,9 @@ appsettings.Local.json
 
 __pycache__/
 
+# File trao đổi với AI của trang giả lập (prompt xuất ra + JSON AI trả về). Dữ liệu BỊA, nhưng
+# lệnh --xuat-* của app HỎI GIT trước khi ghi (KiemChoGhi) — không chặn ở đây thì nút xuất chết.
+scripts/giao-dien/gia-lap-io/
+
 # Bản chép ra từ scripts/chay-windows.example.ps1 — chứa mật khẩu database thật.
 scripts/chay-windows.ps1

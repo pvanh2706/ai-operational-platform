@@ -432,6 +432,90 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-50` · Giả lập hai luồng — và năm chỗ chỉ lộ ra khi CHẠY trang thật
+
+**Ngày 2026-10-19.** Sinh từ `docs/18` NHÓM O (6/6). Câu hỏi gốc: *"hệ thống đã hoàn thiện chưa — test 2
+luồng bằng dữ liệu giả; có API token thì dùng, không thì xuất prompt ra file cho Claude/Codex rồi nạp lại"*.
+
+```text
+P11-0  docs/18 nhóm O + file trạng thái                                       4b11fd8
+P11-1  host đọc appsettings.Local.json (Development, cổng git, env thắng)     80e0e3b
+P11-2  soạn nháp gom cả case MODEL định tuyến qua ngưỡng (O5-1)               cc5ad2f
+P11-3  --xuat-dinh-tuyen nhận tiền tố khoá nguồn                              cc5ad2f
+P11-4  database kp_gialap + khách gia-lap + run-gia-lap-app.bat (cổng 5120)
+P11-5  trang /gia-lap trên giao diện local: chọn API/file từng bước, chấm AI
+P11-6  chạy thật đầu-cuối ở chế độ file
+✅ 543 test (252 + 33 + 258), trước 539 · 4 test mới, 3 đã chứng minh biết ĐỎ bằng đột biến
+✅ kiem_dau_cuoi.py 81 phép kiểm, 0 sai (cần Link__PublicBaseUrl — thiếu thì mục H tự bỏ qua, 75/1)
+```
+
+### Bốn lựa chọn kỹ thuật (`J1-1`)
+
+```text
+1  Dữ liệu giả MANG ĐÁP ÁN. Mỗi ticket bịa có `nhomDung`, nên trang chấm được AI đúng/sai/không biết.
+   Corpus thật không có nhãn đúng nào — đây là thứ duy nhất dữ liệu bịa cho mà dữ liệu thật không cho.
+   ⚠ Con số chấm trên 11 ticket do CHÍNH người viết bộ đề soạn KHÔNG phải độ chính xác định tuyến.
+     Nó chỉ trả lời "đường ống có chạy và có chấm được không". Đừng đặt nó cạnh con số 84,1% của docs/13.
+
+2  Mã trần của ticket giả phải DUY NHẤT giữa các lô: `gialap:<lô>-001`, không phải `gialap:<lô>:GL-001`.
+   Model và người hay viết mã trần; TraCaseTheoMa khớp đuôi `:mã` — hai lô cùng `GL-001` là MƠ HỒ và
+   dẫn chứng không nối. Bắt được lúc thiết kế, không phải lúc chạy.
+
+3  Trang giả lập CHỈ đi qua đường sản phẩm có: HTTP của app, hoặc lệnh CLI của chính app (exe đã build,
+   không `dotnet run` — app đang chạy giữ DLL). Không ghi thẳng database, không tự dựng kết quả: một lối
+   tắt ở đây là một thứ không test nào kiểm.
+
+4  Bật định tuyến bằng model ở MỘT chỗ: `DinhTuyen.GoiModel` trong appsettings.Local.json. Bản đầu của
+   run-gia-lap-app.bat có dòng `set DinhTuyen__GoiModel=true` để bỏ comment — gỡ đi, vì lệnh CLI mà trang
+   gọi thay KHÔNG đi qua file .bat, nên hai bên sẽ nhìn hai cấu hình khác nhau.
+```
+
+### Chạy thật đầu-cuối (chế độ file — agent đóng vai AI đọc file)
+
+```text
+lô 11 ticket / 32 mẩu → Kênh 1                                    created 11 / 32
+xuất định tuyến (lọc tiền tố)                                     đúng 11 ticket của lô, không lẫn case cũ
+nạp kết quả (bọc ``` + CỐ Ý một tên nhóm viết tắt)                10 nạp · 1 bị TỪ CHỐI, báo rõ dòng nào
+chấm                                                              10 đúng · 0 sai · 1 không biết (đúng dòng bị từ chối)
+xuất soạn nháp nhóm "Phân quyền & ký hiệu"                        3 case · 9 mẩu · 0 chỗ che
+nạp bản nháp                                                      3 tri thức DRAFT + quy trình DRAFT 4 bước · 27 dẫn chứng · 0 mã mơ hồ
+duyệt                                                             4/4 → ACTIVE
+/hoi lại                                                          3/3 biết trả lời · bước hiện tại K1 · dẫn chứng trỏ về mẩu nguồn
+xác nhận K1 xong                                                  bước hiện tại → K2
+khai USED                                                         phễu ô J ghi USED 1
+nhánh API, khoá là giá trị mẫu qua BIẾN MÔI TRƯỜNG                409 chua-co-credit — và chứng minh env THẮNG file Local
+```
+
+### 🛑 Năm chỗ chỉ lộ ra khi chạy trang thật — không test C# nào chạm tới chúng
+
+```text
+1  Báo cáo lệnh CLI dài hàng trăm dòng log SQL của EF — dòng "đã nạp 10, bỏ qua 1" chìm mất.
+   → lệnh gọi từ trang đặt Logging__LogLevel__Default=Warning.
+2  Câu lệnh gợi ý cho Claude/Codex có dấu backtick bên trong "…". PowerShell coi backtick là ký tự
+   THOÁT: câu tới tay AI đã hỏng mà không ai thấy. → câu gợi ý không chứa backtick hay nháy kép.
+3  Lô chỉ nằm trong RAM: khởi động lại giao diện là mất lô, trong khi case vẫn nằm trong kp_gialap.
+   → lô ghi ra gia-lap-io/<lô>/lo.json, trang tự mở lại lô mới nhất.
+4  409 của /knowledge/soan-nhap là ProblemDetails (`detail`, `lyDo`) chứ không phải KetQuaSoanNhap
+   (`giaiThich`) — trang bản đầu sẽ hiện lý do mà BỎ MẤT hướng dẫn thay thế. → đọc cả hai dạng.
+5  Phễu ô J trả `soLuotDat`/`soLuotKhongDat`; trang bản đầu đọc `soLuot` → in "undefined".
+```
+⚠ Và một chỗ KHÔNG phải lỗi sản phẩm, ghi để người sau khỏi chẩn đoán lại: `curl -d '{"nhom":"Phân quyền…"}'`
+từ Git Bash gửi tiếng Việt theo codepage ANSI → server báo *"không phải JSON"*. Trình duyệt luôn gửi UTF-8.
+Thử bằng curl thì ghi body ra file UTF-8 rồi `--data-binary @file`.
+
+### ⚠ Những gì VẪN CHƯA kiểm được
+
+```text
+· Nhánh API với khoá THẬT: chưa có lượt gọi model nào — gọi là tiêu tiền và gửi dữ liệu (bịa) ra
+  Anthropic; đó là quyết định của chủ dự án, agent không tự bấm. Định tuyến bằng model vẫn 0 lượt thật.
+· Chế độ API của định tuyến đã đi qua trang, nhưng với GoiModel TẮT — tức chỉ kiểm phần ống, không kiểm model.
+· Trang /gia-lap CHƯA được bấm trong trình duyệt thật: mọi endpoint đã gọi thật bằng curl, JS đã qua
+  `node --check` và đã soát từng hàm vẽ với response thật — nhưng đó không phải một lượt bấm.
+· Lệnh gợi ý `claude -p …` / `codex exec …` CHƯA chạy thật trên máy này.
+```
+
+---
+
 ## `IM-49` · Mười một phase để mọi ô của sơ đồ có code — và chín chỗ bản nháp kế hoạch đã sai
 
 **Ngày 2026-10-10.** Sinh từ `AR-s` (§5). Đây là các lựa chọn KỸ THUẬT (`J1-1`); câu sản

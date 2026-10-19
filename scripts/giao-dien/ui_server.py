@@ -40,6 +40,7 @@ JIRA_DIR = os.path.join(GOC, "jira-export")
 sys.path.insert(0, JIRA_DIR)
 
 import export_jira_to_channel1 as X  # noqa: E402
+import gia_lap  # noqa: E402 — trang giả lập hai luồng (O4-2), cùng server, đường /gia-lap
 
 # 🛑 CHỈ loopback. Đổi thành "" hay "0.0.0.0" là phơi dữ liệu khách ra cả LAN.
 DIA_CHI = "127.0.0.1"
@@ -453,7 +454,7 @@ def kiem_ket_qua(du_lieu: dict, cases: list) -> list[str]:
 # ------------------------------------------------------------------ HTTP
 
 
-class Handler(http.server.BaseHTTPRequestHandler):
+class Handler(gia_lap.GiaLapApi, http.server.BaseHTTPRequestHandler):
     server_version = "KP-UI"
 
     def log_message(self, fmt, *args):
@@ -478,8 +479,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         duong = urllib.parse.urlparse(self.path).path
 
-        if duong in ("/", "/index.html"):
-            with open(os.path.join(HERE, "index.html"), "rb") as f:
+        trang = {"/": "index.html", "/index.html": "index.html", "/gia-lap": "gia-lap.html"}.get(duong)
+        if trang:
+            with open(os.path.join(HERE, trang), "rb") as f:
                 raw = f.read()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")

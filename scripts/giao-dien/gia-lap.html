@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giả lập hai luồng</title>
+<style>
+  :root {
+    --nen: #f6f7f9; --the: #fff; --vien: #dfe3e8; --chu: #1c2024; --mo: #667085;
+    --xanh: #1a7f5a; --do: #b42318; --vang: #b54708; --xanh-nhat: #eaf6f1;
+    --do-nhat: #fef3f2; --vang-nhat: #fffaeb; --lam: #1d4ed8; --lam-nhat: #eff4ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px; background: var(--nen); color: var(--chu);
+    font: 15px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .khung { max-width: 1060px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .phu { color: var(--mo); margin: 0 0 20px; font-size: 14px; }
+  a { color: var(--lam); }
+
+  .the {
+    background: var(--the); border: 1px solid var(--vien); border-radius: 10px;
+    padding: 18px 20px; margin-bottom: 16px;
+  }
+  .the[data-khoa="1"] { opacity: .45; pointer-events: none; }
+  .the h2 { font-size: 16px; margin: 0 0 6px; display: flex; align-items: center; gap: 9px; }
+  .the > .phu { margin: 0 0 12px; }
+  .so {
+    background: var(--chu); color: #fff; width: 22px; height: 22px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex: none;
+  }
+  .luong { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+           color: var(--lam); background: var(--lam-nhat); border-radius: 4px; padding: 2px 7px; }
+
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
+  .hint { font-weight: 400; color: var(--mo); font-size: 12px; }
+  input[type=text], input[type=number], textarea, select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--vien); border-radius: 6px;
+    font: inherit; background: #fff; color: inherit;
+  }
+  textarea { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; resize: vertical; }
+  .hang { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hang > * { flex: 1 1 220px; min-width: 0; }
+
+  button {
+    background: var(--chu); color: #fff; border: 0; border-radius: 6px; padding: 9px 16px;
+    font: inherit; font-weight: 600; cursor: pointer; margin: 12px 8px 0 0;
+  }
+  button.phu2 { background: #fff; color: var(--chu); border: 1px solid var(--vien); }
+  button.nho { padding: 4px 9px; font-size: 12px; margin: 2px 4px 2px 0; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+
+  .che-do { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .che-do label {
+    margin: 0; font-weight: 500; display: flex; gap: 7px; align-items: flex-start; cursor: pointer;
+    border: 1px solid var(--vien); border-radius: 8px; padding: 9px 12px; flex: 1 1 260px;
+  }
+  .che-do input { margin-top: 4px; }
+  .che-do label:has(input:checked) { border-color: var(--lam); background: var(--lam-nhat); }
+  .che-do label:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+  .che-do small { display: block; color: var(--mo); font-weight: 400; font-size: 12px; }
+
+  pre {
+    background: #0f1419; color: #d7dce2; padding: 12px 14px; border-radius: 6px;
+    overflow-x: auto; font-size: 12px; line-height: 1.5; max-height: 340px; margin: 10px 0 0;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  code { font-size: 12.5px; background: #f0f2f5; padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+  .bao { border-radius: 6px; padding: 10px 14px; margin-top: 12px; font-size: 14px; }
+  .ok { background: var(--xanh-nhat); border: 1px solid #a6e0c8; color: #0b5c40; }
+  .loi { background: var(--do-nhat); border: 1px solid #fecdc9; color: var(--do); }
+  .chu-y { background: var(--vang-nhat); border: 1px solid #fedf89; color: var(--vang); }
+  .bao ul { margin: 6px 0 0; padding-left: 20px; }
+
+  .bang-cuon { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--vien); vertical-align: top; }
+  th { font-size: 11px; color: var(--mo); text-transform: uppercase; letter-spacing: .04em; }
+  .the-kq { font-weight: 700; white-space: nowrap; }
+  .kq-dung { color: var(--xanh); } .kq-sai { color: var(--do); } .kq-khong-biet { color: var(--vang); }
+  .diem { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .diem div { border: 1px solid var(--vien); border-radius: 8px; padding: 8px 14px; min-width: 110px; }
+  .diem b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .diem span { font-size: 12px; color: var(--mo); }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-size: 13px; color: var(--mo); }
+  .an { display: none; }
+</style>
+</head>
+<body>
+<div class="khung">
+
+  <h1>Giả lập hai luồng — luồng xuôi + luồng ngược</h1>
+  <p class="phu">
+    Ticket bịa, chạy trên app <b>giả lập</b> (database <code>kp_gialap</code>, cổng 5120) — không đụng
+    <code>kp_dev</code>. Mỗi bước có AI chọn được <b>API</b> (app tự gọi model) hoặc <b>file</b>
+    (xuất prompt → Claude/Codex → nạp lại). <a href="/">← Trang quét Jira</a>
+  </p>
+
+  <!-- 0 -->
+  <div class="the" id="the0">
+    <h2><span class="so">0</span> Kiểm tra &amp; chọn cách gán AI</h2>
+    <p class="phu">Chạy <code>scripts\giao-dien\run-gia-lap-app.bat</code> ở một cửa sổ khác trước.</p>
+    <div class="hang">
+      <div>
+        <label>Địa chỉ app giả lập</label>
+        <input type="text" id="base" value="http://localhost:5120">
+      </div>
+      <div>
+        <label>Tên người thao tác <span class="hint">(ghi vào kho làm người nạp / duyệt)</span></label>
+        <input type="text" id="nguoi" value="trang-gia-lap">
+      </div>
+    </div>
+    <button id="btnKiem">Kiểm tra</button>
+    <div id="baoKiem"></div>
+
+    <div id="chonCheDo" class="an">
+      <label>Định tuyến — luồng xuôi</label>
+      <div class="che-do">
+        <label><input type="radio" name="cdDT" value="api">
+          <span>API<small>App gọi model khi <code>/hoi</code> hỏi ticket mới. Cần khoá + <code>DinhTuyen:GoiModel = true</code>. Tính tiền mỗi ticket.</small></span></label>
+        <label><input type="radio" name="cdDT" value="file">
+          <span>File<small>Xuất prompt ra file → Claude/Codex đọc, ghi JSON → nạp lại. Không cần khoá.</small></span></label>
+      </div>
+      <label>Soạn nháp SOP — luồng ngược</label>
+      <div class="che-do">
+        <label><input type="radio" name="cdSN" value="api">
+          <span>API<small><code>POST /knowledge/soan-nhap</code> — app gọi model. Cần khoá. Tính tiền một lượt.</small></span></label>
+        <label><input type="radio" name="cdSN" value="file">
+          <span>File<small><code>--xuat-soan-nhap</code> → AI → <code>POST /knowledge/sop-draft</code>.</small></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <div class="the" id="the1" data-khoa="1">
+    <h2><span class="so">1</span> Sinh dữ liệu giả &amp; gửi vào Kênh 1</h2>
+    <p class="phu">Mỗi ticket bịa mang sẵn <b>nhóm đúng</b> để chấm AI. Mẩu đầu tiên là thứ có lúc ticket đến; các mẩu sau là chẩn đoán + cách sửa.</p>
+    <div class="hang" style="max-width:360px">
+      <div>
+        <label>Số ticket <span class="hint">(tối đa 11)</span></label>
+        <input type="number" id="soLuong" value="11" min="1" max="11">
+      </div>
+    </div>
+    <button id="btnSinh">Sinh lô mới &amp; gửi</button>
+    <div id="baoSinh"></div>
+  </div>
+
+  <!-- 2 -->
+  <div class="the" id="the2" data-khoa="1">
+    <h2><span class="so">2</span> <span class="luong">Luồng xuôi</span> Định tuyến — ticket thuộc nhóm nào</h2>
+    <div id="dtApi" class="an">
+      <p class="phu">Gọi <code>POST /hoi</code> cho từng ticket. App tự định tuyến: kho người nạp → bảng đo → model.</p>
+      <button id="btnDtApi">Định tuyến cả lô bằng API</button>
+    </div>
+    <div id="dtFile" class="an">
+      <p class="phu">Bước a: xuất prompt (chỉ ticket của lô này). Bước b: đưa cho AI. Bước c: nạp lại.</p>
+      <button id="btnDtXuat">a · Xuất prompt định tuyến</button>
+      <div id="dtXuatKq"></div>
+      <label>c · Dán JSON AI trả về <span class="hint">— để trống thì đọc file kết quả ở đường dẫn trên</span></label>
+      <textarea id="dtKetQua" rows="6" placeholder='{ "ketQua": [ { "khoaNguon": "...", "nhom": "...", "nguon": "...", "giaiThich": "..." } ] }'></textarea>
+      <button id="btnDtNap">c · Nạp kết quả định tuyến</button>
+    </div>
+    <div id="baoDt"></div>
+  </div>
+
+  <!-- 3 -->
+  <div class="the" id="the3" data-khoa="1">
+    <h2><span class="so">3</span> <span class="luong">Luồng ngược</span> Soạn nháp SOP cho một nhóm</h2>
+    <p class="phu">Gom case của nhóm (người nạp + model qua ngưỡng — <code>O5-1</code>), soạn bản nháp. Bản nháp vào kho ở <b>DRAFT</b>, kèm một quy trình DRAFT.</p>
+    <label>Nhóm</label>
+    <select id="nhom"></select>
+    <div id="snApi" class="an">
+      <button id="btnSnApi">Soạn nháp bằng API</button>
+    </div>
+    <div id="snFile" class="an">
+      <button id="btnSnXuat">a · Xuất prompt soạn nháp</button>
+      <div id="snXuatKq"></div>
+      <label>c · Dán bản nháp JSON AI trả về <span class="hint">— để trống thì đọc file kết quả</span></label>
+      <textarea id="snKetQua" rows="6" placeholder='{ "nhom": "...", "trieuChungVao": [...], "buocKiem": [...], "buocSua": [...], ... }'></textarea>
+      <button id="btnSnNap">c · Nạp bản nháp</button>
+    </div>
+    <div id="baoSn"></div>
+  </div>
+
+  <!-- 4 -->
+  <div class="the" id="the4" data-khoa="1">
+    <h2><span class="so">4</span> <span class="luong">Luồng ngược</span> Duyệt tri thức + quy trình</h2>
+    <p class="phu">Duyệt với quyền xem <code>noi-bo</code> và lời khai đã soát dữ liệu thương mại (<code>AR-n</code>) — dữ liệu ở đây là bịa.</p>
+    <button id="btnDuyet">Duyệt bản nháp vừa nạp</button>
+    <div id="baoDuyet"></div>
+  </div>
+
+  <!-- 5 -->
+  <div class="the" id="the5" data-khoa="1">
+    <h2><span class="so">5</span> <span class="luong">Đóng vòng</span> Hỏi lại — bước hiện tại, hướng dẫn, phản hồi</h2>
+    <p class="phu">Ticket của nhóm vừa duyệt giờ phải ra <b>biết trả lời</b>, kèm bước hiện tại của quy trình. Xác nhận một bước xong thì bước hiện tại phải nhảy.</p>
+    <button id="btnHoi">Hỏi lại các ticket của nhóm</button>
+    <div id="baoHoi"></div>
+  </div>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nguoi = () => $('#nguoi').value.trim() || 'trang-gia-lap';
+const cheDo = ten => (document.querySelector(`input[name=${ten}]:checked`) || {}).value;
+
+async function api(duong, than) {
+  const r = await fetch('/api/' + duong, {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(than || {})
+  });
+  try { return await r.json(); } catch { return {ok: false, loi: `HTTP ${r.status}`}; }
+}
+function bao(o, loai, html) { $(o).innerHTML = `<div class="bao ${loai}">${html}</div>`; }
+function moKhoa(...ids) { ids.forEach(id => $(id).dataset.khoa = '0'); }
+async function bam(nut, viec) {
+  const cu = nut.textContent; nut.disabled = true; nut.textContent = 'Đang chạy…';
+  try { await viec(); } catch (e) { alert(e); } finally { nut.disabled = false; nut.textContent = cu; }
+}
+const ngan = k => String(k).split(':').pop();
+const jsonKhoi = o => `<details><summary>JSON đầy đủ</summary><pre>${esc(JSON.stringify(o, null, 2))}</pre></details>`;
+
+// ---------- 0 ----------
+function capNhatCheDo() {
+  $('#dtApi').classList.toggle('an', cheDo('cdDT') !== 'api');
+  $('#dtFile').classList.toggle('an', cheDo('cdDT') !== 'file');
+  $('#snApi').classList.toggle('an', cheDo('cdSN') !== 'api');
+  $('#snFile').classList.toggle('an', cheDo('cdSN') !== 'file');
+}
+document.querySelectorAll('input[name=cdDT], input[name=cdSN]').forEach(i => i.onchange = capNhatCheDo);
+
+$('#btnKiem').onclick = () => bam($('#btnKiem'), async () => {
+  const k = await api('gl-trang-thai', {base: $('#base').value});
+  if (k.loi) { bao('#baoKiem', 'loi', esc(k.loi)); return; }
+
+  const dong = [];
+  dong.push(k.appSong ? '✅ App giả lập đang chạy, ranh giới tenant còn nguyên.'
+                      : `🛑 App giả lập KHÔNG trả lời — ${esc(k.chiTietApp)}`);
+  dong.push(k.coKhoa ? '✅ Có khoá Anthropic (đọc từ appsettings.Local.json hoặc biến môi trường).'
+                     : '⚪ Không có khoá Anthropic — chỉ dùng được chế độ <b>file</b>.');
+  dong.push(k.goiModel ? '✅ <code>DinhTuyen:GoiModel = true</code> — định tuyến bằng API dùng được.'
+                       : '⚪ <code>DinhTuyen:GoiModel</code> đang tắt — định tuyến bằng API sẽ trả KHÔNG BIẾT cho ticket mới. Bật trong appsettings.Local.json rồi chạy lại app.');
+  if (k.nhomDungLech && k.nhomDungLech.length)
+    dong.push(`🛑 Dữ liệu giả có nhóm KHÔNG nằm trong taxonomy: ${esc(k.nhomDungLech.join(', '))}`);
+  if (k.lo) dong.push(`↺ Đang dùng lô <b>${esc(k.lo)}</b> (mở lại từ đĩa) — đi tiếp từ bước 2, hoặc sinh lô mới ở bước 1.`);
+  bao('#baoKiem', k.appSong ? 'ok' : 'loi', dong.join('<br>') +
+      (k.cauHinh ? `<details><summary>--kiem-cau-hinh</summary><pre>${esc(k.cauHinh)}</pre></details>` : ''));
+
+  // Mặc định chế độ theo cái đang có — không có khoá thì API bị khoá hẳn.
+  const apiDT = document.querySelector('input[name=cdDT][value=api]');
+  const apiSN = document.querySelector('input[name=cdSN][value=api]');
+  apiDT.disabled = !k.coKhoa; apiSN.disabled = !k.coKhoa;
+  document.querySelector(`input[name=cdDT][value=${k.coKhoa && k.goiModel ? 'api' : 'file'}]`).checked = true;
+  document.querySelector(`input[name=cdSN][value=${k.coKhoa ? 'api' : 'file'}]`).checked = true;
+  $('#chonCheDo').classList.remove('an');
+  capNhatCheDo();
+  if (k.appSong) moKhoa('#the1');
+  if (k.appSong && k.lo) moKhoa('#the2');
+});
+
+// ---------- 1 ----------
+$('#btnSinh').onclick = () => bam($('#btnSinh'), async () => {
+  const k = await api('gl-sinh', {soLuong: +$('#soLuong').value});
+  if (!k.ok) { bao('#baoSinh', 'loi', esc(k.loi)); return; }
+  const bang = k.ticket.map(t => `<tr><td><code>${esc(ngan(t.khoa))}</code></td><td>${esc(t.tieuDe)}</td><td>${esc(t.nhomDung)}</td></tr>`).join('');
+  bao('#baoSinh', 'ok', `Lô <b>${esc(k.lo)}</b> — tạo <b>${k.soCase}</b> case, <b>${k.soEvidence}</b> mẩu evidence.
+      <div class="bang-cuon"><table><tr><th>Mã</th><th>Tiêu đề</th><th>Nhóm đúng (đáp án)</th></tr>${bang}</table></div>`);
+  ['#baoDt', '#baoSn', '#baoDuyet', '#baoHoi', '#dtXuatKq', '#snXuatKq'].forEach(s => $(s).innerHTML = '');
+  moKhoa('#the2');
+});
+
+// ---------- 2 ----------
+function veDinhTuyen(k, truoc = '') {
+  const kq = {dung: '✓ đúng', sai: '✗ sai', 'khong-biet': '? không biết'};
+  const bang = k.dong.map(d => `<tr>
+      <td><code>${esc(ngan(d.khoa))}</code><br><span class="hint">${esc(d.tieuDe)}</span></td>
+      <td>${esc(d.nhomDung)}</td><td>${esc(d.nhom)}</td>
+      <td class="hint">${esc(d.nguon)}${d.giaiThich ? '<br><i>' + esc(d.giaiThich) + '</i>' : ''}</td>
+      <td class="the-kq kq-${d.ketQua}">${kq[d.ketQua]}</td></tr>`).join('');
+  const c = k.cham;
+  bao('#baoDt', c.sai ? 'chu-y' : 'ok', truoc + `
+    <div class="diem"><div><b>${c.dung}/${c.tong}</b><span>đúng</span></div>
+      <div><b>${c.sai}</b><span>sai nhóm</span></div><div><b>${c.khongBiet}</b><span>không biết</span></div></div>
+    <div class="hint" style="margin-top:6px">"Không biết" với ticket có nhóm là im lặng (<code>E1-1</code>) — an toàn hơn sai nhóm, nhưng vẫn là trượt.</div>
+    <div class="bang-cuon"><table><tr><th>Ticket</th><th>Nhóm đúng</th><th>Nhóm AI</th><th>Nguồn · giải thích</th><th></th></tr>${bang}</table></div>`);
+  $('#nhom').innerHTML = (k.nhom || []).map(n => `<option value="${esc(n.ten)}">${esc(n.ten)} — ${n.soCase} case</option>`).join('');
+  if (k.nhom && k.nhom.length) moKhoa('#the3');
+}
+
+$('#btnDtApi').onclick = () => bam($('#btnDtApi'), async () => {
+  const k = await api('gl-dinh-tuyen-api', {});
+  if (!k.ok) { bao('#baoDt', 'loi', esc(k.loi)); return; }
+  veDinhTuyen(k);
+});
+
+function veXuat(o, k) {
+  if (!k.ok) { bao(o, 'loi', esc(k.loi) + (k.baoCao ? `<pre>${esc(k.baoCao)}</pre>` : '')); return; }
+  bao(o, 'ok', `Đã xuất <code>${esc(k.duongVao)}</code><br>
+    b · Giao cho AI ghi kết quả vào <code>${esc(k.duongRa)}</code> — một trong ba cách:
+    <ul><li>Dán câu này vào Claude Code / Codex: <pre>${esc(k.lenh.cau)}</pre></li>
+        <li>Claude Code không tương tác: <pre>${esc(k.lenh.claude)}</pre></li>
+        <li>Codex: <pre>${esc(k.lenh.codex)}</pre></li></ul>
+    Hoặc chép nội dung file vào một khung chat AI rồi dán JSON trả về vào ô bên dưới.
+    <details><summary>Nội dung file prompt (${k.noiDung.length.toLocaleString('vi')} ký tự)</summary><pre>${esc(k.noiDung)}</pre></details>`);
+}
+
+$('#btnDtXuat').onclick = () => bam($('#btnDtXuat'), async () => veXuat('#dtXuatKq', await api('gl-xuat-dinh-tuyen', {})));
+
+$('#btnDtNap').onclick = () => bam($('#btnDtNap'), async () => {
+  const k = await api('gl-nap-dinh-tuyen', {ketQua: $('#dtKetQua').value, nguoi: nguoi()});
+  if (k.loi && !k.dong) { bao('#baoDt', 'loi', esc(k.loi)); return; }
+  veDinhTuyen(k, `${k.ok ? '' : `<b>Lệnh nạp trả mã ${k.maThoat}.</b> `}<details ${k.ok ? '' : 'open'}><summary>Báo cáo lệnh nạp</summary><pre>${esc(k.baoCao)}</pre></details>`);
+});
+
+// ---------- 3 ----------
+function veSoan(k) {
+  const kq = k.ketQua || {};
+  const bn = kq.daNap || kq;   // API trả KetQuaSoanNhap; đường file trả thẳng kết quả nạp
+  if (!k.ok) {
+    // 409 của /knowledge/soan-nhap là ProblemDetails: lý do ở `lyDo`, hướng dẫn thay thế ở `detail`.
+    const giaiThich = kq.giaiThich || kq.detail || kq.loi || '';
+    bao('#baoSn', 'loi', `HTTP ${k.http} — <b>${esc(kq.lyDo || kq.title || '')}</b>` +
+        (giaiThich ? `<pre>${esc(giaiThich)}</pre>` : '') +
+        (kq.lyDo === 'chua-co-credit' ? 'Chuyển ô “Soạn nháp” ở bước 0 sang <b>File</b> để đi tiếp không cần khoá.' : '') + jsonKhoi(kq));
+    return;
+  }
+  const nn = (bn.nguyenNhan || []).map(n => `<li>${esc(n.tenNguyenNhan)} — ${n.soAssertion} phát biểu, ${esc(n.trangThai)}</li>`).join('');
+  const qt = bn.quyTrinh || {};
+  bao('#baoSn', 'ok', `Nhóm <b>${esc(bn.nhom)}</b> · tạo <b>${bn.daTao}</b> bản ghi tri thức (đã có từ trước: ${bn.daCoTuTruoc}).
+    ${kq.soCase != null ? `<br>Gom <b>${kq.soCase}</b> case, trong đó <b>${kq.soCaseTuModel || 0}</b> do MODEL định tuyến (ngưỡng chưa đo).` : ''}
+    <ul>${nn}</ul>
+    Quy trình: phiên bản ${qt.phienBan} · ${qt.soBuoc} bước · <b>${esc(qt.trangThai)}</b>
+    ${qt.canhBao ? `<br><span class="hint">${esc(qt.canhBao)}</span>` : ''}
+    ${bn.danChung ? `<br>Dẫn chứng nối được: ${bn.danChung.soLienKetMoi ?? '?'} liên kết mới.` : ''}` + jsonKhoi(kq));
+  moKhoa('#the4');
+}
+
+$('#btnSnApi').onclick = () => bam($('#btnSnApi'), async () =>
+  veSoan(await api('gl-soan-api', {nhom: $('#nhom').value, nguoi: nguoi()})));
+$('#btnSnXuat').onclick = () => bam($('#btnSnXuat'), async () =>
+  veXuat('#snXuatKq', await api('gl-xuat-soan', {nhom: $('#nhom').value})));
+$('#btnSnNap').onclick = () => bam($('#btnSnNap'), async () => {
+  const k = await api('gl-nap-soan', {ketQua: $('#snKetQua').value});
+  if (k.loi && k.http == null) { bao('#baoSn', 'loi', esc(k.loi)); return; }
+  veSoan(k);
+});
+
+// ---------- 4 ----------
+$('#btnDuyet').onclick = () => bam($('#btnDuyet'), async () => {
+  const k = await api('gl-duyet', {nguoi: nguoi()});
+  if (k.loi && !k.dong) { bao('#baoDuyet', 'loi', esc(k.loi)); return; }
+  const bang = k.dong.map(d => `<tr><td>${esc(d.loai)}</td><td>${esc(d.ten)}</td><td>${d.http}</td><td>${esc(d.trangThai || '')}</td><td class="hint">${esc(d.loi || '')}</td></tr>`).join('');
+  bao('#baoDuyet', k.ok ? 'ok' : 'loi',
+      `<table><tr><th>Loại</th><th>Tên</th><th>HTTP</th><th>Trạng thái</th><th></th></tr>${bang}</table>`);
+  if (k.ok) moKhoa('#the5');
+});
+
+// ---------- 5 ----------
+function veHoi(dong, nhom) {
+  const hang = dong.map(d => {
+    const hd = d.huongDan[0];
+    const xuLy = hd ? (hd.cachXuLy || []).slice(0, 3).map(p => `<li>${esc(p.noiDung)} <span class="hint">[${esc(p.mucKiemChung)}${p.danChung && p.danChung.length ? ' · ' + p.danChung.length + ' dẫn chứng' : ''}]</span></li>`).join('') : '';
+    return `<tr>
+      <td><code>${esc(ngan(d.khoa))}</code><br><span class="hint">${esc(d.tieuDe)}</span></td>
+      <td class="the-kq ${d.bietTraLoi ? 'kq-dung' : 'kq-khong-biet'}">${d.bietTraLoi ? 'biết' : 'không biết'}<br><span class="hint">${esc(d.lyDoKhongBiet || '')}</span></td>
+      <td>${d.buocHienTai ? `<b>${esc(d.buocHienTai)}</b> ${esc(d.noiDungBuoc || '')}` : (d.daXongHet ? 'đã xong hết' : `<span class="hint">${esc(d.lyDoKhongCoQuyTrinh || '—')}</span>`)}</td>
+      <td>${d.soHuongDan}${xuLy ? `<ul style="margin:4px 0 0;padding-left:16px">${xuLy}</ul>` : ''}</td>
+      <td>${d.buocHienTai ? `<button class="nho phu2" data-xn="${esc(d.khoa)}" data-buoc="${esc(d.buocHienTai)}">Xác nhận ${esc(d.buocHienTai)} xong</button>` : ''}
+          ${d.maLuotGoiY ? `<button class="nho phu2" data-ph="${esc(d.maLuotGoiY)}">Khai: đã dùng gợi ý</button>` : ''}</td></tr>`;
+  }).join('');
+  const biet = dong.filter(d => d.bietTraLoi).length;
+  bao('#baoHoi', biet ? 'ok' : 'chu-y', `Nhóm <b>${esc(nhom)}</b> — <b>${biet}/${dong.length}</b> ticket biết trả lời.
+    <div class="bang-cuon"><table><tr><th>Ticket</th><th>Trả lời</th><th>Bước hiện tại</th><th>Hướng dẫn</th><th></th></tr>${hang}</table></div>
+    <div id="baoVong"></div>`);
+
+  document.querySelectorAll('[data-xn]').forEach(b => b.onclick = () => bam(b, async () => {
+    const k = await api('gl-xac-nhan-buoc', {khoa: b.dataset.xn, maBuoc: b.dataset.buoc, nguoi: nguoi()});
+    const sau = (k.dong || [])[0] || {};
+    bao('#baoVong', k.ok ? 'ok' : 'loi', k.ok
+      ? `Đã xác nhận <b>${esc(b.dataset.buoc)}</b> cho <code>${esc(ngan(b.dataset.xn))}</code> → bước hiện tại giờ là <b>${esc(sau.buocHienTai || (sau.daXongHet ? 'đã xong hết' : '—'))}</b>.`
+      : `HTTP ${k.http}` + jsonKhoi(k.ketQua));
+  }));
+  document.querySelectorAll('[data-ph]').forEach(b => b.onclick = () => bam(b, async () => {
+    const k = await api('gl-phan-hoi', {maLuotGoiY: b.dataset.ph, nac: 'used', datDuoc: true, nguoi: nguoi()});
+    const tk = (k.thongKe && k.thongKe.theoNac || []).map(x => `${esc(x.nac)} ${x.soLuotDat}`).join(' · ');
+    bao('#baoVong', k.ok ? 'ok' : 'loi', k.ok ? `Đã ghi nấc <b>USED</b> (lời khai). Phễu ô J: ${tk}` : `HTTP ${k.http}` + jsonKhoi(k.ketQua));
+  }));
+}
+
+$('#btnHoi').onclick = () => bam($('#btnHoi'), async () => {
+  const k = await api('gl-hoi-lai', {});
+  if (!k.ok) { bao('#baoHoi', 'loi', esc(k.loi)); return; }
+  veHoi(k.dong, k.nhom);
+});
+</script>
+</body>
+</html>
