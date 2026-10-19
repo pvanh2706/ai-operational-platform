@@ -678,7 +678,7 @@ mới phải vào script đó cùng commit.
 - [ ] **P3-2 — Host .NET phục vụ** (`UseStaticFiles`, lộ ra cùng chỗ với API).
 - [ ] **P3-3 — Vite dev server riêng.**
 
-## P4 · Thêm thư viện nào ngoài Vue 3 + Vite + TypeScript? (chọn nhiều)
+## P4 · Thêm thư viện nào ngoài Vue 3 + Vite + TypeScript? (tích nhiều ô)
 
 - [x] **P4-1 — Vue Flow** (`@vue-flow/core`) (đề xuất): sơ đồ luồng tương tác, tô sáng ô một ticket đã đi qua.
 - [ ] **P4-2 — Naive UI.**
