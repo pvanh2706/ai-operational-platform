@@ -1,4 +1,4 @@
-import type { CaseTrongDanhSach, DongChayCase, LoiHost } from './kieu'
+import type { CaseTrongDanhSach, DongChayCase, KetQuaThuKhoa, LoiHost } from './kieu'
 
 /**
  * Gọi host QUA ui_server.py: `/app/<cổng>/<đường>` → `http://127.0.0.1:<cổng>/<đường>`.
@@ -44,4 +44,6 @@ export const api = {
       `/internal/cases?soLuong=${soLuong}${tienTo ? `&tienTo=${encodeURIComponent(tienTo)}` : ''}`,
     ),
   dongChay: (cong: number, khoa: string) => goiApp<DongChayCase>(cong, `/internal/cases/${maHoa(khoa)}/dong-chay`),
+  /** ĐI RA MẠNG tới Anthropic (miễn phí) bằng khoá của host — chỉ gọi khi người bấm nút, không tự gọi khi mở trang. */
+  thuKhoa: (cong: number) => goiApp<KetQuaThuKhoa>(cong, '/internal/thu-khoa-model', { method: 'POST' }),
 }

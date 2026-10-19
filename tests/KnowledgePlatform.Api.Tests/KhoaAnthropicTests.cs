@@ -62,6 +62,21 @@ public sealed class KhoaAnthropicTests(ApiDatabaseFixture db) : IClassFixture<Ap
         Assert.IsType<AnthropicSopDrafter>(BanDuocCam(app));
     }
 
+    /// <summary>`IM-57`: không có khoá thì nút "thử khoá" trả lời NGAY — không gọi ra mạng với một khoá rỗng.</summary>
+    [Fact]
+    public async Task Thu_khoa_khi_KHONG_co_khoa_tra_khong_co_khoa_va_khong_goi_gi()
+    {
+        using var app = ApiFactory.Dedicated(db.TenantAKey);
+
+        var res = await app.CreateClient().PostAsync("/internal/thu-khoa-model", null);
+        var kq = await System.Net.Http.Json.HttpContentJsonExtensions.ReadFromJsonAsync<System.Text.Json.JsonElement>(res.Content);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, res.StatusCode);
+        Assert.False(kq.GetProperty("coKhoa").GetBoolean());
+        Assert.Equal(ThuKhoaModel.KhongCoKhoa, kq.GetProperty("lyDo").GetString());
+        Assert.Equal(SopDrafterOptions.ModelMacDinh, kq.GetProperty("model").GetString());
+    }
+
     [Fact]
     public void Khong_co_khoa_nao_thi_cam_ban_bao_chua_co_credit()
     {

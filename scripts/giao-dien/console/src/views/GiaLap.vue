@@ -8,6 +8,8 @@ import { CONG_GIA_LAP, giaLap, type DongCham, type KetQuaDinhTuyen, type KetQuaS
 import BanDoLo from '../components/BanDoLo.vue'
 import NhanNguon from '../components/NhanNguon.vue'
 import XuatNapFile from '../components/XuatNapFile.vue'
+import ThuKhoa from '../components/ThuKhoa.vue'
+import type { KetQuaThuKhoa } from '../kieu'
 import { useKetNoi } from '../stores/ketNoi'
 
 const ketNoi = useKetNoi()
@@ -61,6 +63,16 @@ async function kiem() {
   }
 }
 watch(cheDo, (v) => { try { localStorage.setItem(KHOA_CHE_DO, JSON.stringify(v)) } catch { /* bỏ qua */ } }, { deep: true })
+
+/** Kết quả lần thử khoá gần nhất: false = Anthropic đã TỪ CHỐI → API bị khoá cho tới khi thử lại được. */
+const khoaHopLe = ref<boolean | null>(null)
+const apiDung = computed(() => !!tt.value?.coKhoa && khoaHopLe.value !== false)
+
+function sauThuKhoa(kq: KetQuaThuKhoa) {
+  khoaHopLe.value = kq.hopLe
+  // Khoá bị từ chối thì mọi lượt bấm API sau đó đều hỏng — chuyển về File thay vì để người dùng tốn lượt mới biết.
+  if (kq.hopLe === false) cheDo.value = { dinhTuyen: 'file', soanNhap: 'file' }
+}
 onMounted(kiem)
 
 /** Nhóm của lô, đọc từ HOST (nhóm hiệu lực) chứ không từ RAM của ui_server — tải lại trang không mất. */
@@ -212,16 +224,17 @@ const chamLabel = { dung: '✓ đúng', sai: '✗ sai', 'khong-biet': '? không 
       </div>
       <div v-if="tt.nhomDungLech.length" class="xau">✗ Dữ liệu giả có nhóm ngoài taxonomy: {{ tt.nhomDungLech.join(', ') }}</div>
       <details v-if="tt.cauHinh"><summary>--kiem-cau-hinh</summary><pre>{{ tt.cauHinh }}</pre></details>
+      <ThuKhoa v-if="tt.coKhoa" :cong="CONG_GIA_LAP" @ket-qua="sauThuKhoa" />
     </div>
     <div class="hang">
       <fieldset>
         <legend>Định tuyến — luồng xuôi</legend>
-        <label><input v-model="cheDo.dinhTuyen" type="radio" value="api" :disabled="!tt?.coKhoa" /> API</label>
+        <label><input v-model="cheDo.dinhTuyen" type="radio" value="api" :disabled="!apiDung" /> API</label>
         <label><input v-model="cheDo.dinhTuyen" type="radio" value="file" /> File</label>
       </fieldset>
       <fieldset>
         <legend>Soạn nháp SOP — luồng ngược</legend>
-        <label><input v-model="cheDo.soanNhap" type="radio" value="api" :disabled="!tt?.coKhoa" /> API</label>
+        <label><input v-model="cheDo.soanNhap" type="radio" value="api" :disabled="!apiDung" /> API</label>
         <label><input v-model="cheDo.soanNhap" type="radio" value="file" /> File</label>
       </fieldset>
       <label class="nguoi">Người thao tác <input v-model="nguoi" /></label>

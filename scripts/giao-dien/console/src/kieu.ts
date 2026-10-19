@@ -150,6 +150,17 @@ export interface DongChayCase {
   guiVe: LuotGuiVe[]
 }
 
+/** `POST /internal/thu-khoa-model` — Infrastructure/Sop/ThuKhoaModel.cs. Không bao giờ chứa khoá. */
+export interface KetQuaThuKhoa {
+  coKhoa: boolean
+  /** true = khoá được nhận VÀ model tồn tại · false = bị từ chối · null = không thử được (mạng, 5xx). */
+  hopLe: boolean | null
+  lyDo: 'khong-co-khoa' | 'khoa-bi-tu-choi' | 'model-khong-ton-tai' | 'loi-khac' | null
+  model: string
+  tenModelHienThi: string | null
+  giaiThich: string
+}
+
 /** ProblemDetails của ASP.NET — mọi lỗi 4xx/5xx của host. */
 export interface LoiHost {
   title?: string

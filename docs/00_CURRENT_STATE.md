@@ -321,6 +321,8 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >           🛑 LƯỢT GỌI MODEL THẬT ĐẦU TIÊN: 11/11 định tuyến → 401 "invalid x-api-key". Khoá trong
 >           appsettings.Local.json KHÔNG HỢP LỆ — chặn bởi chủ dự án (cần khoá mới), không bởi code.
 >           Định tuyến hỏng có kiểm soát; soạn nháp từng trả 500 + stack trace → đã sửa thành 409 khoa-bi-tu-choi.
+>    +      nút "Thử khoá" (POST /internal/thu-khoa-model, đường MIỄN PHÍ của Anthropic) — biết khoá dùng được
+>           không TRƯỚC khi tiêu lượt gọi · 566 test · kiem_dau_cuoi 90/0 · IM-57                     ✅ 2026-10-19
 > ```
 
 > 🔄 **GIẢ LẬP HAI LUỒNG + HAI CÁCH GÁN AI — chốt 2026-10-19.** Quyết định: `docs/18` NHÓM O (6/6).

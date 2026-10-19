@@ -364,6 +364,14 @@ def console_noi_bo(ma_case: str) -> None:
     s, _ = goi("GET", "/internal/cases/" + urllib.parse.quote(f"{DAU}:khong-bao-gio-ton-tai", safe="") + "/dong-chay")
     kiem("  ... case không tồn tại -> 404", s, 404)
 
+    # IM-57: thử khoá. ⚠ Nếu app CÓ khoá thì đây là một lượt đi ra mạng tới Anthropic — MIỄN PHÍ (xem một model),
+    #   nhưng vẫn ra ngoài. Không khẳng định khoá hợp lệ hay không: đó là trạng thái của máy, không phải của code.
+    s, b = goi("POST", "/internal/thu-khoa-model")
+    kiem("POST /internal/thu-khoa-model", s, 200)
+    kiem("  ... trả lời một trong bốn kết cục đã định",
+         (b or {}).get("lyDo") in (None, "khong-co-khoa", "khoa-bi-tu-choi", "model-khong-ton-tai", "loi-khac"), True)
+    kiem("  ... KHÔNG có gì trông như khoá trong response", "sk-ant-" in json.dumps(b or {}), False)
+
 
 def rut_lai(ma_ev: str) -> None:
     muc("D · AR-m · rút lại  (1 endpoint)")

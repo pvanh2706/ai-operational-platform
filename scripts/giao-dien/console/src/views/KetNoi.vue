@@ -3,6 +3,7 @@
 // đọc mới. Các màn thật (sơ đồ, danh sách, dòng chảy) là bước 3.
 import { ref, watch } from 'vue'
 import { api } from '../api'
+import ThuKhoa from '../components/ThuKhoa.vue'
 import type { CaseTrongDanhSach } from '../kieu'
 import { useKetNoi } from '../stores/ketNoi'
 
@@ -37,6 +38,7 @@ watch(() => ketNoi.song, (s) => s && void taiCase(), { immediate: true })
       <code>dotnet run --project src/KnowledgePlatform.Api</code>.
     </div>
     <button class="phu" style="margin-top: 10px" @click="ketNoi.kiemTra()">Kiểm lại</button>
+    <ThuKhoa v-if="ketNoi.song" :key="ketNoi.cong" :cong="ketNoi.cong" />
   </section>
 
   <section v-if="ketNoi.song" class="the">

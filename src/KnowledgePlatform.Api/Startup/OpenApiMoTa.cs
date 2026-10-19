@@ -209,6 +209,12 @@ public static partial class OpenApiMoTa
                 "nhóm HIỆU LỰC và NGUỒN của nó (`nguoi-nap:` · `tra-san:` · `model:`), tính KHÔNG gọi model — " +
                 "`model:chua-goi` nghĩa là chưa ai hỏi ticket này từ khi bật định tuyến bằng model."),
 
+            ["POST /internal/thu-khoa-model"] = new(NhomConsole,
+                "Khoá model có dùng được không",
+                "Dùng ĐÚNG khoá host đang dùng, gọi đường MIỄN PHÍ của Anthropic (xem một model) — trả lời trước khi tiêu " +
+                "lượt gọi: khoá được nhận chưa, và model mà code ghim có tồn tại không. `hopLe: null` = không thử được " +
+                "(mạng, 5xx) — KHÔNG phải khoá sai. ⚠ KHÔNG kiểm được số dư credit. Không bao giờ trả khoá."),
+
             ["GET /internal/cases/{khoaNguon}/dong-chay"] = new(NhomConsole,
                 "Dòng chảy của một case",
                 "Mọi thứ hệ thống đã làm với case: evidence (rút gọn; bản đủ ở `GET /cases/{khoaNguon}/evidence`), định " +

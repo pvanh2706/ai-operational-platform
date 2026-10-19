@@ -1169,6 +1169,16 @@ app.MapGet("/internal/cases", async (string? tienTo, int? soLuong,
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
+// "Khoá model DÙNG ĐƯỢC không?" — trước khi tiêu một lượt gọi (IM-57). POST chứ không GET: nó ĐI RA MẠNG tới Anthropic
+// (miễn phí, nhưng vẫn là một lượt ra ngoài), và một GET thì trình duyệt, proxy, công cụ quét có quyền tự gọi lại.
+// ⚠ Dựng client từ ĐÚNG chỗ đọc khoá của host (KhoaAnthropic) — thử một khoá khác với khoá host dùng là trả lời sai câu.
+app.MapPost("/internal/thu-khoa-model", async (IConfiguration cfg, CancellationToken ct) =>
+        Results.Ok(await ThuKhoaModel.ThuAsync(
+            KhoaAnthropic.Doc(cfg) is { } khoa ? new Anthropic.AnthropicClient { ApiKey = khoa, MaxRetries = 0 } : null,
+            SopDrafterOptions.ModelMacDinh, ct)))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
 app.MapGet("/internal/cases/{khoaNguon}/dong-chay", async (string khoaNguon,
         KnowledgePlatform.Api.DongChay.DongChayHandler h, CancellationToken ct) =>
         await h.DocAsync(khoaNguon, ct) is { } kq

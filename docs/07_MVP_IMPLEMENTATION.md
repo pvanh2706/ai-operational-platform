@@ -432,6 +432,38 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-57` · Nút "Thử khoá" — biết khoá dùng được không TRƯỚC khi tiêu lượt gọi
+
+**Ngày 2026-10-19.** Chủ dự án đồng ý thêm sau `IM-56` (11 lượt định tuyến hỏng mới biết khoá bị từ chối). Đây là một
+đường ĐI RA MẠNG mới từ host — lý do nó cần một cái gật đầu chứ không tự thêm.
+
+```text
+ThuKhoaModel.ThuAsync          GET /v1/models/{model} bằng ĐÚNG khoá host dùng (KhoaAnthropic) — MIỄN PHÍ, một lượt trả
+                               lời hai câu: khoá được nhận chưa, model code ghim (claude-opus-5) có tồn tại không
+POST /internal/thu-khoa-model  POST chứ không GET: nó đi ra ngoài, và GET thì trình duyệt/proxy/công cụ quét có quyền tự
+                               gọi lại · không có khoá → trả lời ngay, không gọi gì · MaxRetries = 0
+console                        nút trên màn Kết nối + bước 0 trang giả lập; chỉ chạy khi BẤM (không tự gọi lúc mở trang);
+                               khoá bị từ chối → trang giả lập tự chuyển hai bước về File và khoá chế độ API
+✅ 566 test (257 + 43 + 266) · 6 test mới qua SDK THẬT bằng HttpMessageHandler giả + 1 test API (không khoá)
+✅ kiem_dau_cuoi.py 90/0 (mục C2 thêm 3 phép kiểm) · bấm thật trong Edge: "Anthropic TỪ CHỐI khoá", API bị khoá
+```
+
+### Bốn luật, mỗi luật vì một cách nút này có thể nói sai
+
+```text
+1  Gọi ĐƯỜNG MIỄN PHÍ. Test khẳng định đúng MỘT lượt `GET /v1/models/claude-opus-5` — một lần sửa vô tình đổi sang
+   /v1/messages vẫn trả lời đúng câu "khoá hợp lệ không", và tính tiền mỗi lần bấm.
+2  "Hợp lệ" KHÔNG phải "gọi được": đường miễn phí không chạm số dư. Câu trả lời nói thẳng KHÔNG kiểm được credit.
+3  5xx / mất mạng → hopLe: null, lyDo loi-khac — KHÔNG được nói "khoá sai". Kết luận sai về khoá là bắt người ta
+   đi tạo khoá mới cho một sự cố của Anthropic.
+4  Không bao giờ in khoá — test + kiem_dau_cuoi cùng kiểm (không có chuỗi `sk-ant-` nào trong response).
+```
+
+Dùng lại `ModelTuChoiException.Tu` của `IM-56`: nút thử và lượt soạn nháp đọc lỗi Anthropic bằng CÙNG một chỗ, nên
+không thể một bên nói "khoá sai" còn bên kia nói "model không có" cho cùng một phản hồi.
+
+---
+
 ## `IM-56` · Lượt gọi model THẬT đầu tiên — khoá bị từ chối, và soạn nháp từng trả 500
 
 **Ngày 2026-10-19, P12-5.** Chủ dự án cho chạy chế độ API với khoá thật. `DinhTuyen__GoiModel=true` đặt bằng BIẾN MÔI
