@@ -432,6 +432,60 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-54` · Giả lập vào console — bản đồ lô, lượt bấm thật đầu tiên, và hai chỗ chỉ bấm thật mới thấy
+
+**Ngày 2026-10-19, P12-4.** Trang `/gia-lap` HTML (IM-50) chuyển sang `/console/gia-lap`, cùng các nút `/api/gl-*`.
+Trang HTML cũ GIỮ, có biển chỉ sang bản mới — máy chưa build console vẫn dùng được.
+
+```text
+src/views/GiaLap.vue           bước 0–5 như bản HTML; chế độ API/file nhớ trong localStorage
+src/components/BanDoLo.vue     BẢN ĐỒ LÔ: hàng = ticket, cột = 11 ô sơ đồ, tô bằng ĐÚNG tinhSoDo của màn dòng chảy
+                               + chấm nhóm hiệu lực với đáp án bịa; bấm hàng → dòng chảy case đó
+src/components/XuatNapFile.vue chế độ file dùng chung cho định tuyến và soạn nháp (xuất · lệnh gợi ý · nạp)
+gia_lap.py                     gl-trang-thai trả kèm ticket của lô; gl-hoi-lai nhận nhóm + khoá TƯỜNG MINH —
+                               bản cũ dựa vào RAM của phiên, khởi động lại server là "hỏi lại" hỏi cả lô
+✅ vue-tsc sạch · kiem:so-do 12/0 trên 33 case
+```
+
+### ✅ Lượt BẤM THẬT đầu tiên của cả dự án (Edge headless lái qua DevTools Protocol bằng WebSocket có sẵn của Node 22)
+
+```text
+chọn file/file → sinh lô 11 ticket                     bản đồ: A/B/C qua, dừng ở ĐT — đúng lô mới
+xuất định tuyến → AI (agent đóng vai) → nạp             10/11 đúng · 1 sai nhóm (CỐ Ý: 010) · 0 không biết
+tải lại trang                                          lô + chế độ còn nguyên (đọc lại từ server + localStorage)
+xuất soạn nháp nhóm "NCC từ chối payload"               gom 5 case của CẢ HAI lô — luồng ngược gom theo nhóm trên toàn kho
+nạp → duyệt → hỏi lại → xác nhận K1 → khai USED          3 tri thức + quy trình 3 bước ACTIVE · 3/3 biết · K1 → XL
+bản đồ cuối                                            001–006 sáng A → J; 007–010 dừng ở D/H; 011 dừng ở ĐT
+```
+🎯 Một điều bản đồ cho thấy mà không bảng nào cho thấy: ba ticket "Phân quyền" của lô MỚI sáng A → J ngay sau khi
+định tuyến — nhóm đó đã có quy trình + SOP duyệt từ lô trước. Tri thức của lô trước trả lời lô sau.
+
+### 🛑 Hai chỗ chỉ lộ ra khi BẤM THẬT
+
+```text
+1  tinhSoDo tô ô G "tra tri thức" xanh chỉ vì có một lượt /hoi — ticket KHÔNG BIẾT nhóm hiện như đã tra.
+   Tương tự ô I sáng khi thứ được giao đi chỉ là câu KHÔNG BIẾT. → G cần một lượt CÓ nhóm; I cần một gợi ý
+   biết trả lời đã GIAO; còn lại là "dừng". Thêm hai bất biến vào kiem:so-do để nó không quay lại.
+   Thấy được NHỜ bản đồ lô: mười một hàng cạnh nhau, hàng 011 sai khác hẳn những hàng đúng.
+2  🛑 LỖ TIỀM ẨN CỦA SẢN PHẨM (chưa sửa, cần chủ dự án — xem dưới): SopDraftToKnowledge.Map dựng "đường nhận ra"
+   CHỈ từ nhánh của buocKiem, BỎ QUA bangTraMaLoi. Bản nháp định tuyến qua bảng tra (đúng như prompt soạn nháp
+   DẶN: "dùng bangTraMaLoi thay vì nhồi mọi thứ vào nhánh") cho ra 3/3 bản ghi tên
+   "[nhóm · S1] KHÔNG CÓ ĐƯỜNG NHẬN RA — …", không có assertion Recognition nào cho mã lỗi.
+   kp_dev KHÔNG bị (0 bản ghi mồ côi): bản nháp máy sinh thật chép từng dòng bảng sang nhánh. Nên nó cắn hay không
+   là tuỳ MODEL viết bản nháp kiểu nào — và prompt đang đẩy model về phía cắn.
+```
+
+### ⚠ Giới hạn của sơ đồ, nói thẳng
+
+Sơ đồ nói hệ thống ĐÃ LÀM gì, không nói nó làm ĐÚNG không. Một ticket định tuyến SAI vào một nhóm ĐÃ có SOP duyệt
+sẽ sáng A → J. Trong giả lập, cột ✓/✗ (so với đáp án bịa) bắt được chuyện đó; với dữ liệu thật thì không có đáp án
+— chỉ có phản hồi `nhomDung` của người (vòng J ⇢ G).
+
+⚠ **Chưa kiểm:** nhánh API với khoá thật (vẫn 0 lượt gọi model — tiêu tiền là việc của chủ dự án); lệnh gợi ý
+`claude -p` / `codex exec` chạy thật (dùng tài khoản của chủ dự án); console trên app dev 5119 bằng trình duyệt.
+
+---
+
 ## `IM-53` · Ba màn chính của console — sơ đồ tô theo case, danh sách, dòng thời gian
 
 **Ngày 2026-10-19, P12-3.** Sinh từ `docs/18` NHÓM P. Dùng hai đường đọc của `IM-51`; mở bất cứ màn nào cũng KHÔNG

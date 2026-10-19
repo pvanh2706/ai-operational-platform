@@ -7,7 +7,7 @@
 //   tuyến"), nhưng đó là bước có AI — và là bước người ta mở console ra để xem nhất.
 // ⚠ Ô Kênh 2 (A2, K, S6) KHÔNG có ở đây: chúng không thuộc về một case.
 
-import type { DongChayCase, SuKienGoiY } from './kieu'
+import type { DongChayCase } from './kieu'
 
 export type TrangThaiO = 'qua' | 'dung' | 'chua'
 
@@ -49,8 +49,6 @@ export const TEN_TANG: Record<TangDinhTuyen, string> = {
   khac: 'nguồn khác',
 }
 
-const coSuKien = (ds: SuKienGoiY[], nac: SuKienGoiY['nac']) => ds.some((s) => s.nac === nac && s.datDuoc)
-
 export function tinhSoDo(dc: DongChayCase): { o: OSoDo[]; canh: CanhSoDo[] } {
   const dt = dc.dinhTuyen
   const td = dc.quyTrinh.tienDo
@@ -58,6 +56,12 @@ export function tinhSoDo(dc: DongChayCase): { o: OSoDo[]; canh: CanhSoDo[] } {
   const suKien = goiY.flatMap((g) => g.suKien)
 
   const daBiet = goiY.filter((g) => g.bietTraLoi)
+  // ⚠ Một lượt /hoi KHÔNG có nghĩa là đã tra tri thức: không có nhóm thì không có gì để tra. Bản đầu tô G xanh chỉ vì
+  //   có lượt hỏi — ticket KHÔNG BIẾT nhóm hiện như đã đi qua G (thấy được trên bản đồ lô, 2026-10-19).
+  const coNhom = goiY.filter((g) => g.nhom)
+  // Tương tự I: giao đi câu "KHÔNG BIẾT" là một câu trả lời trung thực (E1-1), nhưng không phải một GỢI Ý.
+  const daGiao = goiY.filter((g) => g.suKien.some((s) => s.nac === 'SHOWN' && s.datDuoc))
+  const daGiaoGoiY = daGiao.filter((g) => g.bietTraLoi)
   const loiKhai = suKien.filter((s) => s.nguoiKhai && (s.nac === 'ACCEPTED' || s.nac === 'USED'))
   const soBuocXong = td.buoc.filter((b) => b.daXong).length
 
@@ -92,20 +96,24 @@ export function tinhSoDo(dc: DongChayCase): { o: OSoDo[]; canh: CanhSoDo[] } {
     },
     {
       ma: 'G', ten: 'Tra tri thức', muc: 'goi-y',
-      trangThai: goiY.length ? 'qua' : 'chua',
-      chiTiet: goiY.length ? `${goiY.length} lượt tra${td.coQuyTrinh ? ' theo bước' : ' theo NHÓM (đường lùi)'}` : 'chưa ai hỏi case này',
+      trangThai: coNhom.length ? 'qua' : 'chua',
+      chiTiet: coNhom.length
+        ? `${coNhom.length} lượt tra${td.coQuyTrinh ? ' theo bước' : ' theo NHÓM (đường lùi)'}`
+        : goiY.length ? `${goiY.length} lượt hỏi, nhưng không có nhóm để tra` : 'chưa ai hỏi case này',
     },
     {
       ma: 'H', ten: 'Tri thức + dẫn chứng', muc: 'goi-y',
-      trangThai: daBiet.length ? 'qua' : goiY.length ? 'dung' : 'chua',
+      trangThai: daBiet.length ? 'qua' : coNhom.length ? 'dung' : 'chua',
       chiTiet: daBiet.length
         ? `${daBiet.length}/${goiY.length} lượt biết trả lời`
-        : goiY.at(-1)?.lyDoKhongBiet ?? '—',
+        : coNhom.at(-1)?.lyDoKhongBiet ?? '—',
     },
     {
       ma: 'I', ten: 'Trả gợi ý', muc: 'goi-y',
-      trangThai: coSuKien(suKien, 'SHOWN') ? 'qua' : goiY.length ? 'dung' : 'chua',
-      chiTiet: coSuKien(suKien, 'SHOWN') ? `đã giao qua ${[...new Set(goiY.map((g) => g.kenhRa))].join(', ')}` : '—',
+      trangThai: daGiaoGoiY.length ? 'qua' : daGiao.length ? 'dung' : 'chua',
+      chiTiet: daGiaoGoiY.length
+        ? `đã giao qua ${[...new Set(daGiaoGoiY.map((g) => g.kenhRa))].join(', ')}`
+        : daGiao.length ? 'chỉ giao đi câu KHÔNG BIẾT' : '—',
     },
     {
       ma: 'J', ten: 'Ghi lại — có dùng không', muc: 'goi-y',

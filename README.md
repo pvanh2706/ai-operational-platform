@@ -159,7 +159,8 @@ scripts\giao-dien\run-ui.bat            # → http://127.0.0.1:8791/console
 
 Console đọc app dev (5119) hoặc app giả lập (5120) qua `/app/<cổng>/…` — chọn ở góc phải. Hai màn: **danh sách case**
 (nhóm hiệu lực + nguồn) và **dòng chảy một case** (sơ đồ luồng tô theo case, dòng thời gian, định tuyến, quy trình,
-gợi ý). Mở màn nào cũng KHÔNG gọi model. Chi tiết: `docs/07` §3 `IM-52`, `IM-53`.
+gợi ý). Màn **giả lập** (`/console/gia-lap`) chạy hai luồng trên dữ liệu bịa, kèm bản đồ lô tô từng ticket theo
+sơ đồ. Mở màn nào cũng KHÔNG gọi model — chỉ nút có chữ API mới gọi. Chi tiết: `docs/07` §3 `IM-52`…`IM-54`.
 
 ### Giả lập hai luồng bằng dữ liệu bịa (2026-10-19, `docs/18` nhóm O)
 

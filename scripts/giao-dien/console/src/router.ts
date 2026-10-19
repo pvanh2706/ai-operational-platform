@@ -11,6 +11,6 @@ export const router = createRouter({
     // Khoá nguồn chứa `:` `/` `#` — vue-router mã hoá param, và ui_server không giải mã đường /console/.
     { path: '/case/:khoa', name: 'case', component: () => import('./views/DongChay.vue') },
     { path: '/ket-noi', name: 'ket-noi', component: KetNoi },
-    // Bước 4 (P12-4): giả lập.
+    { path: '/gia-lap', name: 'gia-lap', component: () => import('./views/GiaLap.vue') },
   ],
 })

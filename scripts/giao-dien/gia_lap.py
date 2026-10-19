@@ -255,6 +255,9 @@ class GiaLapApi:
             "cauHinh": hai_muc_cau_hinh(ra),
             "nhomDungLech": sai_tax,
             "lo": GL["lo"]["lo"] if GL["lo"] else None,
+            # Console (P12-4) dựng lại bảng lô sau khi tải lại trang mà không phải sinh lô mới.
+            "tienTo": GL["lo"]["tienTo"] if GL["lo"] else None,
+            "ticket": [{"khoa": k, **v} for k, v in GL["lo"]["dapAn"].items()] if GL["lo"] else [],
         })
 
     def api_gl_sinh(self, t: dict) -> None:
@@ -409,8 +412,10 @@ class GiaLapApi:
     # -------- đóng vòng: hỏi lại, xác nhận bước, phản hồi
 
     def api_gl_hoi_lai(self, t: dict) -> None:
-        nhom = GL.get("nhom")
-        khoa = [k for k, v in GL["dinhTuyen"].items() if v.get("nhom") == nhom] if nhom else None
+        # Console gửi nhóm + khoá TƯỜNG MINH (nó đọc nhóm hiệu lực từ host); trang HTML cũ dựa vào RAM của phiên —
+        # khởi động lại server là mất, và "hỏi lại" lặng lẽ hỏi cả lô thay vì một nhóm.
+        nhom = (t.get("nhom") or "").strip() or GL.get("nhom")
+        khoa = t.get("khoa") or ([k for k, v in GL["dinhTuyen"].items() if v.get("nhom") == nhom] if nhom else None)
         dong = hoi_ca_lo(khoa)
         self._tra(200, {"ok": True, "nhom": nhom, "dong": dong})
 

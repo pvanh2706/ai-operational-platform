@@ -313,7 +313,9 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >           scripts/giao-dien/console · build-console.bat · Edge headless render đúng · IM-52
 >    P12-3  màn Sơ đồ luồng (Vue Flow, ô A–J của README, tô sáng theo case) · Danh sách case · Dòng thời gian  ✅ 2026-10-19
 >           thêm ô ĐT (định tuyến) giữa C và D · npm run kiem:so-do 10/0 · IM-53
->    P12-4  chuyển trang giả lập (/gia-lap) sang console — trang HTML cũ giữ tới khi bản Vue chạy thật
+>    P12-4  chuyển trang giả lập (/gia-lap) sang console — trang HTML cũ giữ tới khi bản Vue chạy thật  ✅ 2026-10-19
+>           + BẢN ĐỒ LÔ · lượt BẤM THẬT đầu tiên (Edge qua DevTools) đi hết vòng · IM-54
+>           🛑 lộ ra: SopDraftToKnowledge bỏ qua bangTraMaLoi → bản ghi "KHÔNG CÓ ĐƯỜNG NHẬN RA" — chờ chủ dự án
 >    P12-5  chạy thật + tài liệu
 > ```
 
