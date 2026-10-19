@@ -35,6 +35,8 @@ NHÓM J  cách làm việc                 ✅ 2/2 CHỐT 2026-09-16
                                       ✅ 20/20 — điền xong trong MỘT phiên
 NHÓM N  hoàn thiện sơ đồ luồng        ✅ 4/7 CHỐT 2026-10-10   · 3 câu PROPOSED chờ chủ dự án
         (thêm 2026-10-10, sinh từ việc MỞ LẠI I1)
+NHÓM O  giả lập 2 luồng + 2 cách gán AI ✅ 6/6 CHỐT 2026-10-19   · O5 sinh ra lúc đọc code
+        (thêm 2026-10-19, từ câu hỏi "đã hoàn thiện chưa / test bằng dữ liệu giả")
 ```
 
 🛑 **20/20 KHÔNG nghĩa là hết chặn.** Ba thứ còn chặn và **không thứ nào gỡ được bằng một
@@ -546,3 +548,82 @@ trong host, không đọc PDF/ảnh. `N4-1` làm đủ phần đạt được kh
 
 ⚠ Model dùng lại đúng hằng số của bộ soạn nháp (`AR3`). Đổi sang model rẻ hơn cho việc phân loại là
 câu `AGENT.md` §10.1 — agent không tự chọn.
+
+---
+
+# NHÓM O — giả lập hai luồng + hai cách gán AI · ✅ 6/6 CHỐT 2026-10-19
+
+Sinh từ câu hỏi của chủ dự án ngày 2026-10-19: *"hệ thống đã hoàn thiện chưa? mình muốn test 2 luồng tín
+hiệu bằng dữ liệu giả lập; phần gán token có hai lựa chọn — có API token thì cấu hình và dùng; không có thì
+xuất prompt ra file để Claude/Codex đọc, trả kết quả, rồi import lại"*. Chọn qua form, sáu câu, hai lượt.
+
+**Hiện trạng đọc được TRƯỚC khi hỏi** (để người đọc sau thấy câu hỏi đứng trên cái gì):
+```text
+cách 1 (API)   ĐÃ CÓ: KhoaAnthropic đọc Anthropic:ApiKey / ANTHROPIC_API_KEY; soạn nháp gọi model khi
+               có khoá; định tuyến gọi model khi có khoá + DinhTuyen:GoiModel=true (N7-1).
+               🛑 BẪY: appsettings.Local.json ở gốc repo CHỈ tools/SoanNhapRunner đọc. Host KHÔNG nạp
+                  file đó — khoá chủ dự án đặt sẵn ở đó vô hình với `dotnet run`.
+cách 2 (file)  ĐÃ CÓ dạng lệnh rời: --xuat-dinh-tuyen/--nap-dinh-tuyen (IM-45) · --xuat-soan-nhap +
+               POST /knowledge/sop-draft (IM-46) · giao diện scripts/giao-dien (riêng cho Jira).
+               Chưa có công tắc chọn chế độ; prompt viết cho "dán vào khung chat".
+```
+
+## O1 · "2 luồng tín hiệu" là hai luồng nào?
+
+- [x] **O1-1 — Xuôi + ngược.** (đề xuất) Xuôi: tín hiệu → case → định tuyến (AI) → quy trình/bước → gợi ý
+      → phản hồi. Ngược: gom case một nhóm → AI soạn nháp SOP → duyệt → `/hoi` trả lời. Cả hai đều chạm AI.
+- [ ] **O1-2 — Kênh 1 + Kênh 2.** Kênh 2 không gọi AI (`S6`).
+- [ ] **O1-3 — Cả ba.**
+
+## O2 · Cách 1 — khoá API cấu hình ở đâu để host đọc được?
+
+- [x] **O2-1 — Host đọc thêm `appsettings.Local.json` ở gốc repo** (đề xuất), biến môi trường vẫn thắng.
+- [ ] **O2-2 — Chỉ biến môi trường**, không sửa code.
+- [ ] **O2-3 — Màn hình nhập khoá trên giao diện.**
+
+⚠ **`O2-1` đổi một câu cũ trong code:** chú thích của `KhoaAnthropic` ghi *"Khoá vẫn KHÔNG đi qua
+appsettings hay log"*. Lập luận gốc là **file được git theo dõi** (`appsettings.Development.json`) —
+không phải mọi file JSON. `appsettings.Local.json` đã nằm trong `.gitignore` từ trước và `SoanNhapRunner`
+đã đọc nó kèm cổng `git check-ignore`. Host chép đúng cổng đó: git không chặn file → KHÔNG đọc. Và chỉ đọc
+ở môi trường `Development` — bản deploy thật vẫn lấy khoá từ biến môi trường như cũ.
+
+## O3 · API token hỗ trợ nhà cung cấp nào?
+
+- [x] **O3-1 — Chỉ Anthropic.** (đề xuất) SDK đã có trong host. Codex vẫn dùng được qua cách 2 (file).
+- [ ] **O3-2 — Anthropic + OpenAI** (thư viện mới — `AGENT.md` §10.1).
+
+## O4 · Cách 2 — xuất/nạp file điều khiển thế nào?
+
+- [ ] **O4-1 — Script giả lập có cờ `--ai api|file`.** (đề xuất)
+- [x] **O4-2 — Thêm vào giao diện web** (`scripts/giao-dien`).
+- [ ] **O4-3 — Chỉ hướng dẫn lệnh có sẵn.**
+
+✅ **Lượt thứ hai chủ dự án KHÔNG chọn ô `(đề xuất)`** (lượt đầu là `H1`). Hệ quả: giả lập là một TRANG của
+giao diện chạy local, không phải một script dòng lệnh — người vận hành nhìn thấy từng bước, chép prompt,
+dán kết quả, trên cùng một màn hình với vòng quét Jira đã có.
+
+## O5 · Chế độ API: case do MODEL định tuyến có được gom vào luồng ngược không?
+
+Câu này **sinh ra lúc đọc code**, không có trong câu hỏi gốc. Model định tuyến xong thì kết quả nằm ở
+`LuotDinhTuyenModel` (biên lai); còn `SoanNhapHandler.GomAsync` chỉ gom từ `DinhTuyenDaNap` (kho NGƯỜI
+nạp). Tức là chạy toàn API thì ticket được model xếp đúng nhóm, nhưng soạn nháp trả `nhom-khong-co-case`.
+
+- [x] **O5-1 — Có, nếu qua ngưỡng.** (đề xuất) Gom thêm case có kết quả model **qua ngưỡng tin cậy + có
+      trong taxonomy**, khi người CHƯA nạp đè. Đúng câu trả lời mà `/hoi` đang dùng cho case đó. Kết quả
+      soạn nháp nói rõ bao nhiêu case đến từ model.
+- [ ] **O5-2 — Không, chỉ người nạp.**
+- [ ] **O5-3 — Nút định tuyến hàng loạt** ghi vào kho người-nạp với nguồn `model`.
+
+⚠ **Rủi ro mang theo, không biến mất vì đã chọn:** ngưỡng 0,9 vẫn **CHƯA ĐO** (`N7-1`). `O5-1` cho phép
+một nhãn chưa kiểm chứng của model đi thêm một bước — vào vật liệu soạn SOP. Lớp chặn còn lại là người
+duyệt bản nháp (`S7`/`AR-n`). Người nạp vẫn thắng model, như thứ tự tra của `DinhTuyenKho`.
+
+## O6 · Dữ liệu giả lập đặt ở đâu?
+
+- [x] **O6-1 — Database riêng `kp_gialap`**, khách hàng `gia-lap`, app thứ hai ở cổng 5120. (đề xuất)
+- [ ] **O6-2 — `kp_dev`, mã `gialap:`.**
+
+🛑 **Vì sao không dùng `kp_dev` dù tiện hơn:** host chỉ đọc MỘT taxonomy (19 nhóm hoá đơn thật), nên ticket
+giả buộc phải rơi vào nhóm THẬT. Duyệt một quy trình giả cho nhóm X sẽ đẩy quy trình đang ACTIVE của nhóm X
+trong `kp_dev` sang DEPRECATED (`N6-1`), và SOP giả sẽ trả lời `/hoi` cho ticket fixture thật cùng nhóm.
+Không crash, không đỏ test nào — đúng loại hỏng im lặng dự án này dựng ra để chặn.

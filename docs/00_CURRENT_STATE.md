@@ -299,6 +299,21 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> 🔄 **GIẢ LẬP HAI LUỒNG + HAI CÁCH GÁN AI — chốt 2026-10-19.** Quyết định: `docs/18` NHÓM O (6/6).
+> Câu hỏi gốc: *"đã hoàn thiện chưa — test 2 luồng bằng dữ liệu giả; có API token thì dùng, không có thì
+> xuất prompt ra file cho Claude/Codex rồi nạp lại"*. Trả lời ngắn: **cả hai cách ĐÃ có trong code**, nhưng
+> (1) host không đọc `appsettings.Local.json` nên khoá đặt ở đó vô hình, (2) ở chế độ API hai luồng KHÔNG
+> nối nhau — soạn nháp chỉ gom case NGƯỜI nạp, không gom case MODEL định tuyến (`O5`).
+> ```text
+>    P11-0  ghi quyết định (docs/18 O, file này)                                  ✅ 2026-10-19
+>    P11-1  host đọc appsettings.Local.json (chỉ Development, có cổng git) — O2-1
+>    P11-2  luồng ngược gom cả case model định tuyến qua ngưỡng — O5-1
+>    P11-3  --xuat-dinh-tuyen lọc theo tiền tố khoá nguồn (không trộn ticket cũ)
+>    P11-4  database kp_gialap + khách gia-lap + app thứ hai ở cổng 5120 — O6-1
+>    P11-5  trang giả lập trên giao diện: chọn API/file, chạy xuôi + ngược — O4-2
+>    P11-6  chạy thật đầu-cuối ở chế độ file; ghi lại cái gì CHƯA kiểm được
+> ```
+
 > 🔄 **HOÀN THIỆN MỌI Ô CỦA SƠ ĐỒ LUỒNG TÍN HIỆU — chốt 2026-10-10, MỞ LẠI `I1`.** Quyết định:
 > `docs/18` NHÓM N · lý do: `07` §5 `AR-s` · kỹ thuật: `07` §3 `IM-49`. Trước đó sơ đồ README có
 > 4 ô đủ, 5 ô một phần, và **D E F J không có dòng code nào**.
