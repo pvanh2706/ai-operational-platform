@@ -1,0 +1,24 @@
+{
+  "name": "kp-console",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Console NỘI BỘ để nhìn luồng chạy (docs/18 nhóm P). Build tĩnh, ui_server.py phục vụ ở /console.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "kiem": "vue-tsc --noEmit",
+    "build": "vue-tsc --noEmit && vite build"
+  },
+  "dependencies": {
+    "@vue-flow/core": "1.48.2",
+    "pinia": "4.0.3",
+    "vue": "3.5.43",
+    "vue-router": "5.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.9",
+    "typescript": "5.9.3",
+    "vite": "8.3.2",
+    "vue-tsc": "3.3.12"
+  }
+}

@@ -1,0 +1,27 @@
+/* Token màu MỘT chỗ — cùng bảng với scripts/giao-dien/index.html để hai công cụ trông như một. */
+:root {
+  --nen: #f6f7f9; --the: #fff; --vien: #dfe3e8; --chu: #1c2024; --mo: #667085;
+  --xanh: #1a7f5a; --do: #b42318; --vang: #b54708; --lam: #1d4ed8;
+  --xanh-nhat: #eaf6f1; --do-nhat: #fef3f2; --vang-nhat: #fffaeb; --lam-nhat: #eff4ff;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--nen); color: var(--chu);
+  font: 15px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+a { color: var(--lam); }
+code { font-size: 12.5px; background: #f0f2f5; padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+button {
+  background: var(--chu); color: #fff; border: 0; border-radius: 6px; padding: 8px 14px;
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+button.phu { background: #fff; color: var(--chu); border: 1px solid var(--vien); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.the { background: var(--the); border: 1px solid var(--vien); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+.the h2 { font-size: 16px; margin: 0 0 10px; }
+.mo { color: var(--mo); font-size: 13px; }
+.bao { border-radius: 6px; padding: 10px 14px; font-size: 14px; margin-top: 10px; }
+.bao.ok { background: var(--xanh-nhat); border: 1px solid #a6e0c8; color: #0b5c40; }
+.bao.loi { background: var(--do-nhat); border: 1px solid #fecdc9; color: var(--do); }
+.bao.chu-y { background: var(--vang-nhat); border: 1px solid #fedf89; color: var(--vang); }

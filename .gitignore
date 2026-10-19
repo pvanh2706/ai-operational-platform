@@ -58,5 +58,10 @@ __pycache__/
 # lệnh --xuat-* của app HỎI GIT trước khi ghi (KiemChoGhi) — không chặn ở đây thì nút xuất chết.
 scripts/giao-dien/gia-lap-io/
 
+# Console Vue (docs/18 nhóm P): phụ thuộc + bản build sinh lại được bằng build-console.bat.
+# package-lock.json THÌ ĐƯỢC theo dõi — nó là thứ ghim đúng phiên bản đã chọn.
+scripts/giao-dien/console/node_modules/
+scripts/giao-dien/console/dist/
+
 # Bản chép ra từ scripts/chay-windows.example.ps1 — chứa mật khẩu database thật.
 scripts/chay-windows.ps1

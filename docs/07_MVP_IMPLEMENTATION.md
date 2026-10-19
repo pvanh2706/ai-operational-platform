@@ -432,6 +432,53 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-52` · Khung console Vue — và đường ống đi qua một trình duyệt thật
+
+**Ngày 2026-10-19, P12-2.** Sinh từ `docs/18` NHÓM P (`P1-1`, `P3-1`, `P4`). Bước này dựng ĐƯỜNG ỐNG, chưa dựng màn:
+trình duyệt → `ui_server.py` → host, với cả hai đường đọc của `IM-51`.
+
+```text
+scripts/giao-dien/console/         dự án Vue 3 + Vite + TS · Pinia · Vue Router · Vue Flow (chưa dùng tới — bước 3)
+  src/kieu.ts                       hình dạng response, CHÉP từ record C# (DongChayHandler, TienDoQuyTrinh)
+  src/api.ts                        mọi lời gọi đi /app/<cổng>/… — không gọi thẳng host
+  src/stores/ketNoi.ts              chọn app 5119 (dev) / 5120 (giả lập), nhớ trong localStorage (có try/catch)
+  src/views/KetNoi.vue              màn duy nhất của bước này: sống chưa · bao nhiêu thao tác · 10 case gần nhất
+scripts/giao-dien/console_web.py   /console tĩnh (SPA fallback) + /app/<cổng>/… chuyển tiếp GET/POST/PUT
+scripts/giao-dien/build-console.bat   npm ci + npm run build
+✅ vue-tsc sạch · build 98 kB JS (38 kB gzip) · Edge headless render đúng 10 case từ kp_gialap
+✅ npm run dev (5173) chuyển /app và /api sang ui_server — cùng một gốc như bản build
+```
+
+### Phiên bản ghim, và vì sao không lấy bản mới nhất
+
+```text
+vue 3.5.43 · vite 8.3.2 · @vitejs/plugin-vue 6.0.9 · vue-tsc 3.3.12 · @vue-flow/core 1.48.2
+vue-router 5.3.1 · pinia 4.0.3 · typescript 5.9.3          (package.json ghim CHÍNH XÁC, package-lock được theo dõi)
+```
+· Mỗi gói lấy bản mới nhất đã phát hành TRƯỚC 2026-10-05 (≥ 2 tuần) — bản vừa ra là bản chưa ai kịp vấp.
+· **TypeScript 5.9.3, không phải 7.0.2**: `vue-tsc` khai `typescript >=5.0`, nhưng 7 là bản viết lại (native) và
+  semver không nói gì về việc `vue-tsc` có dùng được API của nó. Dòng 5.x là dòng `vue-tsc` được dùng nhiều nhất.
+
+### Bốn luật của `console_web.py`, mỗi luật vì một chuyện cụ thể
+
+```text
+1  Proxy CHỈ tới 127.0.0.1 và CHỈ các cổng trong KP_CONSOLE_CONG (mặc định 5119,5120) — 9999 → 403.
+   Không có cách nào đưa một địa chỉ tuỳ ý vào URL: proxy mở là một lỗ.
+2  Chỉ chuyển Authorization + Content-Type + Accept. Lỗi của host đi về NGUYÊN TRẠNG (404 ProblemDetails đã kiểm);
+   app chưa chạy → 502 kèm lý do, không phải trang treo.
+3  Không cho ra khỏi dist/: `/console/../../../appsettings.Local.json` → 404 (đã thử bằng curl --path-as-is) —
+   đó đúng là file chứa khoá API.
+4  Kiểu MIME GHIM tay. Windows lấy MIME từ registry, và trên không ít máy `.js` ra text/plain — trình duyệt từ chối
+   chạy module script có kiểu sai, và trang trắng không báo gì. File tài nguyên thiếu → 404 thật, không trả
+   index.html (trả index cho một .js thiếu là biến "thiếu file" thành lỗi cú pháp khó hiểu).
+```
+
+⚠ `src/kieu.ts` CHÉP hình dạng từ C# — đổi record bên đó mà quên bên này thì `vue-tsc` KHÔNG bắt được. Bắt được là
+lượt chạy thật. Sinh kiểu từ `/openapi/v1.json` là đường đúng hơn, nhưng cần thêm một thư viện (`AGENT.md` §10.1)
+— chưa làm, ghi ra để phân biệt "đã cân nhắc" với "bỏ sót".
+
+---
+
 ## `IM-51` · Hai đường đọc cho console — và một đường "CHỈ ĐỌC" có sẵn đang tiêu tiền
 
 **Ngày 2026-10-19, P12-1.** Sinh từ `docs/18` NHÓM P (`P2-1`). Bước đầu của console Vue: host phải có dữ liệu

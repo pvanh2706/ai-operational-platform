@@ -147,6 +147,18 @@ vẫn nằm ở `docs/13`, không nằm ở đây. Đầy đủ: [`docs/07`](doc
 Cái thứ ba là cái đáng xem. Nó đếm bằng **SQL thô cố ý không có điều kiện tenant** —
 nếu con số nhỏ hơn tổng số dòng thật trong bảng, nghĩa là database đang chặn hộ.
 
+### Console nội bộ (Vue 3, 2026-10-19, `docs/18` nhóm P)
+
+Công cụ NỘI BỘ để nhìn luồng chạy và kết quả — không phải widget sản phẩm. Build tĩnh, `ui_server.py` phục vụ.
+
+```bash
+scripts\giao-dien\build-console.bat     # cần Node 22 — chỉ lúc build
+scripts\giao-dien\run-ui.bat            # → http://127.0.0.1:8791/console
+# Phát triển: cd scripts/giao-dien/console && npm run dev   (→ 127.0.0.1:5173/console, vẫn cần run-ui.bat chạy)
+```
+
+Console đọc app dev (5119) hoặc app giả lập (5120) qua `/app/<cổng>/…` — chọn ở góc phải. Chi tiết: `docs/07` §3 `IM-52`.
+
 ### Giả lập hai luồng bằng dữ liệu bịa (2026-10-19, `docs/18` nhóm O)
 
 Đi hết **luồng xuôi** (tín hiệu → định tuyến → bước hiện tại → gợi ý → phản hồi) và **luồng ngược** (gom case

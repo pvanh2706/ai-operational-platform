@@ -309,7 +309,8 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >    P12-0  ghi quyết định (docs/18 P, file này)                                   ✅ 2026-10-19
 >    P12-1  host: GET /internal/cases?tienTo= · GET /internal/cases/{k}/dong-chay   ✅ 2026-10-19
 >           + test + OpenAPI + kiem_dau_cuoi mục C2 — 548 test · 87/0 · IM-51
->    P12-2  dựng dự án Vue (Vite + TS), ui_server phục vụ bản build + chuyển tiếp /app/* sang app
+>    P12-2  dựng dự án Vue (Vite + TS), ui_server phục vụ bản build + chuyển tiếp /app/* sang app  ✅ 2026-10-19
+>           scripts/giao-dien/console · build-console.bat · Edge headless render đúng · IM-52
 >    P12-3  màn Sơ đồ luồng (Vue Flow, ô A–J của README, tô sáng theo case) · Danh sách case · Dòng thời gian
 >    P12-4  chuyển trang giả lập (/gia-lap) sang console — trang HTML cũ giữ tới khi bản Vue chạy thật
 >    P12-5  chạy thật + tài liệu

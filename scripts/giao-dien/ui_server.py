@@ -41,6 +41,7 @@ sys.path.insert(0, JIRA_DIR)
 
 import export_jira_to_channel1 as X  # noqa: E402
 import gia_lap  # noqa: E402 — trang giả lập hai luồng (O4-2), cùng server, đường /gia-lap
+import console_web  # noqa: E402 — console Vue (P3-1): /console tĩnh + /app/<cổng>/... chuyển tiếp sang host
 
 # 🛑 CHỈ loopback. Đổi thành "" hay "0.0.0.0" là phơi dữ liệu khách ra cả LAN.
 DIA_CHI = "127.0.0.1"
@@ -479,6 +480,13 @@ class Handler(gia_lap.GiaLapApi, http.server.BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         duong = urllib.parse.urlparse(self.path).path
 
+        if console_web.la_duong_console(duong):
+            console_web.phuc_vu_console(self, duong)
+            return
+        if console_web.la_duong_app(duong):
+            console_web.chuyen_tiep(self, "GET")
+            return
+
         trang = {"/": "index.html", "/index.html": "index.html", "/gia-lap": "gia-lap.html"}.get(duong)
         if trang:
             with open(os.path.join(HERE, trang), "rb") as f:
@@ -508,8 +516,18 @@ class Handler(gia_lap.GiaLapApi, http.server.BaseHTTPRequestHandler):
 
     # -- POST --
 
+    def do_PUT(self):  # noqa: N802
+        if console_web.la_duong_app(urllib.parse.urlparse(self.path).path):
+            console_web.chuyen_tiep(self, "PUT")
+            return
+        self.send_error(404)
+
     def do_POST(self):  # noqa: N802
         duong = urllib.parse.urlparse(self.path).path
+        # Trước khi đọc thân: thân của đường chuyển tiếp đi nguyên byte sang host, không qua json.loads ở đây.
+        if console_web.la_duong_app(duong):
+            console_web.chuyen_tiep(self, "POST")
+            return
         try:
             than = self._doc()
         except Exception as ex:  # noqa: BLE001
@@ -809,7 +827,7 @@ class Handler(gia_lap.GiaLapApi, http.server.BaseHTTPRequestHandler):
 def main() -> int:
     srv = http.server.ThreadingHTTPServer((DIA_CHI, CONG), Handler)
     dia = f"http://{DIA_CHI}:{CONG}"
-    print(f"Giao diện chạy ở {dia}")
+    print(f"Giao diện chạy ở {dia}  ·  console Vue: {dia}/console")
     print("⚠ Trang này hiện dữ liệu khách thật. Chỉ nghe trên loopback; Ctrl+C để tắt.")
     if CONG_CHE_TAT_TAM:
         print("🛑 KP_CONG_CHE_TAT_TAM=1 — cổng credential CHỈ BÁO, KHÔNG CHẶN (N1-2). "
