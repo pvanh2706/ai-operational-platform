@@ -432,6 +432,50 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-56` · Lượt gọi model THẬT đầu tiên — khoá bị từ chối, và soạn nháp từng trả 500
+
+**Ngày 2026-10-19, P12-5.** Chủ dự án cho chạy chế độ API với khoá thật. `DinhTuyen__GoiModel=true` đặt bằng BIẾN MÔI
+TRƯỜNG cho riêng lượt chạy (env thắng file — `O2-1`), KHÔNG sửa `appsettings.Local.json` của chủ dự án. Bấm thật trên
+`/console/gia-lap`, chế độ API cho cả hai bước.
+
+```text
+sinh lô 11 ticket mới                     bản đồ: dừng ở ĐT, nguồn "model chưa hỏi" — mở trang KHÔNG gọi model ✓
+định tuyến cả lô bằng API                 11 lượt gọi claude-opus-5 → 11/11 HỎNG: 401 authentication_error
+                                          "invalid x-api-key" · 0 crash · mỗi ticket KHÔNG BIẾT + biên lai ghi lỗi ✓
+soạn nháp bằng API (gọi thẳng)            🛑 HTTP 500 kèm nguyên stack trace của SDK  → ĐÃ SỬA → 409 khoa-bi-tu-choi
+```
+
+### Khoá: kiểm được gì mà KHÔNG in giá trị
+
+```text
+nguồn       CHỈ appsettings.Local.json — không ANTHROPIC_API_KEY / Anthropic__ApiKey ở Process, User hay Machine
+hình dạng   108 ký tự · tiền tố sk-ant-api03- · không ký tự lạ · không khoảng trắng · không phải giá trị mẫu
+kết luận    lời gọi tới Anthropic với ĐÚNG khoá trong file, và Anthropic nói khoá đó không hợp lệ (thu hồi / vô hiệu /
+            chép thiếu). KHÔNG phải hết credit — hết credit là 400 "credit balance", khác mã.
+```
+→ **Chặn bởi chủ dự án, không bởi code**: cần một khoá hợp lệ. Định tuyến bằng model vẫn **0 lượt THÀNH CÔNG**.
+
+### Sửa: lỗi CẤU HÌNH của model → 409 có tên, cùng khuôn `chua-co-credit` (`IM-46`)
+
+```text
+ModelTuChoiException   401/403 → khoa-bi-tu-choi · 404 → model-khong-ton-tai · 400 "credit balance" → het-credit
+                       lỗi KHÁC (400 request hỏng, 429, 5xx, mất mạng) ném NGUYÊN — chúng cần thử lại/sửa request,
+                       gộp vào đây là nói sai việc phải làm
+AnthropicSopDrafter    đổi lỗi ngay quanh Messages.Create · SoanNhapHandler → 409 + lyDo + biên lai ghi lý do
+✅ 559 test (257 + 37 + 265) · 5 test mới: 4 đi qua SDK THẬT bằng HttpMessageHandler trả đúng thân lỗi của Anthropic
+   (không mạng, không tiền); đột biến bỏ khối catch → 3 đỏ. Một test khẳng định thông điệp KHÔNG chứa khoá.
+✅ chạy lại trên app thật với khoá thật: 409 "Anthropic từ chối khoá", không stack trace
+```
+
+⚠ Vì sao chỉ có lượt gọi thật mới thấy: mọi test cũ dùng drafter GIẢ (`SopDrafterGia`) hoặc bản không-khoá
+(`SopDrafterChuaCoCredit`). Không bản nào ném đúng exception của SDK — nên nhánh "SDK ném lỗi xác thực" chưa từng chạy.
+
+⚠ **Chưa làm, gợi ý:** trang giả lập chỉ biết khoá CÓ hay KHÔNG, không biết khoá DÙNG ĐƯỢC không — phải tốn một lượt
+hỏng mới biết. Một nút "thử khoá" (gọi đường không tính tiền của Anthropic) sẽ nói trước, nhưng nó là một đường ra mạng
+mới từ host — chưa tự thêm.
+
+---
+
 ## `IM-55` · Một dòng bảng tra mã lỗi là một cách nhận ra — và bản nháp thật cũng đã thiếu
 
 **Ngày 2026-10-19.** `docs/18` `P6-1`, sinh từ lượt bấm thật của `IM-54`. `SopDraftToKnowledge.Map` dựng đường nhận ra

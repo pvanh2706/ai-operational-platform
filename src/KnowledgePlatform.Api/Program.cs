@@ -571,6 +571,9 @@ app.MapPost("/knowledge/soan-nhap", async (
                 title: kq.LyDo switch
                 {
                     "chua-co-credit" => "Chưa gọi model được",
+                    "khoa-bi-tu-choi" => "Anthropic từ chối khoá",
+                    "model-khong-ton-tai" => "Anthropic không có model này",
+                    "het-credit" => "Tài khoản Anthropic hết credit",
                     "vuot-tran-thang" => "Đã chạm trần tháng",
                     "nhom-khong-co-case" => "Nhóm chưa có case nào",
                     _ => "Không soạn nháp được",

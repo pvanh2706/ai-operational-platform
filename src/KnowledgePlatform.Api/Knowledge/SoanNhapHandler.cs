@@ -25,7 +25,8 @@ public sealed class SoanNhapOptions
 }
 
 /// <param name="LyDo">
-/// <c>chua-co-credit</c> · <c>vuot-tran-thang</c> · <c>nhom-khong-co-case</c> ·
+/// <c>chua-co-credit</c> · <c>khoa-bi-tu-choi</c> · <c>model-khong-ton-tai</c> · <c>het-credit</c> ·
+/// <c>vuot-tran-thang</c> · <c>nhom-khong-co-case</c> ·
 /// <c>cong-che-chan</c> — mỗi lý do đòi một việc khác nhau, nên đừng gộp vào một nhánh.
 /// </param>
 public sealed record KetQuaSoanNhap(
@@ -221,6 +222,16 @@ public sealed class SoanNhapHandler(
             await db.SaveChangesAsync(ct);
 
             return new KetQuaSoanNhap(false, "chua-co-credit", e.Message,
+                yeuCau.Cases.Count, prompt.RedactedCount, null, gom.SoCaseTuModel);
+        }
+        catch (ModelTuChoiException e)
+        {
+            // Khoá sai / model không có / hết credit (2026-10-19): cùng khuôn chưa-có-credit — 409 + lý do + việc phải
+            // làm, KHÔNG 500 kèm stack trace. Biên lai ghi lý do, nên trần tháng vẫn đếm lượt này.
+            luot.Loi = e.LyDo;
+            await db.SaveChangesAsync(ct);
+
+            return new KetQuaSoanNhap(false, e.LyDo, e.Message,
                 yeuCau.Cases.Count, prompt.RedactedCount, null, gom.SoCaseTuModel);
         }
         catch (Exception e)

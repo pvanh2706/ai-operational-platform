@@ -134,7 +134,8 @@ public static partial class OpenApiMoTa
                 "⚠ `nguoiYeuCau` là LỜI KHAI, không phải phép xác thực: sản phẩm biết request " +
                 "thuộc công ty nào, chưa biết người nào. " +
                 "🛑 Chưa cấu hình khoá model thì trả 409 kèm `lyDo: chua-co-credit` và ba bước " +
-                "của vòng thay thế — KHÔNG hỏng im lặng, KHÔNG trả bản nháp rỗng."),
+                "của vòng thay thế — KHÔNG hỏng im lặng, KHÔNG trả bản nháp rỗng. Anthropic từ chối vì CẤU HÌNH " +
+                "cũng là 409, không phải 500: `khoa-bi-tu-choi` (401/403) · `model-khong-ton-tai` (404) · `het-credit`."),
 
             ["POST /knowledge/{id}/approve"] = new(NhomTriThuc,
                 "Duyệt — nội dung và quyền xem trong MỘT hành động",

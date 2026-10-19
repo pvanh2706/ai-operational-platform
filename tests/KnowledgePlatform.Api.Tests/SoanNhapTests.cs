@@ -201,6 +201,28 @@ public sealed class SoanNhapTests(ApiDatabaseFixture db) : IClassFixture<ApiData
         Assert.Equal(1, _drafter.SoLanGoi);
     }
 
+    /// <summary>
+    /// 🛑 Lượt gọi THẬT đầu tiên (2026-10-19): khoá bị Anthropic từ chối → endpoint từng trả 500 kèm stack trace.
+    /// Giờ là 409 + lý do + việc phải làm, cùng khuôn chưa-có-credit; và biên lai ghi lại lý do.
+    /// </summary>
+    [Fact]
+    public async Task Khoa_bi_tu_choi_thi_409_kem_ly_do_khong_phai_500()
+    {
+        var (app, tenantId) = await MoiKhachAsync(coDrafter: true);
+        using var _ = app;
+        var c = app.CreateClient();
+        var nhom = await DungNhomAsync(app, tenantId, c);
+        _drafter.Dung = _ => throw new ModelTuChoiException(ModelTuChoiException.KhoaBiTuChoi, "Anthropic TỪ CHỐI khoá", new Exception("401"));
+
+        var res = await c.PostAsJsonAsync("/knowledge/soan-nhap", new { nhom, nguoiYeuCau = "chị Lan" });
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        Assert.Contains("khoa-bi-tu-choi", await res.Content.ReadAsStringAsync());
+
+        await using var ctx = db.OpenContext(tenantId);
+        Assert.Equal("khoa-bi-tu-choi", (await ctx.Set<LuotSoanNhap>().SingleAsync(x => x.Nhom == nhom)).Loi);
+    }
+
     [Fact]
     public async Task Nhom_chua_co_case_nao_thi_noi_ra_chu_khong_goi_model()
     {

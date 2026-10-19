@@ -317,7 +317,10 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >           + BẢN ĐỒ LÔ · lượt BẤM THẬT đầu tiên (Edge qua DevTools) đi hết vòng · IM-54
 >           🛑 lộ ra: SopDraftToKnowledge bỏ qua bangTraMaLoi → bản ghi "KHÔNG CÓ ĐƯỜNG NHẬN RA"
 >           ✅ ĐÃ SỬA theo P6-1 — dòng bảng = một cách nhận ra · 554 test · IM-55. Bản nháp THẬT cũng đã thiếu.
->    P12-5  chạy thật + tài liệu
+>    P12-5  chạy thật + tài liệu                                                    ✅ 2026-10-19 · IM-56
+>           🛑 LƯỢT GỌI MODEL THẬT ĐẦU TIÊN: 11/11 định tuyến → 401 "invalid x-api-key". Khoá trong
+>           appsettings.Local.json KHÔNG HỢP LỆ — chặn bởi chủ dự án (cần khoá mới), không bởi code.
+>           Định tuyến hỏng có kiểm soát; soạn nháp từng trả 500 + stack trace → đã sửa thành 409 khoa-bi-tu-choi.
 > ```
 
 > 🔄 **GIẢ LẬP HAI LUỒNG + HAI CÁCH GÁN AI — chốt 2026-10-19.** Quyết định: `docs/18` NHÓM O (6/6).

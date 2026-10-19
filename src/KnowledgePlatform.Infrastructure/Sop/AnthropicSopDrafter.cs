@@ -74,17 +74,26 @@ public sealed class AnthropicSopDrafter(AnthropicClient client, SopDrafterOption
         var schema = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(SopDraftSchema.Json)
                      ?? throw new InvalidOperationException("SopDraftSchema.Json không đọc được.");
 
-        var response = await client.Messages.Create(new MessageCreateParams
+        Message response;
+        try
         {
-            Model = _options.Model,
-            MaxTokens = _options.MaxTokens,
-            System = prompt.SystemText,
-            Messages = [new() { Role = Role.User, Content = prompt.UserText }],
-            OutputConfig = new OutputConfig
+            response = await client.Messages.Create(new MessageCreateParams
             {
-                Format = new JsonOutputFormat { Schema = schema },
-            },
-        }, cancellationToken: ct);
+                Model = _options.Model,
+                MaxTokens = _options.MaxTokens,
+                System = prompt.SystemText,
+                Messages = [new() { Role = Role.User, Content = prompt.UserText }],
+                OutputConfig = new OutputConfig
+                {
+                    Format = new JsonOutputFormat { Schema = schema },
+                },
+            }, cancellationToken: ct);
+        }
+        catch (Exception e) when (ModelTuChoiException.Tu(e, _options.Model) is { } cauHinh)
+        {
+            // Lỗi CẤU HÌNH (khoá sai, model không có, hết credit) → lỗi có tên. Lỗi tạm thời ném nguyên — xem lớp đó.
+            throw cauHinh;
+        }
 
         var json = LayVanBan(response);
         var draft = JsonSerializer.Deserialize<SopDraft>(json, ReadOptions)
