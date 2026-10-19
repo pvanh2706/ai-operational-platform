@@ -9,7 +9,7 @@ namespace KnowledgePlatform.Api.Startup;
 /// Hai lệnh của **vòng không-credit** cho định tuyến (`--xuat-dinh-tuyen`, `--nap-dinh-tuyen`).
 ///
 /// <code>
-///   -- --xuat-dinh-tuyen &lt;mã-khách&gt; &lt;file-ra&gt; [số-lượng]
+///   -- --xuat-dinh-tuyen &lt;mã-khách&gt; &lt;file-ra&gt; [số-lượng] [tiền-tố-khoá-nguồn]
 ///   ...dán nội dung file cho một ngữ cảnh AI, lưu JSON nó trả về...
 ///   -- --nap-dinh-tuyen &lt;mã-khách&gt; &lt;file-vào&gt; &lt;tên người nạp&gt;
 /// </code>
@@ -23,12 +23,13 @@ public static class LenhDinhTuyen
     {
         if (args.Length < 3)
         {
-            Console.Error.WriteLine("Dùng: --xuat-dinh-tuyen <mã-khách> <file-ra> [số-lượng, mặc định 50]");
+            Console.Error.WriteLine("Dùng: --xuat-dinh-tuyen <mã-khách> <file-ra> [số-lượng, mặc định 50] [tiền-tố-khoá-nguồn]");
             Environment.ExitCode = 2;
             return;
         }
 
         var soLuong = args.Length > 3 && int.TryParse(args[3], out var n) ? n : 50;
+        var tienTo = args.Length > 4 && !string.IsNullOrWhiteSpace(args[4]) ? args[4] : null;
 
         var duong = Path.GetFullPath(args[2]);
         if (!KiemChoGhi(duong)) { Environment.ExitCode = 7; return; }
@@ -39,7 +40,7 @@ public static class LenhDinhTuyen
         await TrongScopeAsync(args[1], services, ct, async sp =>
         {
             var vong = sp.GetRequiredService<VongKhongCredit>();
-            var ticket = await vong.ChonTicketAsync(soLuong, ct);
+            var ticket = await vong.ChonTicketAsync(soLuong, ct, tienTo);
 
             if (ticket.Count == 0)
             {

@@ -62,12 +62,19 @@ public sealed class VongKhongCredit(AppDbContext db, ITenantContext tenant, Star
     /// rằng đưa cả transcript vào còn TỆ HƠN, vì transcript chứa sẵn câu chẩn đoán. Đưa nó
     /// vào đây là đưa đáp án vào đề.
     /// </summary>
-    public async Task<IReadOnlyList<TicketCanDinhTuyen>> ChonTicketAsync(int toiDa, CancellationToken ct = default)
+    /// <param name="tienTo">
+    /// Chỉ lấy case có khoá nguồn bắt đầu bằng chuỗi này (2026-10-19). Có nó vì lô giả lập (`O6-1`) cần xuất ĐÚNG
+    /// lô vừa sinh: không lọc thì case cũ chưa định tuyến của khách đi lẫn vào file, và người đọc kết quả không
+    /// tách được cái nào thuộc lượt thử nào.
+    /// </param>
+    public async Task<IReadOnlyList<TicketCanDinhTuyen>> ChonTicketAsync(
+        int toiDa, CancellationToken ct = default, string? tienTo = null)
     {
         var daCo = await db.Set<DinhTuyenDaNap>().Select(x => x.KhoaNguon).ToListAsync(ct);
 
         var cases = await db.Cases
             .Where(c => !daCo.Contains(c.SourceReference))
+            .Where(c => tienTo == null || c.SourceReference.StartsWith(tienTo))
             .OrderBy(c => c.IngestedAt)
             .Take(toiDa)
             .Select(c => new { c.Id, c.SourceReference, c.Subject })

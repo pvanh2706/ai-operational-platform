@@ -34,7 +34,11 @@ public sealed record KetQuaSoanNhap(
     string? GiaiThich,
     int SoCase,
     int SoChoDaChe,
-    SopDraftIngestResult? DaNap);
+    SopDraftIngestResult? DaNap,
+    int SoCaseTuModel = 0);
+
+/// <summary>Case đã gom cho một nhóm, và bao nhiêu trong đó đến từ MODEL định tuyến (`O5-1`).</summary>
+public sealed record CaseDaGom(SopDraftRequest YeuCau, int SoCaseTuModel);
 
 /// <summary>
 /// Soạn nháp SOP **từ trong host** — mảnh còn thiếu của bước 4.
@@ -49,6 +53,13 @@ public sealed record KetQuaSoanNhap(
 ///
 /// 🛑 **Cổng che `AR-o` chạy TRƯỚC khi gọi model**, trong <c>SopPromptBuilder.Build</c>. Nó
 /// ném thì KHÔNG GỬI GÌ CẢ — fail closed, không phải "che được bao nhiêu thì gửi bấy nhiêu".
+///
+/// 🔄 **2026-10-19 (`O5-1`): gom thêm case do MODEL định tuyến.** Trước đó chạy toàn bằng khoá API thì
+/// model xếp ticket đúng nhóm, nhưng vòng này chỉ đọc kho NGƯỜI nạp nên trả <c>nhom-khong-co-case</c> —
+/// hai luồng không nối nhau. Giờ một case được gom khi kết quả model MỚI NHẤT của nó qua đúng hai cửa
+/// mà <see cref="DinhTuyenKho"/> áp cho <c>/hoi</c>: nhóm có trong taxonomy và độ tin ≥ ngưỡng. Người nạp
+/// vẫn thắng model: case đã có dòng người nạp (nhóm nào cũng vậy) thì không đọc kết quả model của nó.
+/// ⚠ Ngưỡng vẫn CHƯA ĐO — kết quả trả ra đếm riêng số case từ model để người duyệt thấy.
 /// </summary>
 public sealed class SoanNhapHandler(
     AppDbContext db,
@@ -57,18 +68,25 @@ public sealed class SoanNhapHandler(
     SopDraftIngestHandler nap,
     TimeProvider clock,
     IOptions<SoanNhapOptions> options,
-    Startup.CongChe congChe)
+    Startup.CongChe congChe,
+    IOptions<DinhTuyenOptions> dinhTuyenOptions,
+    TaxonomyNhom taxonomy)
 {
     private readonly SoanNhapOptions _options = options.Value;
 
     /// <summary>Gom case của một nhóm từ kho định tuyến. Dùng chung với đường xuất offline.</summary>
-    public async Task<SopDraftRequest?> GomAsync(string nhom, CancellationToken ct = default)
+    public async Task<CaseDaGom?> GomAsync(string nhom, CancellationToken ct = default)
     {
-        var khoa = await db.Set<DinhTuyenDaNap>()
+        var tuNguoi = await db.Set<DinhTuyenDaNap>()
             .Where(x => x.Nhom == nhom)
             .Select(x => x.KhoaNguon)
-            .Take(_options.ToiDaCaseMoiLuot)
             .ToListAsync(ct);
+
+        var tuModel = await KhoaTuModelAsync(nhom, ct);
+
+        // Người nạp đứng TRƯỚC: trần mỗi lượt cắt bớt thì cắt phần model trước.
+        var khoa = tuNguoi.Concat(tuModel).Distinct(StringComparer.Ordinal).Take(_options.ToiDaCaseMoiLuot).ToList();
+        var soTuModel = khoa.Count(tuModel.Contains);
 
         if (khoa.Count == 0) return null;
 
@@ -96,7 +114,7 @@ public sealed class SoanNhapHandler(
                         .Select(x => new EvidenceForDrafting(
                             x.SourceReference, x.Content, x.ObservedAt ?? DateTimeOffset.MinValue))]);
 
-        return new SopDraftRequest
+        return new CaseDaGom(new SopDraftRequest
         {
             GroupName = nhom,
             Cases =
@@ -106,7 +124,32 @@ public sealed class SoanNhapHandler(
                     c.Subject,
                     theoCase.TryGetValue(c.Id, out var ds) ? ds : []))
             ],
-        };
+        }, soTuModel);
+    }
+
+    /// <summary>
+    /// Khoá nguồn mà MODEL định tuyến vào <paramref name="nhom"/> và qua ngưỡng (`O5-1`). Đọc kết quả MỚI NHẤT
+    /// của mỗi case — đúng cái <see cref="DinhTuyenKho"/> sẽ dùng — chứ không phải "đã từng có một lần nói X".
+    /// </summary>
+    private async Task<HashSet<string>> KhoaTuModelAsync(string nhom, CancellationToken ct)
+    {
+        // `G6`: nhóm ngoài taxonomy thì /hoi cũng trả KHÔNG BIẾT cho mọi kết quả model của nó.
+        if (taxonomy.TenNhom?.Contains(nhom) != true) return [];
+
+        var nguong = dinhTuyenOptions.Value.NguongTinCay;
+        var nguoiDaNap = db.Set<DinhTuyenDaNap>().Select(x => x.KhoaNguon);
+
+        var luot = await db.Set<LuotDinhTuyenModel>()
+            .Where(x => x.ThanhCong && x.KhoaNguon != null && !nguoiDaNap.Contains(x.KhoaNguon))
+            .Select(x => new { KhoaNguon = x.KhoaNguon!, x.Nhom, x.DoTinCay, x.Luc })
+            .ToListAsync(ct);
+
+        return luot
+            .GroupBy(x => x.KhoaNguon)
+            .Select(g => g.OrderByDescending(x => x.Luc).First())
+            .Where(x => x.Nhom == nhom && (x.DoTinCay ?? 0) >= nguong)
+            .Select(x => x.KhoaNguon)
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     public async Task<KetQuaSoanNhap> SoanAsync(string nhom, string nguoiYeuCau, CancellationToken ct = default)
@@ -124,14 +167,15 @@ public sealed class SoanNhapHandler(
                 "Trần đặt ở SoanNhap:TranThang.", 0, 0, null);
         }
 
-        var yeuCau = await GomAsync(nhom, ct);
-
-        if (yeuCau is null)
+        var gom = await GomAsync(nhom, ct);
+        if (gom is null)
         {
             return new KetQuaSoanNhap(false, "nhom-khong-co-case",
-                $"Chưa có case nào được định tuyến vào nhóm \"{nhom}\". " +
-                "Nạp định tuyến trước: --xuat-dinh-tuyen / --nap-dinh-tuyen.", 0, 0, null);
+                $"Chưa có case nào được định tuyến vào nhóm \"{nhom}\" — người nạp chưa nạp, và model chưa xếp " +
+                "case nào vào đó qua ngưỡng. Nạp định tuyến trước: --xuat-dinh-tuyen / --nap-dinh-tuyen.", 0, 0, null);
         }
+
+        var yeuCau = gom.YeuCau;
 
         // --- Cổng che AR-o, TRƯỚC khi gửi bất cứ byte nào ---
         SopPrompt prompt;
@@ -169,7 +213,7 @@ public sealed class SoanNhapHandler(
             luot.ThanhCong = true;
             await db.SaveChangesAsync(ct);
 
-            return new KetQuaSoanNhap(true, null, null, yeuCau.Cases.Count, prompt.RedactedCount, daNap);
+            return new KetQuaSoanNhap(true, null, null, yeuCau.Cases.Count, prompt.RedactedCount, daNap, gom.SoCaseTuModel);
         }
         catch (ChuaCoCreditException e)
         {
@@ -177,7 +221,7 @@ public sealed class SoanNhapHandler(
             await db.SaveChangesAsync(ct);
 
             return new KetQuaSoanNhap(false, "chua-co-credit", e.Message,
-                yeuCau.Cases.Count, prompt.RedactedCount, null);
+                yeuCau.Cases.Count, prompt.RedactedCount, null, gom.SoCaseTuModel);
         }
         catch (Exception e)
         {

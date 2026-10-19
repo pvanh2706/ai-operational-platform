@@ -207,6 +207,25 @@ public sealed class VongKhongCreditTests(ApiDatabaseFixture db) : IClassFixture<
         Assert.Contains(chuaNap, khoa);
     }
 
+    /// <summary>Lô giả lập (`O6-1`) xuất ĐÚNG lô của nó — case khác chưa định tuyến không đi lẫn vào file.</summary>
+    [Fact]
+    public async Task Loc_theo_tien_to_chi_xuat_dung_lo()
+    {
+        using var app = App(db.TenantAKey);
+        var c = app.CreateClient();
+        var ngoaiLo = await TaoCaseAsync(c);
+
+        var lo = $"gialap:{Guid.CreateVersion7():N}:";
+        var trongLo = lo + "001";
+        (await c.PostAsJsonAsync("/signals/case-observed",
+            new[] { new { sourceReference = trongLo, subject = "Không phát hành được hoá đơn" } })).EnsureSuccessStatusCode();
+
+        var ra = await TrongScopeAsync(app, db.TenantAId, v => v.ChonTicketAsync(500, tienTo: lo));
+
+        Assert.Equal([trongLo], ra.Select(x => x.KhoaNguon));
+        Assert.DoesNotContain(ngoaiLo, ra.Select(x => x.KhoaNguon));
+    }
+
     /// <summary>
     /// 🛑 Gói xuất ra RỜI KHỎI MÁY (người ta dán nó vào một cửa sổ chat), nên nó phải đi qua
     /// cổng che `AR-o` — cùng chốt mà `SoanNhapRunner --xuat-payload` đã có.

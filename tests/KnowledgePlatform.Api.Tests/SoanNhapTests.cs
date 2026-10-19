@@ -292,4 +292,90 @@ public sealed class SoanNhapTests(ApiDatabaseFixture db) : IClassFixture<ApiData
         Assert.DoesNotContain(thay!.Cases.SelectMany(x => x.Evidence),
             e => e.Content.Contains("đã rút lại"));
     }
+
+    // ===================================================== O5-1 — case do MODEL định tuyến
+
+    /// <summary>Taxonomy tạm chỉ có <paramref name="nhom"/> — cửa `G6` của tầng model đọc từ đây.</summary>
+    private string TaxonomyTam(string nhom)
+    {
+        var duong = Path.Combine(Path.GetTempPath(), $"sn-tax-{Guid.CreateVersion7():N}.json");
+        File.WriteAllText(duong, JsonSerializer.Serialize(new { nhom = new[] { new { ten = nhom, moTa = "x" } } }));
+        _fileTam.Add(duong);
+        return duong;
+    }
+
+    private static LuotDinhTuyenModel BienLai(Guid tenantId, string khoa, string nhom, double tin, DateTimeOffset luc) => new()
+    {
+        TenantId = tenantId, KhoaNguon = khoa, HashDauVao = Guid.CreateVersion7().ToString("N"),
+        Nhom = nhom, Nguon = "suy-tu-trieu-chung", GiaiThich = "x", DoTinCay = tin, ThanhCong = true, Luc = luc,
+    };
+
+    /// <summary>
+    /// 🛑 Đúng ca hai luồng KHÔNG nối nhau trước `O5-1`: chạy toàn bằng khoá API thì model xếp đúng nhóm,
+    /// nhưng soạn nháp trả <c>nhom-khong-co-case</c> vì nó chỉ đọc kho NGƯỜI nạp.
+    /// </summary>
+    [Fact]
+    public async Task Case_MODEL_dinh_tuyen_qua_nguong_cung_duoc_gom_va_dem_rieng()
+    {
+        var (goc, tenantId) = await MoiKhachAsync(coDrafter: true);
+        var nhom = $"nhom-model-{Guid.CreateVersion7():N}";
+        using var app = goc.With("DinhTuyen:DuongDanTaxonomy", TaxonomyTam(nhom));
+        goc.Dispose();
+        var c = app.CreateClient();
+        var khoa = await TaoCaseAsync(c);
+
+        await using (var ctx = db.OpenContext(tenantId))
+        {
+            ctx.Set<LuotDinhTuyenModel>().Add(BienLai(tenantId, khoa, nhom, 0.95, DateTimeOffset.UtcNow));
+            await ctx.SaveChangesAsync();
+        }
+
+        var res = await c.PostAsJsonAsync("/knowledge/soan-nhap", new { nhom, nguoiYeuCau = "chị Lan" });
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var kq = await res.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, kq.GetProperty("soCase").GetInt32());
+        Assert.Equal(1, kq.GetProperty("soCaseTuModel").GetInt32());
+        Assert.Equal(1, _drafter.SoLanGoi);
+    }
+
+    /// <summary>
+    /// Ba ca model KHÔNG được gom, mỗi ca vì đúng một cửa mà <c>DinhTuyenKho</c> cũng áp cho <c>/hoi</c>:
+    /// dưới ngưỡng · người nạp đã nạp nhóm khác (người thắng model) · lần gọi MỚI NHẤT nói nhóm khác.
+    /// </summary>
+    [Fact]
+    public async Task Model_duoi_nguong_bi_nguoi_de_hoac_da_doi_y_thi_KHONG_gom()
+    {
+        var (goc, tenantId) = await MoiKhachAsync(coDrafter: true);
+        var nhom = $"nhom-model-{Guid.CreateVersion7():N}";
+        const string nhomKhac = "nhom-khac";
+        using var app = goc.With("DinhTuyen:DuongDanTaxonomy", TaxonomyTam(nhom));
+        goc.Dispose();
+        var c = app.CreateClient();
+
+        var duoiNguong = await TaoCaseAsync(c);
+        var biNguoiDe = await TaoCaseAsync(c);
+        var doiY = await TaoCaseAsync(c);
+        var bayGio = DateTimeOffset.UtcNow;
+
+        await using (var ctx = db.OpenContext(tenantId))
+        {
+            ctx.Set<LuotDinhTuyenModel>().AddRange(
+                BienLai(tenantId, duoiNguong, nhom, 0.5, bayGio),
+                BienLai(tenantId, biNguoiDe, nhom, 0.99, bayGio),
+                BienLai(tenantId, doiY, nhom, 0.99, bayGio.AddMinutes(-5)),
+                BienLai(tenantId, doiY, nhomKhac, 0.99, bayGio));
+            ctx.Set<DinhTuyenDaNap>().Add(new DinhTuyenDaNap
+            {
+                TenantId = tenantId, KhoaNguon = biNguoiDe, Nhom = nhomKhac, Nguon = "noi-ro-trong-mo-ta", NguoiNap = "test",
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        var res = await c.PostAsJsonAsync("/knowledge/soan-nhap", new { nhom, nguoiYeuCau = "chị Lan" });
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        Assert.Contains("nhom-khong-co-case", await res.Content.ReadAsStringAsync());
+        Assert.Equal(0, _drafter.SoLanGoi);
+    }
 }

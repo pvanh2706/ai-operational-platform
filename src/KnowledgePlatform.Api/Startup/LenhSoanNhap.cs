@@ -40,15 +40,17 @@ public static class LenhSoanNhap
 
         await LenhDinhTuyen.TrongScopeAsync(args[1], services, ct, async sp =>
         {
-            var yeuCau = await sp.GetRequiredService<SoanNhapHandler>().GomAsync(nhom, ct);
+            var gom = await sp.GetRequiredService<SoanNhapHandler>().GomAsync(nhom, ct);
 
-            if (yeuCau is null)
+            if (gom is null)
             {
                 Console.Error.WriteLine($"Chưa có case nào được định tuyến vào nhóm \"{nhom}\".");
                 Console.Error.WriteLine("Nạp định tuyến trước: --xuat-dinh-tuyen / --nap-dinh-tuyen.");
                 Environment.ExitCode = 3;
                 return;
             }
+
+            var yeuCau = gom.YeuCau;
 
             // 🛑 Cổng che AR-o chạy Ở ĐÂY, trước khi bất cứ byte nào ra file. Nó ném thì
             //    KHÔNG GHI GÌ CẢ — fail closed, không phải "che được bao nhiêu thì ghi bấy nhiêu".
@@ -76,6 +78,7 @@ public static class LenhSoanNhap
                 daQuaCongChe = congChe.DaQuaCongChe,
                 nhom,
                 soCase = yeuCau.Cases.Count,
+                soCaseTuModel = gom.SoCaseTuModel,
                 soMauEvidence = yeuCau.Cases.Sum(c => c.Evidence.Count),
                 daChe = prompt.RedactedCount,
                 system = prompt.SystemText,
@@ -92,6 +95,10 @@ public static class LenhSoanNhap
             Console.WriteLine($"Đã xuất   : {duong}");
             Console.WriteLine($"Nhóm      : {nhom}");
             Console.WriteLine($"Case      : {yeuCau.Cases.Count} · mẩu evidence: {yeuCau.Cases.Sum(c => c.Evidence.Count)}");
+            if (gom.SoCaseTuModel > 0)
+            {
+                Console.WriteLine($"⚠ Trong đó: {gom.SoCaseTuModel} case do MODEL định tuyến (O5-1) — ngưỡng tin cậy CHƯA ĐO.");
+            }
             Console.WriteLine(congChe.DaQuaCongChe
                 ? $"Đã che    : {prompt.RedactedCount} chỗ nghi là bí mật (AR-o)"
                 : "Đã che    : KHÔNG — cờ N1-2 đang bật, file này chứa dữ liệu NGUYÊN VĂN");
