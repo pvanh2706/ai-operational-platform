@@ -178,7 +178,10 @@ public sealed class QuyTrinhHandler(
         var c = await db.Cases.FirstOrDefaultAsync(x => x.SourceReference == khoaNguon, ct);
         if (c is null) return null;
 
-        var tuyen = await khop.DinhTuyenCaseAsync(c, ct);
+        // `P5-1` (2026-10-19): đường XEM — không gọi model, không ghi biên lai. Trước đó, bật GoiModel thì một lượt GET
+        // vào case mới là một lượt gọi model tính tiền, trong khi hợp đồng ghi "CHỈ ĐỌC". Case model chưa xếp thì giờ
+        // trả `dinh-tuyen-khong-biet` cho tới khi /hoi hoặc webhook hỏi nó.
+        var tuyen = await khop.XemDinhTuyenCaseAsync(c, ct);
         return TienDoCase.Tu(khoaNguon, await khop.KhopAsync(c, tuyen, taoLuotChay: false, ct));
     }
 

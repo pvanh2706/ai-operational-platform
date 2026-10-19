@@ -303,8 +303,8 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > Console NỘI BỘ (không phải widget `AR2`/`D5-1`), build tĩnh do `ui_server.py` phục vụ (loopback), Vue 3 + Vite +
 > TS + Vue Flow + Router + Pinia. 🛑 Chỗ khó là DỮ LIỆU: host chưa có đường liệt kê case hay trả dòng thời gian
 > một case → `P2-1` thêm hai endpoint đọc `/internal/`.
-> ⚠ **Tìm ra ở P12-1, CHƯA sửa (câu sản phẩm):** `GET /cases/{k}/quy-trinh` ghi "CHỈ ĐỌC" nhưng khi bật
-> `GoiModel` thì một lượt GET vào case mới là một lượt gọi model tính tiền + một biên lai. Xem `07` §3 `IM-51`.
+> ✅ **Tìm ra ở P12-1, ĐÃ SỬA theo `P5-1`:** `GET /cases/{k}/quy-trinh` ghi "CHỈ ĐỌC" nhưng khi bật `GoiModel`
+> thì một lượt GET vào case mới từng là một lượt gọi model tính tiền + một biên lai. Giờ nó đi đường xem. `07` `IM-51`.
 > ```text
 >    P12-0  ghi quyết định (docs/18 P, file này)                                   ✅ 2026-10-19
 >    P12-1  host: GET /internal/cases?tienTo= · GET /internal/cases/{k}/dong-chay   ✅ 2026-10-19

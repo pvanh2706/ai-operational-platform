@@ -460,7 +460,7 @@ IDinhTuyenNhom.XemAsync                       đúng các tầng của /hoi, d�
    chắc dịch được sang SQL — và một phép chiếu không dịch được chỉ nổ lúc chạy.
 ```
 
-### 🛑 Tìm ra lúc viết, CHƯA sửa — cần chủ dự án quyết
+### 🛑 Tìm ra lúc viết — chủ dự án quyết `P5-1`, đã sửa
 
 `GET /cases/{khoaNguon}/quy-trinh` mô tả trong hợp đồng là *"CHỈ ĐỌC — không tạo gì"*, nhưng nó đi qua định
 tuyến ĐẦY ĐỦ (`KhopQuyTrinh.DinhTuyenCaseAsync`). Khi `DinhTuyen:GoiModel = true`, một lượt GET vào case mà model
@@ -468,6 +468,8 @@ chưa từng xếp là **một lượt gọi model tính tiền + một dòng bi
 gì" chỉ sai một nửa, đúng loại sai không ai nhìn ra.
 Sửa bằng `XemDinhTuyenCaseAsync` là một dòng, nhưng nó ĐỔI THỨ HỆ THỐNG HỨA: bật model rồi thì đường đó sẽ trả
 `dinh-tuyen-khong-biet` cho case mới cho tới khi /hoi hoặc webhook hỏi nó. Theo `J1-1` đó là câu sản phẩm.
+✅ **Chủ dự án chọn `P5-1` cùng ngày — ĐÃ SỬA.** Test `Duong_quy_trinh_CHI_DOC_cung_KHONG_goi_model` giữ nó, và đã
+chứng minh biết ĐỎ (trả lại `DinhTuyenCaseAsync` → đỏ đúng test đó).
 
 ---
 

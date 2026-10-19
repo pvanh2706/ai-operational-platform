@@ -37,7 +37,7 @@ NHÓM N  hoàn thiện sơ đồ luồng        ✅ 4/7 CHỐT 2026-10-10   · 3
         (thêm 2026-10-10, sinh từ việc MỞ LẠI I1)
 NHÓM O  giả lập 2 luồng + 2 cách gán AI ✅ 6/6 CHỐT 2026-10-19   · O5 sinh ra lúc đọc code
         (thêm 2026-10-19, từ câu hỏi "đã hoàn thiện chưa / test bằng dữ liệu giả")
-NHÓM P  giao diện Vue 3 — luồng chạy    ✅ 4/4 CHỐT 2026-10-19   · console nội bộ, KHÔNG phải widget
+NHÓM P  giao diện Vue 3 — luồng chạy    ✅ 5/5 CHỐT 2026-10-19   · console nội bộ, KHÔNG phải widget
 ```
 
 🛑 **20/20 KHÔNG nghĩa là hết chặn.** Ba thứ còn chặn và **không thứ nào gỡ được bằng một
@@ -683,6 +683,18 @@ mới phải vào script đó cùng commit.
 - [x] **P4-1 — Vue Flow** (`@vue-flow/core`) (đề xuất): sơ đồ luồng tương tác, tô sáng ô một ticket đã đi qua.
 - [ ] **P4-2 — Naive UI.**
 - [x] **P4-3 — Vue Router + Pinia.**
+
+## P5 · `GET /cases/{k}/quy-trinh` ghi "CHỈ ĐỌC" mà gọi model khi bật `GoiModel` — xử lý thế nào?
+
+Câu này **sinh ra lúc code P12-1** (`07` §3 `IM-51`), chủ dự án chọn qua form cùng ngày.
+
+- [x] **P5-1 — Sửa: chỉ xem** (đề xuất). Không gọi model, không ghi biên lai. Case model chưa xếp trả
+      `dinh-tuyen-khong-biet` cho tới khi `/hoi` hoặc webhook hỏi nó.
+- [ ] **P5-2 — Giữ hành vi, sửa lời mô tả hợp đồng.**
+- [ ] **P5-3 — Để sau.**
+
+⚠ Hệ quả cho bên tích hợp: bật model rồi thì đường này KHÔNG còn là cách "đánh thức" định tuyến cho một case.
+Muốn case được xếp nhóm thì hỏi `/hoi` (hoặc chờ webhook) — đó vốn là hai đường được thiết kế để tiêu tiền.
 
 ⚠ `AGENT.md` §10.1: thư viện lớn là câu BẮT BUỘC hỏi — bốn thư viện trên (Vue, Vite, Vue Flow, Router+Pinia,
 cộng TypeScript) là toàn bộ phạm vi đã được chốt. Thêm thư viện thứ năm (biểu đồ, bộ component…) là hỏi lại.

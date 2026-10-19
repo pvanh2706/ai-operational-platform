@@ -171,6 +171,26 @@ public sealed class DongChayTests(ApiDatabaseFixture db) : IClassFixture<ApiData
         Assert.Equal(1, sau.GetProperty("dinhTuyen").GetProperty("bienLaiModel").GetArrayLength());
     }
 
+    /// <summary>
+    /// 🛑 `P5-1`: <c>GET /cases/{k}/quy-trinh</c> ghi "CHỈ ĐỌC" trong hợp đồng — trước 2026-10-19 nó gọi model khi bật
+    /// <c>GoiModel</c>. Giờ nó đi đường xem như dòng chảy.
+    /// </summary>
+    [Fact]
+    public async Task Duong_quy_trinh_CHI_DOC_cung_KHONG_goi_model()
+    {
+        var model = new ModelDinhTuyenGia(() => new KetQuaModelDinhTuyen("x", "noi-ro-trong-mo-ta", "x", 0.95, 1, 1));
+        var (app, c, tenantId, _) = await MoiAsync(model, goiModel: true);
+        using var _ = app;
+        var khoa = await TaoCaseAsync(c, "dc-qt:", "Phát hành thì báo E0042");
+
+        var kq = await c.GetFromJsonAsync<JsonElement>($"/cases/{Uri.EscapeDataString(khoa)}/quy-trinh");
+
+        Assert.Equal(0, model.SoLanGoi);
+        Assert.Equal("dinh-tuyen-khong-biet", kq.GetProperty("lyDoKhongCo").GetString());
+        await using var ctx = db.OpenContext(tenantId);
+        Assert.False(await ctx.Set<LuotDinhTuyenModel>().AnyAsync());
+    }
+
     [Fact]
     public async Task Khach_B_khong_thay_case_cua_khach_A()
     {

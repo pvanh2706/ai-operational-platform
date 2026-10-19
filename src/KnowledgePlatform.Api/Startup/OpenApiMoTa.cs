@@ -249,7 +249,7 @@ public static partial class OpenApiMoTa
 
             ["GET /cases/{khoaNguon}/quy-trinh"] = new(NhomQuyTrinh,
                 "Case đang ở bước nào",
-                "CHỈ ĐỌC — không tạo gì. Tiến độ là PHÉP CHIẾU từ evidence, không có cờ nào được lưu (PR1): bước " +
+                "CHỈ ĐỌC — không tạo gì, KHÔNG gọi model (case model chưa xếp thì trả `dinh-tuyen-khong-biet`). Tiến độ là PHÉP CHIẾU từ evidence, không có cờ nào được lưu (PR1): bước " +
                 "xong ⟸ một mẩu chứa dấu hiệu của bước, hoặc một lời xác nhận trỏ đúng bước. Mỗi bước xong kèm " +
                 "`canCu` — mẩu nào, bằng cách nào — để phản bác được. `coQuyTrinh: false` kèm `lyDoKhongCo`."),
 
