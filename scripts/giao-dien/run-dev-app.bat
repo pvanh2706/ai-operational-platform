@@ -11,6 +11,9 @@ setlocal
 set "APP=%~dp0..\..\src\KnowledgePlatform.Api"
 set "ASPNETCORE_ENVIRONMENT=Development"
 set "ASPNETCORE_URLS=http://localhost:5119"
+rem Link xem tri thuc (D5-3) can dia chi goc. localhost CHI mo duoc tren chinh may nay - du cho may dev,
+rem va de kiem_dau_cuoi.py chay du muc H (thieu thi muc do tu bo qua va muc J bao 1 sai).
+set "Link__PublicBaseUrl=http://localhost:5119"
 
 if not exist "%APP%\bin\Debug\net10.0\KnowledgePlatform.Api.exe" (
   echo Chua co ban build. Chay truoc: dotnet build src\KnowledgePlatform.Api
