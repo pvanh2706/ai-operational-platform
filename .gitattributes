@@ -1,0 +1,4 @@
+# cmd.exe đọc .bat theo khối và tìm nhãn (`goto`, `call :nhan`) theo vị trí byte — file xuống dòng kiểu LF làm
+# `goto`/`call :nhan` hỏng ngẫu nhiên. Ghim CRLF cho mọi máy, không phụ thuộc core.autocrlf của từng người.
+*.bat text eol=crlf
+*.cmd text eol=crlf

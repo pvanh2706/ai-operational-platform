@@ -68,6 +68,12 @@ Chi tiết: [Ranh giới tenant](#ranh-giới-tenant--đã-đo-trên-database-th
 
 ## Chạy thử
 
+> **Nhanh nhất — nhấn đúp `chay-thu.bat` ở thư mục gốc** (2026-10-20). Nó kiểm dotnet/python/PostgreSQL, build app
+> (bỏ qua nếu app đang chạy), build console nếu chưa có, mở ba cửa sổ — app giả lập `:5120` (`kp_gialap`), app dev
+> `:5119` (`kp_dev`), giao diện `:8791` — chờ app sẵn sàng rồi mở `http://127.0.0.1:8791/console/gia-lap`. Thành phần
+> nào đang chạy rồi thì không mở lại, nên chạy nhiều lần vô hại. Tắt hết: **`dung-thu.bat`**.
+> ⚠ Vẫn cần dựng database MỘT lần cho mỗi máy (bước 1–3 dưới đây, và `scripts/gia-lap-db-setup.sql` cho `kp_gialap`).
+
 ```bash
 # 1. Một lần cho mỗi máy: role kp_app + 3 database. Cần superuser.
 psql -U postgres -h localhost -f scripts/dev-db-setup.sql

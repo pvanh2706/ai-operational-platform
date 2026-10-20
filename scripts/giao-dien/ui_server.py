@@ -832,10 +832,13 @@ def main() -> int:
     if CONG_CHE_TAT_TAM:
         print("🛑 KP_CONG_CHE_TAT_TAM=1 — cổng credential CHỈ BÁO, KHÔNG CHẶN (N1-2). "
               "Lô có mật khẩu/token vẫn gửi được vào kho.")
-    try:
-        webbrowser.open(dia)
-    except Exception:  # noqa: BLE001 — không mở được trình duyệt thì vẫn chạy
-        pass
+    # KP_UI_MO_TRANG: trang mở đầu (chay-thu.bat đặt /console/gia-lap) · KP_UI_KHONG_MO=1: không mở trình duyệt.
+    trang = os.environ.get("KP_UI_MO_TRANG", "/")
+    if os.environ.get("KP_UI_KHONG_MO") != "1":
+        try:
+            webbrowser.open(dia + (trang if trang.startswith("/") else "/" + trang))
+        except Exception:  # noqa: BLE001 — không mở được trình duyệt thì vẫn chạy
+            pass
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
