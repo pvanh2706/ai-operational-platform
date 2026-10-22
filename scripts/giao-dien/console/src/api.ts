@@ -1,4 +1,7 @@
-import type { CaseTrongDanhSach, DongChayCase, KetQuaThuKhoa, LoiHost } from './kieu'
+import type {
+  CaseTrongDanhSach, DongChayCase, KetQuaHoiDap, KetQuaNapTaiLieu, KetQuaThuKhoa, LoiHost, NhaCungCap, PromptHoiDap,
+  TaiLieu, TrangThaiAi,
+} from './kieu'
 
 /**
  * Gọi host QUA ui_server.py: `/app/<cổng>/<đường>` → `http://127.0.0.1:<cổng>/<đường>`.
@@ -19,7 +22,11 @@ export class LoiGoiApp extends Error {
 export async function goiApp<T>(cong: number, duong: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`/app/${cong}${duong}`, {
     ...init,
-    headers: { Accept: 'application/json', ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...init?.headers },
+    headers: {
+      Accept: 'application/json',
+      ...(init?.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+      ...init?.headers,
+    },
   })
   const raw = await r.text()
   let body: unknown = raw
@@ -44,6 +51,30 @@ export const api = {
       `/internal/cases?soLuong=${soLuong}${tienTo ? `&tienTo=${encodeURIComponent(tienTo)}` : ''}`,
     ),
   dongChay: (cong: number, khoa: string) => goiApp<DongChayCase>(cong, `/internal/cases/${maHoa(khoa)}/dong-chay`),
-  /** ĐI RA MẠNG tới Anthropic (miễn phí) bằng khoá của host — chỉ gọi khi người bấm nút, không tự gọi khi mở trang. */
-  thuKhoa: (cong: number) => goiApp<KetQuaThuKhoa>(cong, '/internal/thu-khoa-model', { method: 'POST' }),
+  /** ĐI RA MẠNG (miễn phí) bằng khoá của host — chỉ gọi khi người bấm nút, không tự gọi khi mở trang. */
+  thuKhoa: (cong: number, nhaCungCap: NhaCungCap = 'anthropic') =>
+    goiApp<KetQuaThuKhoa>(cong, `/internal/thu-khoa-model?nhaCungCap=${nhaCungCap}`, { method: 'POST' }),
+  /** Q6-1 — không ra mạng, không trả khoá. */
+  trangThaiAi: (cong: number) => goiApp<TrangThaiAi>(cong, '/internal/ai'),
+
+  danhSachTaiLieu: (cong: number) => goiApp<TaiLieu[]>(cong, '/documents'),
+  /** Multipart — KHÔNG đặt Content-Type tay: trình duyệt phải tự viết boundary. */
+  napTaiLieu: (cong: number, file: File, subTenantCode: string, nguoiNap: string) => {
+    const f = new FormData()
+    f.append('file', file)
+    f.append('subTenantCode', subTenantCode)
+    f.append('nguoiNap', nguoiNap)
+    return goiApp<KetQuaNapTaiLieu>(cong, '/documents', { method: 'POST', body: f })
+  },
+
+  /** Q3-1 — TỐN TIỀN. 409 (không hỏi được) ném LoiGoiApp, kèm `chiTiet.ketQua`. */
+  hoiDap: (cong: number, than: NguonHoi & { cauHoi: string; nguoiHoi: string; nhaCungCap: NhaCungCap }) =>
+    goiApp<KetQuaHoiDap>(cong, '/internal/hoi-dap', { method: 'POST', body: JSON.stringify(than) }),
+  xuatPromptHoiDap: (cong: number, than: NguonHoi & { cauHoi: string }) =>
+    goiApp<PromptHoiDap>(cong, '/internal/hoi-dap/xuat-prompt', { method: 'POST', body: JSON.stringify(than) }),
+  napKetQuaHoiDap: (cong: number, than: NguonHoi & { cauHoi: string; ketQua: string }) =>
+    goiApp<KetQuaHoiDap>(cong, '/internal/hoi-dap/nap-ket-qua', { method: 'POST', body: JSON.stringify(than) }),
 }
+
+/** Đúng MỘT trong hai — host trả 400 nếu không. */
+export type NguonHoi = { khoaNguon: string; taiLieuId?: never } | { taiLieuId: string; khoaNguon?: never }

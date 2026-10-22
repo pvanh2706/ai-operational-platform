@@ -11,7 +11,10 @@ onMounted(() => void ketNoi.kiemTra())
     <div class="ten">Console nội bộ</div>
     <nav>
       <RouterLink :to="{ name: 'danh-sach' }">Case</RouterLink>
+      <RouterLink :to="{ name: 'nap-hoi' }">Nạp &amp; hỏi</RouterLink>
       <RouterLink :to="{ name: 'gia-lap' }">Giả lập</RouterLink>
+      <RouterLink :to="{ name: 'phan-mem-khach' }">Phần mềm khách</RouterLink>
+      <RouterLink :to="{ name: 'cau-hinh' }">Cấu hình AI</RouterLink>
       <RouterLink :to="{ name: 'ket-noi' }">Kết nối</RouterLink>
     </nav>
     <label class="chon-app">

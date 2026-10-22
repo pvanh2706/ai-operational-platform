@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Giả lập hai luồng trong console (P12-4) — thay trang /gia-lap HTML cũ. Cùng các nút /api/gl-* của ui_server, cộng
 // BẢN ĐỒ LÔ: sau mỗi bước, cả lô được tô lại theo đúng sơ đồ luồng của màn dòng chảy.
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api'
 import { CONG_GIA_LAP, giaLap, type DongCham, type KetQuaDinhTuyen, type KetQuaSoan, type TicketGiaLap, type TrangThaiGiaLap } from '../apiGiaLap'
@@ -9,14 +9,13 @@ import BanDoLo from '../components/BanDoLo.vue'
 import NhanNguon from '../components/NhanNguon.vue'
 import XuatNapFile from '../components/XuatNapFile.vue'
 import ThuKhoa from '../components/ThuKhoa.vue'
-import type { KetQuaThuKhoa } from '../kieu'
+import type { CheDoAi as CheDo, KetQuaThuKhoa } from '../kieu'
+import { useCauHinhAi } from '../stores/cauHinhAi'
 import { useKetNoi } from '../stores/ketNoi'
 
 const ketNoi = useKetNoi()
+const ai = useCauHinhAi()
 const router = useRouter()
-
-type CheDo = 'api' | 'file'
-const KHOA_CHE_DO = 'kp-console:gia-lap-che-do'
 
 const tt = ref<TrangThaiGiaLap | null>(null)
 const nguoi = ref('trang-gia-lap')
@@ -50,11 +49,10 @@ async function kiem() {
     lo.value = k.lo
     tienTo.value = k.tienTo
     ticket.value = k.ticket
-    try {
-      const luu = JSON.parse(localStorage.getItem(KHOA_CHE_DO) ?? 'null')
-      if (luu) cheDo.value = luu
-    } catch { /* tiện ích — xem stores/ketNoi.ts */ }
-    if (!k.coKhoa) cheDo.value = { dinhTuyen: 'file', soanNhap: 'file' }
+    // Q6-1: chế độ đọc từ cấu hình CHUNG (ui_server), không từ localStorage riêng của trang này. Chọn API mà host không
+    // dùng được thì cheDoHieuLuc đã là File.
+    await ai.tai(CONG_GIA_LAP)
+    cheDo.value = { dinhTuyen: ai.cheDoHieuLuc.dinhTuyen, soanNhap: ai.cheDoHieuLuc.soanNhap }
     await taiNhomLo()
   } catch (e) {
     loiChung.value = e instanceof Error ? e.message : String(e)
@@ -62,16 +60,38 @@ async function kiem() {
     ban.value = null
   }
 }
-watch(cheDo, (v) => { try { localStorage.setItem(KHOA_CHE_DO, JSON.stringify(v)) } catch { /* bỏ qua */ } }, { deep: true })
+/**
+ * Người dùng BẤM đổi chế độ ở trang này = đổi cấu hình chung (màn Cấu hình AI thấy cùng lựa chọn).
+ *
+ * 🛑 Gọi từ @change của ô chọn, KHÔNG từ watch(cheDo). Bản đầu dùng watch + cờ "đang nạp", và lượt bấm thật bắt được:
+ *   watcher của Vue chạy SAU khi cờ đã tắt, nên chỉ MỞ trang là ghi file — tệ hơn, ghi chế độ HIỆU LỰC (File khi khoá
+ *   tạm thiếu) đè lên lựa chọn API của người dùng. Mở một trang không được đổi cấu hình.
+ */
+function luuCheDo() {
+  if (!ai.cauHinh) return
+  void ai.ghi({
+    ...ai.cauHinh,
+    dinhTuyen: { cheDo: cheDo.value.dinhTuyen },
+    soanNhap: { ...ai.cauHinh.soanNhap, cheDo: cheDo.value.soanNhap },
+  }).catch((e) => { loiChung.value = e instanceof Error ? e.message : String(e) })
+}
 
-/** Kết quả lần thử khoá gần nhất: false = Anthropic đã TỪ CHỐI → API bị khoá cho tới khi thử lại được. */
-const khoaHopLe = ref<boolean | null>(null)
-const apiDung = computed(() => !!tt.value?.coKhoa && khoaHopLe.value !== false)
+/** API chọn được không, theo TỪNG bước: định tuyến cần DinhTuyen:GoiModel; soạn nháp theo nhà cung cấp đã chọn. */
+const apiDung = computed(() => ({ dinhTuyen: ai.apiChonDuoc('dinhTuyen'), soanNhap: ai.apiChonDuoc('soanNhap') }))
+const nccSoan = computed(() => ai.cauHinh?.soanNhap.nhaCungCap ?? 'anthropic')
 
 function sauThuKhoa(kq: KetQuaThuKhoa) {
-  khoaHopLe.value = kq.hopLe
+  ai.sauThuKhoa(kq)
   // Khoá bị từ chối thì mọi lượt bấm API sau đó đều hỏng — chuyển về File thay vì để người dùng tốn lượt mới biết.
-  if (kq.hopLe === false) cheDo.value = { dinhTuyen: 'file', soanNhap: 'file' }
+  // Chỉ những bước DÙNG nhà cung cấp vừa bị từ chối: khoá OpenAI sai không làm định tuyến bằng Anthropic hỏng theo.
+  // ⚠ Chỉ đổi cho phiên này, KHÔNG ghi file: sửa khoá rồi thử lại được thì lựa chọn API đã lưu vẫn còn nguyên.
+  if (kq.hopLe === false) {
+    const ncc = kq.nhaCungCap ?? 'anthropic'
+    cheDo.value = {
+      dinhTuyen: ai.trangThai?.dinhTuyen.nhaCungCap === ncc ? 'file' : cheDo.value.dinhTuyen,
+      soanNhap: nccSoan.value === ncc ? 'file' : cheDo.value.soanNhap,
+    }
+  }
 }
 onMounted(kiem)
 
@@ -135,7 +155,7 @@ async function napDinhTuyen(txt: string) {
 
 async function soanApi() {
   await lam('soan', async () => {
-    ketQuaSoan.value = await giaLap.soanApi(nhom.value, nguoi.value)
+    ketQuaSoan.value = await giaLap.soanApi(nhom.value, nguoi.value, nccSoan.value)
     await sauMoiBuoc()
   })
 }
@@ -225,20 +245,23 @@ const chamLabel = { dung: '✓ đúng', sai: '✗ sai', 'khong-biet': '? không 
       <div v-if="tt.nhomDungLech.length" class="xau">✗ Dữ liệu giả có nhóm ngoài taxonomy: {{ tt.nhomDungLech.join(', ') }}</div>
       <details v-if="tt.cauHinh"><summary>--kiem-cau-hinh</summary><pre>{{ tt.cauHinh }}</pre></details>
       <ThuKhoa v-if="tt.coKhoa" :cong="CONG_GIA_LAP" @ket-qua="sauThuKhoa" />
+      <ThuKhoa v-if="ai.trangThai?.openAI.coKhoa" :cong="CONG_GIA_LAP" nha-cung-cap="openai" :model="ai.trangThai.openAI.model" @ket-qua="sauThuKhoa" />
     </div>
     <div class="hang">
       <fieldset>
         <legend>Định tuyến — luồng xuôi</legend>
-        <label><input v-model="cheDo.dinhTuyen" type="radio" value="api" :disabled="!apiDung" /> API</label>
-        <label><input v-model="cheDo.dinhTuyen" type="radio" value="file" /> File</label>
+        <label><input v-model="cheDo.dinhTuyen" type="radio" value="api" :disabled="!apiDung.dinhTuyen" @change="luuCheDo" /> API</label>
+        <label><input v-model="cheDo.dinhTuyen" type="radio" value="file" @change="luuCheDo" /> File</label>
       </fieldset>
       <fieldset>
         <legend>Soạn nháp SOP — luồng ngược</legend>
-        <label><input v-model="cheDo.soanNhap" type="radio" value="api" :disabled="!apiDung" /> API</label>
-        <label><input v-model="cheDo.soanNhap" type="radio" value="file" /> File</label>
+        <label><input v-model="cheDo.soanNhap" type="radio" value="api" :disabled="!apiDung.soanNhap" @change="luuCheDo" /> API · {{ nccSoan }}</label>
+        <label><input v-model="cheDo.soanNhap" type="radio" value="file" @change="luuCheDo" /> File</label>
       </fieldset>
       <label class="nguoi">Người thao tác <input v-model="nguoi" /></label>
     </div>
+    <p class="mo">Lựa chọn ở đây LÀ cấu hình chung — đổi nhà cung cấp, hoặc xem vì sao API bị khoá, ở màn
+      <RouterLink :to="{ name: 'cau-hinh' }">Cấu hình AI</RouterLink>.</p>
     <button class="phu" :disabled="!!ban" @click="kiem">{{ ban === 'kiem' ? 'Đang kiểm…' : 'Kiểm lại' }}</button>
   </section>
 

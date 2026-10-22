@@ -155,10 +155,98 @@ export interface KetQuaThuKhoa {
   coKhoa: boolean
   /** true = khoá được nhận VÀ model tồn tại · false = bị từ chối · null = không thử được (mạng, 5xx). */
   hopLe: boolean | null
-  lyDo: 'khong-co-khoa' | 'khoa-bi-tu-choi' | 'model-khong-ton-tai' | 'loi-khac' | null
+  lyDo: 'khong-co-khoa' | 'thieu-model' | 'khoa-bi-tu-choi' | 'model-khong-ton-tai' | 'het-credit' | 'loi-khac' | null
   model: string
   tenModelHienThi: string | null
   giaiThich: string
+  /** `Q1-1` — nhà cung cấp đã thử. */
+  nhaCungCap: NhaCungCap
+}
+
+export type NhaCungCap = 'anthropic' | 'openai'
+export type CheDoAi = 'api' | 'file'
+
+/** `GET /internal/ai` — Api/Knowledge/CacModel.cs. Không bao giờ chứa khoá. */
+export interface TrangThaiNhaCungCap {
+  ten: NhaCungCap
+  coKhoa: boolean
+  model: string | null
+  /** Có khoá (và với OpenAI: có model). CHƯA nói khoá hợp lệ — đó là việc của Thử khoá. */
+  dungDuoc: boolean
+  lyDo: string | null
+}
+export interface TrangThaiBuocAi {
+  nhaCungCap: NhaCungCap
+  dungDuoc: boolean
+  tranThang: number
+}
+export interface TrangThaiAi {
+  anthropic: TrangThaiNhaCungCap
+  openAI: TrangThaiNhaCungCap
+  dinhTuyen: TrangThaiBuocAi
+  dinhTuyenGoiModel: boolean
+  dinhTuyenNguongTinCay: number
+  soanNhap: TrangThaiBuocAi
+  hoiDap: TrangThaiBuocAi
+}
+
+/** `cau-hinh-ai.json` của ui_server (Q6-1). Định tuyến KHÔNG có nhà cung cấp ở đây — đó là cấu hình host. */
+export interface CauHinhAi {
+  dinhTuyen: { cheDo: CheDoAi }
+  soanNhap: { cheDo: CheDoAi; nhaCungCap: NhaCungCap }
+  hoiDap: { cheDo: CheDoAi; nhaCungCap: NhaCungCap }
+}
+
+/** `GET /documents` — Api/Documents/DocumentHandler.cs. */
+export interface TaiLieu {
+  id: string
+  tenKhaiBao: string
+  loaiNoiDung: string
+  kichThuoc: number
+  subTenantCode: string
+  nguoiNap: string
+  napLuc: string
+  trangThaiTrichChu: string | null
+}
+export interface KetQuaNapTaiLieu {
+  id: string
+  tenKhaiBao: string
+  kichThuoc: number
+  daCoTuTruoc: boolean
+  trungVoi: string | null
+  trangThaiTrichChu: string | null
+  ghiChuTrichChu: string | null
+}
+
+/** `POST /internal/hoi-dap*` — Api/Knowledge/HoiDapHandler.cs (Q3-1). */
+export interface NguonHoiDap { ma: string; nhan: string; noiDung: string }
+export interface KetQuaHoiDap {
+  bietTraLoi: boolean
+  /** true = không hỏi được vì vận hành (trần, khoá…) — host trả 409. */
+  loiVanHanh: boolean
+  lyDoKhongBiet: string | null
+  giaiThich: string | null
+  phatBieu: { noiDung: string; nguon: string[] }[]
+  soPhatBieuBiBo: number
+  ghiChu: string | null
+  nguon: NguonHoiDap[]
+  nguonBiCat: boolean
+  soChoDaChe: number
+  cheDo: CheDoAi
+  nhaCungCap: NhaCungCap | null
+  model: string | null
+  /** Luôn `CHUA-DUYET`. */
+  trangThai: string
+}
+export interface PromptHoiDap {
+  systemText: string
+  userText: string
+  schema: string
+  nguon: NguonHoiDap[]
+  nguonBiCat: boolean
+  soChoDaChe: number
+  huongDan: string
+  trangThai: string
 }
 
 /** ProblemDetails của ASP.NET — mọi lỗi 4xx/5xx của host. */
@@ -167,4 +255,6 @@ export interface LoiHost {
   detail?: string
   status?: number
   lyDo?: string
+  /** 409 của `/internal/hoi-dap` mang kèm kết quả (mẩu đã gửi, lý do). */
+  ketQua?: KetQuaHoiDap
 }

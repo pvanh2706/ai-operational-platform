@@ -97,7 +97,8 @@ export const giaLap = {
   dinhTuyenApi: () => gl<KetQuaDinhTuyen>('dinh-tuyen-api'),
   xuatDinhTuyen: () => gl<KetQuaXuat>('xuat-dinh-tuyen'),
   napDinhTuyen: (ketQua: string, nguoi: string) => gl<KetQuaDinhTuyen>('nap-dinh-tuyen', { ketQua, nguoi }),
-  soanApi: (nhom: string, nguoi: string) => gl<KetQuaSoan>('soan-api', { nhom, nguoi }),
+  /** Q6-1: `nhaCungCap` theo màn Cấu hình AI; host kiểm lại và trả 400 nếu lạ. */
+  soanApi: (nhom: string, nguoi: string, nhaCungCap?: string) => gl<KetQuaSoan>('soan-api', { nhom, nguoi, nhaCungCap }),
   xuatSoan: (nhom: string) => gl<KetQuaXuat>('xuat-soan', { nhom }),
   napSoan: (ketQua: string) => gl<KetQuaSoan>('nap-soan', { ketQua }),
   duyet: (nguoi: string) => gl<KetQuaDuyet>('duyet', { nguoi }),

@@ -12,5 +12,9 @@ export const router = createRouter({
     { path: '/case/:khoa', name: 'case', component: () => import('./views/DongChay.vue') },
     { path: '/ket-noi', name: 'ket-noi', component: KetNoi },
     { path: '/gia-lap', name: 'gia-lap', component: () => import('./views/GiaLap.vue') },
+    // Nhóm Q (2026-10-22): nạp theo mã/file + hỏi tự do · phần mềm khách gửi/nhận · cấu hình AI chung.
+    { path: '/nap-hoi', name: 'nap-hoi', component: () => import('./views/NapHoi.vue') },
+    { path: '/phan-mem-khach', name: 'phan-mem-khach', component: () => import('./views/PhanMemKhach.vue') },
+    { path: '/cau-hinh', name: 'cau-hinh', component: () => import('./views/CauHinh.vue') },
   ],
 })
