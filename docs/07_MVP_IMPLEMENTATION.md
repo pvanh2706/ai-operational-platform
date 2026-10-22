@@ -432,6 +432,49 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-59` · Hỏi tự do về một case / một tài liệu — đường đầu tiên cho model nói từ vật liệu CHƯA DUYỆT
+
+**Ngày 2026-10-22, P13-2.** Quyết định: `docs/18` `Q3-1` (nội bộ, nhãn CHƯA DUYỆT, có biên lai + trần), `Q5-1` (tài
+liệu đứng riêng — hỏi đáp đọc chữ đã trích, không gắn case).
+
+```text
+POST /internal/hoi-dap              {khoaNguon | taiLieuId, cauHoi, nguoiHoi, nhaCungCap?} — TỐN TIỀN
+POST /internal/hoi-dap/xuat-prompt  chế độ File, bước 1 — không gọi, không ghi
+POST /internal/hoi-dap/nap-ket-qua  chế độ File, bước 2 — đối chiếu mã dẫn bằng ĐÚNG luật của chế độ API, không ghi
+nguồn case      N1 = tiêu đề, N2… = evidence CHƯA rút lại (AR-m), theo thời gian
+nguồn tài liệu  chữ đã trích, chia đoạn ~1500 ký tự; chưa trích được (PDF/ảnh, N4-1) → 409, không gửi gì
+luot_hoi_dap    biên lai ghi TRƯỚC khi gọi, có RLS · KHÔNG lưu câu hỏi hay câu trả lời
+HoiDap:*        TranThang 200 · TranKyTu 60000 · DoDaiDoan 1500 · NhaCungCap
+✅ 607 test (260 + 58 + 289) · 12 test API + 3 test Domain · kiem_dau_cuoi 102/0
+✅ đột biến: bỏ `RetractedAt == null` → đúng test "bỏ mẩu rút lại" đỏ; hoàn nguyên bằng bản chép
+```
+
+### Bốn luật — mỗi luật một cách đường này có thể làm người đọc tin nhầm
+
+```text
+1  Cổng che chạy trên CẢ câu hỏi lẫn nguồn. Câu hỏi là chữ người gõ — người ta dán mật khẩu vào đó y như dán vào ticket.
+2  Mẩu đã rút lại không đi. Cùng luật soạn nháp; thiếu nó là một đoạn người gửi đã rút vẫn được model trích lại.
+3  Phát biểu không dẫn được mã CÓ THẬT bị BỎ (không phải "đánh dấu"), số bị bỏ được trả ra. Model nói "biết" mà mọi
+   phát biểu đều bị bỏ → KHÔNG BIẾT (`khong-co-nguon-dan-chung`). Chế độ File dựng LẠI nguồn lúc nạp, không tin danh sách
+   mã file mang theo — mẩu bị rút giữa hai bước thì mã dẫn tới nó cũng bị bỏ.
+4  Mọi câu trả lời mang `trangThai: CHUA-DUYET`, và không có đường nào ghi nó vào kho tri thức.
+```
+
+### Ba chỗ tự quyết
+
+```text
+1  200 + bietTraLoi:false = KHÔNG BIẾT thật (giống /hoi) · 409 + lyDo = KHÔNG HỎI ĐƯỢC (trần, khoá, cổng che, lỗi gọi).
+   Trộn hai loại vào một mã là để người đọc không phân biệt được "nguồn không nói" với "chưa hỏi được".
+2  Nguồn quá trần thì cắt TỪ CUỐI và NÓI RA — cả trong prompt (model được báo phần sau không có) lẫn trong kết quả. Không
+   nói ra thì "nguồn không nói" và "phần đó không được gửi" trông giống hệt nhau.
+3  nguoiHoi bắt buộc ở chế độ API (lời khai của người bấm nút tốn tiền, cùng loại E3-1); chế độ File không cần.
+```
+
+⚠ `Q3-1` mang theo một rủi ro không biến mất vì đã chọn: một câu trả lời CHƯA DUYỆT trông giống hệt câu trả lời đúng.
+Lớp chặn là nhãn + chỉ loopback + mã dẫn đối chiếu được. Ai nối đường này ra phần mềm khách là đang làm `Q3-2`.
+
+---
+
 ## `IM-58` · OpenAI bằng HttpClient thuần — và schema bản nháp mà strict của OpenAI sẽ từ chối
 
 **Ngày 2026-10-22, P13-1.** Quyết định: `docs/18` `Q1-1` (HttpClient thuần, mở lại `O3-1`), `Q2-1` (model bắt buộc cấu

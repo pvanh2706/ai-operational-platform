@@ -347,7 +347,7 @@ def console_noi_bo(ma_case: str) -> None:
     ⚠ Không kiểm được ở đây chuyện "không gọi model": app chạy kiểm này có thể không bật model. Luật đó do test C#
       `DongChayTests.Xem_KHONG_goi_model_va_KHONG_ghi_bien_lai` giữ, bằng một model giả đếm số lần bị gọi.
     """
-    muc("C2 · Console nội bộ  (2 endpoint · P2-1)")
+    muc("C2 · Console nội bộ  (5 endpoint · P2-1, Q3-1)")
     tien_to = f"{DAU}:{LAN}:"
 
     s, b = goi("GET", "/internal/cases?tienTo=" + urllib.parse.quote(tien_to, safe=""))
@@ -363,6 +363,23 @@ def console_noi_bo(ma_case: str) -> None:
 
     s, _ = goi("GET", "/internal/cases/" + urllib.parse.quote(f"{DAU}:khong-bao-gio-ton-tai", safe="") + "/dong-chay")
     kiem("  ... case không tồn tại -> 404", s, 404)
+
+    # Q3-1: hỏi tự do — CHƯA DUYỆT. Chế độ File đi trọn vòng (không tốn gì). Chế độ API chỉ gọi với thân THIẾU nguoiHoi:
+    #   bị chặn ở cửa (400) TRƯỚC khi chạm model — app dev có khoá thật, và phép kiểm này không được tiêu tiền.
+    hoi = {"khoaNguon": ma_case, "cauHoi": "Khách báo lỗi gì?"}
+    s, b = goi("POST", "/internal/hoi-dap/xuat-prompt", hoi)
+    kiem("POST /internal/hoi-dap/xuat-prompt", s, 200)
+    kiem("  ... mang nhãn CHƯA DUYỆT", (b or {}).get("trangThai"), "CHUA-DUYET")
+    kiem("  ... có mẩu N1 trong prompt", "[N1]" in ((b or {}).get("userText") or ""), True)
+
+    tra = {"bietTraLoi": True, "ghiChu": "",
+           "phatBieu": [{"noiDung": "có nguồn", "nguon": ["N1"]}, {"noiDung": "bịa", "nguon": ["N99"]}]}
+    s, b = goi("POST", "/internal/hoi-dap/nap-ket-qua", {**hoi, "ketQua": tra})
+    kiem("POST /internal/hoi-dap/nap-ket-qua", s, 200)
+    kiem("  ... phát biểu dẫn mã KHÔNG có thật bị bỏ", ((b or {}).get("soPhatBieuBiBo"), len((b or {}).get("phatBieu", []))), (1, 1))
+
+    s, _ = goi("POST", "/internal/hoi-dap", hoi)
+    kiem("POST /internal/hoi-dap  thiếu nguoiHoi -> 400 (chặn trước khi gọi model)", s, 400)
 
     # IM-57: thử khoá. ⚠ Nếu app CÓ khoá thì đây là một lượt đi ra mạng tới Anthropic — MIỄN PHÍ (xem một model),
     #   nhưng vẫn ra ngoài. Không khẳng định khoá hợp lệ hay không: đó là trạng thái của máy, không phải của code.

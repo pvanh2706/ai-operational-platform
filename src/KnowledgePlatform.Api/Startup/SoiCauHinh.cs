@@ -139,6 +139,8 @@ public static class SoiCauHinh
 
         var nccSoanNhap = NhaCungCap.TuCauHinhDaChuan(cfg[$"{SoanNhapOptions.SectionName}:NhaCungCap"]);
         Console.WriteLine($"    soạn nháp mặc định: {nccSoanNhap} (SoanNhap:NhaCungCap; request khai nhaCungCap thì đè được)");
+        var nccHoiDap = NhaCungCap.TuCauHinhDaChuan(cfg[$"{HoiDapOptions.SectionName}:NhaCungCap"]);
+        Console.WriteLine($"    hỏi đáp (Q3-1, CHƯA DUYỆT) mặc định: {nccHoiDap} (HoiDap:NhaCungCap)");
 
         // --- Định tuyến ticket MỚI bằng model (P8, N7-1 PROPOSED) ---
         Muc("Định tuyến ticket mới bằng model (N7-1)");

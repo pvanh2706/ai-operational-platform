@@ -261,7 +261,9 @@ public sealed class TenantIsolationTests : IClassFixture<TestDatabaseFixture>
         //   nó rơi nhầm chỗ.
         Assert.Equal(
             ["assertion", "assertion_evidence", "canonical_case", "dinh_tuyen_da_nap",
-             "document", "evidence_item", "knowledge_record", "luot_dinh_tuyen_model", "luot_goi_y", "luot_goi_y_su_kien", "luot_soan_nhap",
+             "document", "evidence_item", "knowledge_record", "luot_dinh_tuyen_model", "luot_goi_y", "luot_goi_y_su_kien",
+             "luot_hoi_dap",   // Q3-1 (2026-10-22) — làm test này đỏ đúng một lần, như hai bảng webhook
+             "luot_soan_nhap",
              "process_definition", "process_run", "process_step",
              "sop_draft_goc", "webhook_delivery", "webhook_endpoint"],
             db.TenantScopedTables);

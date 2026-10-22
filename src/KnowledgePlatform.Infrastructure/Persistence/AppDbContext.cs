@@ -257,6 +257,21 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.HasIndex(x => new { x.TenantId, x.Luc });
         });
 
+        // --- `Q3-1`: biên lai hỏi đáp — tenant-scoped, CÓ RLS. KHÔNG lưu câu hỏi hay câu trả lời ---
+        b.Entity<LuotHoiDap>(e =>
+        {
+            e.ToTable("luot_hoi_dap");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.LoaiNguon).HasMaxLength(16).IsRequired();
+            e.Property(x => x.MaNguon).HasMaxLength(512).IsRequired();
+            e.Property(x => x.NguoiHoi).HasMaxLength(256).IsRequired();
+            e.Property(x => x.NhaCungCap).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Model).HasMaxLength(128);
+            e.Property(x => x.Loi).HasMaxLength(1000);
+
+            e.HasIndex(x => new { x.TenantId, x.Luc });   // đếm trần tháng
+        });
+
         // --- Kênh 2: siêu dữ liệu tài liệu. Nội dung nằm ở kho file (AR5) ---
         b.Entity<Document>(e =>
         {

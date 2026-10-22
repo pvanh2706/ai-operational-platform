@@ -309,7 +309,8 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >    P13-1  host: OpenAI qua HttpClient (soạn nháp, định tuyến, thử khoá) · KhoaOpenAI · chọn nhà cung cấp  ✅ 2026-10-22
 >           · GET /internal/ai (trạng thái, KHÔNG BAO GIỜ trả khoá) · --kiem-cau-hinh có mục OpenAI
 >           — 592 test · IM-58 · test bắt schema bản nháp mà strict OpenAI sẽ từ chối → SopDraftSchemaOpenAi
->    P13-2  host: POST /internal/hoi-dap (+ /prompt, /nap cho chế độ File) · biên lai + trần tháng · trỏ nguồn
+>    P13-2  host: POST /internal/hoi-dap (+ xuat-prompt, nap-ket-qua cho chế độ File) · biên lai + trần · trỏ nguồn  ✅ 2026-10-22
+>           — 607 test · kiem_dau_cuoi 102/0 · IM-59
 >    P13-3  ui_server: lưu cấu hình AI · nạp một mã issue từ Jira · hộp nhận webhook kiểm HMAC
 >    P13-4  console: màn Cấu hình · Nạp & hỏi · Phần mềm khách; trang giả lập đọc cấu hình chung
 >    P13-5  tài liệu khớp code (07 §3, 08, 19, 21) + kiem_dau_cuoi phủ đường mới

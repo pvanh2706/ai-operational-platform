@@ -64,6 +64,8 @@ builder.Services.Configure<WebhookOptions>(
     builder.Configuration.GetSection(WebhookOptions.SectionName));
 builder.Services.Configure<SoanNhapOptions>(
     builder.Configuration.GetSection(SoanNhapOptions.SectionName));
+builder.Services.Configure<HoiDapOptions>(
+    builder.Configuration.GetSection(HoiDapOptions.SectionName));
 builder.Services.Configure<KhoFileOptions>(
     builder.Configuration.GetSection(KhoFileOptions.SectionName));
 builder.Services.Configure<CongCheOptions>(
@@ -157,6 +159,10 @@ builder.Services.AddHttpClient(OpenAiChat.TenHttpClient, c => c.Timeout = TimeSp
 // một tên khác). Singleton: nó không chạm tenant.
 builder.Services.AddSingleton<CacModel>();
 
+// `Q3-1`: hỏi tự do về một case / một tài liệu — NỘI BỘ, nhãn CHƯA DUYỆT, có biên lai + trần. Xem HoiDapHandler.
+builder.Services.AddScoped<HoiDapHandler>();
+builder.Services.AddSingleton(sp => new ModelHoiDap(sp.GetRequiredService<CacModel>().HoiDap));
+
 // `AR3` — MỘT DÒNG để đổi bản hiện thực, và đây là dòng đó.
 //
 // 🛑 Không có khoá thì cắm bản NÉM kèm hướng dẫn, KHÔNG để trống DI (host chết vì một tính
@@ -227,6 +233,7 @@ var app = builder.Build();
 // này, nhưng nó nói bằng cách không chạy, như mọi cấu hình hỏng khác ở đây).
 NhaCungCap.TuCauHinh(app.Configuration, $"{DinhTuyenOptions.SectionName}:NhaCungCap");
 NhaCungCap.TuCauHinh(app.Configuration, $"{SoanNhapOptions.SectionName}:NhaCungCap");
+NhaCungCap.TuCauHinh(app.Configuration, $"{HoiDapOptions.SectionName}:NhaCungCap");
 
 // Lệnh vận hành của `AR-e` (tạo/thu hồi khoá): chạy rồi THOÁT, không mở cổng nghe.
 // Cố ý đứng TRƯỚC StartupChecks — xem AdminCommands.
@@ -1210,14 +1217,56 @@ app.MapPost("/internal/thu-khoa-model", async (string? nhaCungCap, IConfiguratio
 
 // `Q6-1`: màn Cấu hình của console đọc ở đây thay vì đọc chữ in ra của --kiem-cau-hinh. 🛑 KHÔNG BAO GIỜ trả khoá —
 // chỉ có/không, tên model, và nhà cung cấp mặc định của từng bước. Không ra mạng.
-app.MapGet("/internal/ai", (CacModel cac, IOptions<DinhTuyenOptions> dt, IOptions<SoanNhapOptions> sn) =>
+app.MapGet("/internal/ai", (CacModel cac, IOptions<DinhTuyenOptions> dt, IOptions<SoanNhapOptions> sn,
+        IOptions<HoiDapOptions> hd) =>
         Results.Ok(new TrangThaiAi(
             cac.TrangThai(NhaCungCap.Anthropic),
             cac.TrangThai(NhaCungCap.OpenAI),
             BuocAi(cac, dt.Value.NhaCungCap, dt.Value.TranThang),
             dt.Value.GoiModel,
             dt.Value.NguongTinCay,
-            BuocAi(cac, sn.Value.NhaCungCap, sn.Value.TranThang))))
+            BuocAi(cac, sn.Value.NhaCungCap, sn.Value.TranThang),
+            BuocAi(cac, hd.Value.NhaCungCap, hd.Value.TranThang))))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+// =============================================================================
+//  `Q3-1` (2026-10-22) — HỎI TỰ DO về một case hoặc một tài liệu đã nạp. NỘI BỘ, cho console.
+//
+//  🛑 Đường ĐẦU TIÊN cho model sinh chữ từ vật liệu CHƯA DUYỆT. Nó KHÔNG thay `/hoi` (`F2-1`: một cửa hỏi của sản
+//     phẩm, chỉ trả tri thức đã duyệt). Mọi câu trả lời mang `trangThai: CHUA-DUYET`, không vào kho tri thức.
+//  ⚠ 200 + `bietTraLoi: false` là KHÔNG BIẾT thật; 409 + `lyDo` là không hỏi được vì vận hành (trần, khoá, cổng che).
+//  ⚠ Chế độ File: xuat-prompt KHÔNG gọi gì, KHÔNG ghi gì; nap-ket-qua đối chiếu mã dẫn bằng ĐÚNG luật chế độ API.
+// =============================================================================
+
+app.MapPost("/internal/hoi-dap", async (YeuCauHoiDap body, HoiDapHandler h, CancellationToken ct) =>
+    {
+        string? ncc = null;
+        if (!string.IsNullOrWhiteSpace(body?.NhaCungCap) && !NhaCungCap.TryChuanHoa(body.NhaCungCap, out ncc))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "nhaCungCap không nhận ra",
+                detail: $"\"{body.NhaCungCap}\" — nhận: {NhaCungCap.DanhSach}. Bỏ trống = HoiDap:NhaCungCap của host.");
+        }
+
+        var kq = await h.HoiAsync(body!, ncc, ct);
+        if (kq.KetCuc != KetCuc.Xong) return TraVe(kq, "Không hỏi được");
+
+        return kq.GiaTri!.LoiVanHanh
+            ? Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Không hỏi model được",
+                detail: kq.GiaTri.GiaiThich,
+                extensions: new Dictionary<string, object?> { ["lyDo"] = kq.GiaTri.LyDoKhongBiet, ["ketQua"] = kq.GiaTri })
+            : Results.Ok(kq.GiaTri);
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapPost("/internal/hoi-dap/xuat-prompt", async (YeuCauHoiDap body, HoiDapHandler h, CancellationToken ct) =>
+        TraVe(await h.XuatPromptAsync(body, ct), "Không xuất được prompt"))
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+app.MapPost("/internal/hoi-dap/nap-ket-qua", async (YeuCauHoiDap body, HoiDapHandler h, CancellationToken ct) =>
+        TraVe(await h.NapKetQuaAsync(body, ct), "Không nạp được kết quả"))
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 

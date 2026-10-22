@@ -218,10 +218,30 @@ public static partial class OpenApiMoTa
                 "OpenAI (`Q1-1`); bỏ trống = Anthropic. `hopLe: null` = không thử được (mạng, 5xx, thiếu `OpenAI:Model`) " +
                 "— KHÔNG phải khoá sai. ⚠ KHÔNG kiểm được số dư credit. Không bao giờ trả khoá."),
 
+            ["POST /internal/hoi-dap"] = new(NhomConsole,
+                "Hỏi tự do về một case hoặc một tài liệu — CHƯA DUYỆT",
+                "`Q3-1`: khai ĐÚNG MỘT trong `khoaNguon` (case) hoặc `taiLieuId` (tài liệu đã nạp), cùng `cauHoi`, " +
+                "`nguoiHoi` (LỜI KHAI, bắt buộc — lượt này TỐN TIỀN) và tuỳ chọn `nhaCungCap`. Model chỉ đọc evidence chưa " +
+                "rút lại / chữ đã trích, ĐÃ qua cổng che; mỗi phát biểu trỏ về mã mẩu (`N1`…), phát biểu không trỏ được bị " +
+                "bỏ. 🛑 Mọi câu trả lời mang `trangThai: CHUA-DUYET` và KHÔNG vào kho tri thức — đây KHÔNG phải `/hoi`. " +
+                "200 + `bietTraLoi: false` = KHÔNG BIẾT thật; 409 + `lyDo` = không hỏi được (`vuot-tran-thang` · " +
+                "`chua-co-credit` · `khoa-bi-tu-choi` · `model-khong-ton-tai` · `het-credit` · `cong-che-chan` · " +
+                "`loi-goi-model`). Có biên lai + trần tháng (`HoiDap:TranThang`)."),
+
+            ["POST /internal/hoi-dap/xuat-prompt"] = new(NhomConsole,
+                "Chế độ File — xuất prompt hỏi đáp",
+                "Cùng thân với `POST /internal/hoi-dap` (không cần `nguoiHoi`). Trả `systemText` + `userText` ĐÃ qua cổng " +
+                "che, `schema` của câu trả lời, và các mẩu đã gửi. KHÔNG gọi model, KHÔNG ghi gì."),
+
+            ["POST /internal/hoi-dap/nap-ket-qua"] = new(NhomConsole,
+                "Chế độ File — nạp câu trả lời AI viết",
+                "Cùng thân + `ketQua` (object JSON AI trả, hoặc chuỗi; hàng rào ``` được gỡ). Nguồn được dựng LẠI và mã dẫn " +
+                "đối chiếu bằng ĐÚNG luật chế độ API. Không đọc được hình dạng → 400, không sửa hộ. KHÔNG ghi gì."),
+
             ["GET /internal/ai"] = new(NhomConsole,
                 "Nhà cung cấp model nào dùng được",
                 "Cho màn Cấu hình của console (`Q6-1`): Anthropic và OpenAI có khoá chưa, model nào, và mỗi bước có AI " +
-                "(định tuyến, soạn nháp) đang dùng nhà cung cấp nào mặc định. ⚠ \"dùng được\" = có khoá (và với OpenAI: " +
+                "(định tuyến, soạn nháp, hỏi đáp) đang dùng nhà cung cấp nào mặc định. ⚠ \"dùng được\" = có khoá (và với OpenAI: " +
                 "có model) — CHƯA nói khoá hợp lệ; muốn biết thì gọi `POST /internal/thu-khoa-model`. 🛑 Không ra mạng, " +
                 "không bao giờ trả khoá."),
 

@@ -54,7 +54,8 @@ public sealed record TrangThaiAi(
     TrangThaiBuocAi DinhTuyen,
     bool DinhTuyenGoiModel,
     double DinhTuyenNguongTinCay,
-    TrangThaiBuocAi SoanNhap);
+    TrangThaiBuocAi SoanNhap,
+    TrangThaiBuocAi HoiDap);
 
 /// <summary>
 /// Sổ đăng ký nhà cung cấp model — `Q1-1` + `Q6-1` (2026-10-22). Đọc khoá ĐÚNG MỘT LẦN cho mỗi nhà cung cấp, rồi dựng
@@ -137,6 +138,14 @@ public sealed class CacModel
         if (ncc == NhaCungCap.OpenAI) return OpenAi() is { } chat ? new OpenAiDinhTuyen(chat) : null;
 
         return AnthropicClient is { } client ? new AnthropicDinhTuyen(client) : null;
+    }
+
+    /// <summary>Bản gọi model hỏi đáp (`Q3-1`) của <paramref name="ncc"/>, hoặc <c>null</c> khi chưa dùng được.</summary>
+    public IGoiModelHoiDap? HoiDap(string ncc)
+    {
+        if (ncc == NhaCungCap.OpenAI) return OpenAi() is { } chat ? new OpenAiHoiDap(chat) : null;
+
+        return AnthropicClient is { } client ? new AnthropicHoiDap(client) : null;
     }
 
     public TrangThaiNhaCungCap TrangThai(string ncc) => ncc == NhaCungCap.OpenAI

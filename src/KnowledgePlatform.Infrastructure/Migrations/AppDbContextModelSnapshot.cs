@@ -733,6 +733,61 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.ToTable("luot_dinh_tuyen_model", "kp");
                 });
 
+            modelBuilder.Entity("KnowledgePlatform.Domain.Sop.LuotHoiDap", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LoaiNguon")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Loi")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset>("Luc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MaNguon")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("NguoiHoi")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NhaCungCap")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("SoChoDaChe")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SoNguon")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("ThanhCong")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Luc");
+
+                    b.ToTable("luot_hoi_dap", "kp");
+                });
+
             modelBuilder.Entity("KnowledgePlatform.Domain.Sop.LuotSoanNhap", b =>
                 {
                     b.Property<Guid>("Id")
