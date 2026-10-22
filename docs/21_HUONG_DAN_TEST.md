@@ -16,7 +16,9 @@
 4. [Bức tranh: ai nói chuyện với ai](#4-bức-tranh-ai-nói-chuyện-với-ai)
 5. [Test giả lập hai luồng — từng bước](#5-test-giả-lập-hai-luồng--từng-bước)
 6. [Đọc kết quả: bản đồ lô và màn dòng chảy](#6-đọc-kết-quả-bản-đồ-lô-và-màn-dòng-chảy)
-7. [Hai cách gán AI: File và API](#7-hai-cách-gán-ai-file-và-api)
+7. [Hai cách gán AI: File và API](#7-hai-cách-gán-ai-file-và-api) — chọn ở màn **Cấu hình AI**
+   - [7a. Nạp & hỏi: một mã issue hoặc một file](#7a-nạp--hỏi-một-mã-issue-hoặc-một-file)
+   - [7b. Phần mềm khách: gửi tín hiệu, nhận kết quả về](#7b-phần-mềm-khách-gửi-tín-hiệu-nhận-kết-quả-về)
 8. [Các phép kiểm tự động](#8-các-phép-kiểm-tự-động)
 9. [Dọn dẹp và làm lại từ đầu](#9-dọn-dẹp-và-làm-lại-từ-đầu)
 10. [Xử lý sự cố](#10-xử-lý-sự-cố)
@@ -29,6 +31,7 @@
 | Loại | Chạy bằng | Kiểm điều gì | Khi nào chạy |
 |---|---|---|---|
 | **Giả lập hai luồng** (thủ công, có giao diện) | `chay-thu.bat` → trình duyệt | Cả vòng sản phẩm chạy được từ tín hiệu tới gợi ý, với dữ liệu bịa có đáp án | Muốn **nhìn** hệ thống làm việc; sau khi đổi luồng nghiệp vụ |
+| **Nạp & hỏi · Phần mềm khách** (thủ công, có giao diện) | `chay-thu.bat` → `/console/nap-hoi`, `/console/phan-mem-khach` | Nạp một issue/file rồi hỏi tự do về nó; gửi tín hiệu như phần mềm khách và nhận kết quả gửi về | Sau khi đổi Kênh 1, Kênh 2, webhook, hoặc đường hỏi đáp — §7a, §7b |
 | **Bộ test C#** | `dotnet test src\KnowledgePlatform.slnx` | Từng LUẬT của domain + hạ tầng + HTTP, trên PostgreSQL thật | Sau mỗi lần sửa code C# |
 | **Kiểm đầu-cuối** | `python scripts\kiem_dau_cuoi.py` | Mọi endpoint trong hợp đồng còn gọi được trên app ĐANG CHẠY | Trước khi commit thay đổi chạm API |
 | **Kiểm hai khách** | `python scripts\kiem_hai_khach.py` | Dựng được khách thứ hai mà không sửa code; hai khách không lẫn dữ liệu | Khi đụng tới tenant, xác thực, onboard |
@@ -67,7 +70,8 @@ phải rơi vào nhóm THẬT. Duyệt quy trình giả cho nhóm X trong `kp_de
 DEPRECATED, và SOP giả sẽ trả lời ticket thật. Tách database thì không có chuyện đó.
 
 **Khoá model (chỉ cần cho chế độ API):** chép `appsettings.Local.example.json` thành `appsettings.Local.json` ở gốc repo,
-điền `Anthropic.ApiKey`. File này đã nằm trong `.gitignore` — host TỪ CHỐI đọc nó nếu git không chặn. Muốn định tuyến
+điền `Anthropic.ApiKey` và/hoặc `OpenAI.ApiKey` + **`OpenAI.Model`** (OpenAI KHÔNG có model mặc định — `Q2-1`; thiếu model
+thì OpenAI coi như chưa dùng được). File này đã nằm trong `.gitignore` — host TỪ CHỐI đọc nó nếu git không chặn. Muốn định tuyến
 bằng model thì thêm `"DinhTuyen": { "GoiModel": true }` (tính tiền MỖI ticket mới). Không có khoá vẫn test được đủ hai
 luồng bằng chế độ **File**.
 
@@ -380,10 +384,20 @@ ACCEPTED · USED), **gửi về**, **evidence**. Nhãn **nguồn** đi kèm mọ
 
 ## 7. Hai cách gán AI: File và API
 
+**Chọn ở đâu (`Q6-1`):** màn **Cấu hình AI** (`/console/cau-hinh`) — mỗi bước có AI (định tuyến, soạn nháp, hỏi đáp) chọn
+**API** hoặc **File**; với API thì soạn nháp và hỏi đáp chọn thêm **Anthropic** hoặc **OpenAI**. Lựa chọn lưu ở
+`scripts\giao-dien\cau-hinh-ai.json` (git chặn, không chứa khoá) và mọi màn đọc chung — đổi ở bước 0 trang giả lập cũng là
+đổi ở đây. Chọn API mà nhà cung cấp chưa dùng được (thiếu khoá / model, hoặc Thử khoá bị từ chối) thì bước đó **chạy bằng
+File** và màn Cấu hình nói vì sao.
+
+⚠ **Định tuyến chọn nhà cung cấp ở HOST**, không ở console: `DinhTuyen:NhaCungCap` trong `appsettings.Local.json`
+(`anthropic` mặc định · `openai`). Lý do: định tuyến chạy tự động trên mọi webhook, không có ai đứng đó chọn. Sai chính tả
+tên → app **không khởi động**.
+
 |  | **File** | **API** |
 |---|---|---|
-| Cần gì | không cần khoá | khoá hợp lệ trong `appsettings.Local.json` (+ `GoiModel` cho định tuyến) |
-| Ai đóng vai AI | bạn đưa file prompt cho Claude Code / Codex / một khung chat | app tự gọi `claude-opus-5` |
+| Cần gì | không cần khoá | khoá hợp lệ trong `appsettings.Local.json` (+ `GoiModel` cho định tuyến; + `OpenAI.Model` nếu dùng OpenAI) |
+| Ai đóng vai AI | bạn đưa file prompt cho Claude Code / Codex / một khung chat | app tự gọi `claude-opus-5`, hoặc model OpenAI đã cấu hình |
 | Tốn gì | lượt dùng của công cụ AI bạn chọn | định tuyến: 1 lượt/ticket mới · soạn nháp: 1 lượt/bấm |
 | Kiểm được gì | toàn bộ đường ống + cổng kiểm đầu vào | thêm: lượt gọi thật, biên lai, ngưỡng tin cậy, trần tháng |
 | Đọc kết quả ở | "Báo cáo lệnh nạp" (dòng bị từ chối) | biên lai model trên màn dòng chảy |
@@ -399,8 +413,97 @@ Hoặc chép toàn bộ nội dung file vào một khung chat AI rồi dán JSON
 `scripts\giao-dien\gia-lap-io\<lô>\` (git đã chặn thư mục này). ⚠ Lệnh `claude -p` / `codex exec` CHƯA được chạy thử
 trên máy này — đó là gợi ý.
 
-**Chế độ API — trước khi bấm:** bấm **Thử khoá** ở bước 0. Ra "✓ Khoá dùng được" rồi mới chọn API. Khoá bị từ chối thì
-mọi lượt API đều hỏng (hỏng có kiểm soát: định tuyến ra KHÔNG BIẾT + biên lai lỗi; soạn nháp ra 409 `khoa-bi-tu-choi`).
+**Chế độ API — trước khi bấm:** bấm **Thử khoá** ở bước 0 hoặc màn Cấu hình AI — mỗi nhà cung cấp một nút, cùng đường
+miễn phí (`GET /v1/models/{model}`). Ra "✓ Khoá dùng được" rồi mới chọn API. Khoá bị từ chối thì mọi lượt API đều hỏng
+(hỏng có kiểm soát: định tuyến ra KHÔNG BIẾT + biên lai lỗi; soạn nháp ra 409 `khoa-bi-tu-choi`). Biên lai ghi cả nhà
+cung cấp và model của từng lượt.
+
+---
+
+## 7a. Nạp & hỏi: một mã issue hoặc một file
+
+Mở **`/console/nap-hoi`**. Chạy trên app đang chọn ở góc phải (5120 giả lập hoặc 5119 dev).
+
+**Ý nghĩa:** đưa MỘT nguồn vào hệ thống rồi hỏi tự do về nó. Hai nửa kiểm hai thứ khác nhau:
+
+```text
+nạp   mã issue → ô A → B → C (như phần mềm khách báo việc mới)      file → ô A2 → K (Kênh 2, đọc chữ)
+hỏi   đường NỘI BỘ /internal/hoi-dap (Q3-1) — KHÔNG phải /hoi. /hoi chỉ trả tri thức ĐÃ DUYỆT; đường này cho model đọc
+      thẳng evidence / chữ tài liệu, nên mọi câu trả lời mang nhãn CHƯA DUYỆT và không vào kho tri thức.
+```
+
+**Nạp một mã issue — luồng chạy:**
+
+```text
+trình duyệt ── POST /api/nap-issue {ma, cong} ──► ui_server
+   1. hỏi host: có case "jira:<mã>" hoặc "<mã>" chưa?  (GET /internal/cases/{k}/dong-chay)  → có thì CHỌN LUÔN, xong
+   2. chưa có + mã đúng hình dạng Jira (ES-123) + đã kết nối Jira:
+      ui_server ── Jira /rest/api/2/search  jql = key = "<MÃ>"   (phiên Jira trong RAM của ui_server)
+                ── description + comment → dry-run-issue-<mã>-*.json   (git chặn)
+                ── check_corpus.py → báo CHẶN thì DỪNG, không gửi (AR-j; ngoại lệ duy nhất: KP_CONG_CHE_TAT_TAM=1)
+                ── POST /signals/case-observed + /signals/case-evidence
+```
+
+Host **không bao giờ** gọi Jira. Chưa kết nối Jira thì trang mở ô **Kết nối Jira** (PAT hoặc tên + mật khẩu; chỉ nằm trong
+RAM ui_server, tắt là mất). ⚠ Đường kéo từ Jira THẬT chưa được chạy trên máy dev (không có phiên Jira) — chỉ nhánh "đã có
+trong kho" và các nhánh từ chối đã được bấm thật.
+
+**Import một file — luồng chạy:**
+
+```text
+trình duyệt ── POST /app/<cổng>/documents (multipart: file, subTenantCode, nguoiNap) ──► host
+host ── khử trùng theo SHA-256 (nạp lại cùng nội dung → trả bản cũ, tên cũ) ── trích chữ (N4-1) ── lưu kho file
+```
+
+Đọc được chữ: txt · md · csv · html · json · xml · docx. PDF/ảnh vào kho nhưng `chua-ho-tro` — **không hỏi được**.
+
+**Hỏi — luồng chạy:**
+
+```text
+chế độ API    POST /internal/hoi-dap {khoaNguon | taiLieuId, cauHoi, nguoiHoi, nhaCungCap}
+              host ── gom nguồn: case = N1 tiêu đề + N2… evidence CHƯA rút lại · tài liệu = chữ chia đoạn ~1500 ký tự
+                   ── cổng che trên CẢ câu hỏi lẫn nguồn ── trần tháng (HoiDap:TranThang) ── biên lai TRƯỚC khi gọi
+                   ── model trả {bietTraLoi, phatBieu[{noiDung, nguon[]}], ghiChu}
+                   ── phát biểu không dẫn được mã CÓ THẬT bị BỎ
+chế độ File   a · POST /internal/hoi-dap/xuat-prompt → trang hiện khối để chép cho Claude Code / Codex
+              c · dán JSON → POST /internal/hoi-dap/nap-ket-qua → đối chiếu mã bằng ĐÚNG luật của chế độ API
+```
+
+**Đọc kết quả:**
+
+| Thấy | Nghĩa |
+|---|---|
+| Nhãn vàng **CHƯA DUYỆT** | luôn có — kể cả khi câu trả lời trông đúng |
+| Chip `N2` sau mỗi phát biểu | bấm để mở đúng mẩu model đã đọc (dạng ĐÃ che) — đối chiếu phát biểu với nó |
+| "Đã BỎ k phát biểu…" | model viết k câu không trỏ được về mẩu có thật — chúng không được hiện |
+| **KHÔNG BIẾT** — nguồn không nói | đúng, không phải lỗi. Nếu kèm "⚠ chỉ phần đầu được gửi" thì có thể là phần đó không được gửi |
+| **KHÔNG BIẾT** — không dẫn được nguồn | model nói "biết" mà mọi phát biểu đều bị bỏ |
+| Hộp đỏ + lý do | không hỏi được: trần tháng, thiếu khoá, khoá bị từ chối, cổng che chặn |
+
+---
+
+## 7b. Phần mềm khách: gửi tín hiệu, nhận kết quả về
+
+Mở **`/console/phan-mem-khach`**. Console đóng vai **phần mềm của khách** (`Q8-1`).
+
+**Ý nghĩa:** kiểm hợp đồng tích hợp (`docs/19`) từ phía bên tích hợp — cả hai chiều:
+
+```text
+GỬI   trình duyệt ── POST /app/<cổng>/signals/* hoặc /hoi ──► host ── phản hồi TRẢ NGAY (đồng bộ)
+NHẬN  host ── hàng đợi bền → vòng quét ~15 giây ── POST http://127.0.0.1:8791/khach-gia-lap/webhook/<cổng>
+      ui_server ── kiểm X-KP-Signature = sha256=HMAC(bí mật ký, NGUYÊN BYTE thân) ── sai → 401 (host thử lại theo lịch)
+```
+
+**Các bước:**
+
+1. **Đăng ký hộp nhận** — ui_server gọi `PUT /internal/webhook`, giữ bí mật ký trong RAM (trang không thấy nó).
+   ⚠ Mỗi khách MỘT đích gửi: đăng ký trên app **5119** là THAY đích hiện có của `dev-tenant`.
+2. Chọn mẫu **Có việc mới** → **Gửi**. Mong đợi: HTTP 200, `created: 1`.
+3. Vài giây sau hộp nhận hiện gói `suKien: case-moi` của đúng mã, **✓ hợp lệ**.
+4. Trên CÙNG mã: **Thêm một mẩu evidence**, **Hỏi**, **Việc ở nguồn đổi trạng thái** — mỗi lượt xem phản hồi trả ngay;
+   mẩu làm case bước sang bước khác thì có thêm gói `buoc-hien-tai-doi`.
+
+`? không kiểm được` ở cột chữ ký = ui_server đã khởi động lại sau khi đăng ký (mất bí mật trong RAM) — đăng ký lại.
 
 ---
 
@@ -499,6 +602,11 @@ database, đừng mong nạp lại sẽ thay thế.
 ---
 
 ## 11. Test này KHÔNG chứng minh được gì
+
+⚠ **Thêm 2026-10-22 (nhóm Q):** đường **OpenAI** chưa từng gọi OpenAI thật — request/response được kiểm bằng HttpClient giả
+theo tài liệu công khai; lượt thật đầu tiên là phép thử thật đầu tiên (bấm Thử khoá trước). Đường **kéo một issue từ
+Jira** chưa chạy với Jira thật. **Chất lượng câu trả lời hỏi đáp** chưa được đo — luật trỏ nguồn chỉ bảo đảm mỗi phát
+biểu CÓ dẫn một mẩu có thật, không bảo đảm mẩu đó NÓI điều phát biểu nói.
 
 Ghi ra để không ai đọc màn hình xanh thành "sản phẩm dùng được":
 

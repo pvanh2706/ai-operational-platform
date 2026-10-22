@@ -311,10 +311,13 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 >           — 592 test · IM-58 · test bắt schema bản nháp mà strict OpenAI sẽ từ chối → SopDraftSchemaOpenAi
 >    P13-2  host: POST /internal/hoi-dap (+ xuat-prompt, nap-ket-qua cho chế độ File) · biên lai + trần · trỏ nguồn  ✅ 2026-10-22
 >           — 607 test · kiem_dau_cuoi 102/0 · IM-59
->    P13-3  ui_server: lưu cấu hình AI · nạp một mã issue từ Jira · hộp nhận webhook kiểm HMAC
->    P13-4  console: màn Cấu hình · Nạp & hỏi · Phần mềm khách; trang giả lập đọc cấu hình chung
->    P13-5  tài liệu khớp code (07 §3, 08, 19, 21) + kiem_dau_cuoi phủ đường mới
+>    P13-3  ui_server: lưu cấu hình AI · nạp một mã issue từ Jira · hộp nhận webhook kiểm HMAC        ✅ 2026-10-22
+>    P13-4  console: màn Cấu hình · Nạp & hỏi · Phần mềm khách; trang giả lập đọc cấu hình chung       ✅ 2026-10-22
+>           — bấm thật 22/22 trong Edge headless; bắt được 1 lỗi (mở trang giả lập đã ghi đè cấu hình) · IM-60
+>    P13-5  tài liệu khớp code (07 §3, 08, 21) + kiem_dau_cuoi phủ đường mới                          ✅ 2026-10-22
 > ```
+> ⚠ **CHƯA chạy thật, nói thẳng:** OpenAI (chưa có khoá trên máy — chỉ HttpClient giả) · kéo issue từ Jira (không có phiên
+> Jira) · chất lượng câu trả lời hỏi đáp (chưa đo). Đây là ba phép thử thật đầu tiên còn nợ.
 
 > 🔄 **CONSOLE VUE 3 ĐỂ NHÌN LUỒNG CHẠY — chốt 2026-10-19, CHƯA CODE.** Quyết định: `docs/18` NHÓM P (4/4).
 > Console NỘI BỘ (không phải widget `AR2`/`D5-1`), build tĩnh do `ui_server.py` phục vụ (loopback), Vue 3 + Vite +

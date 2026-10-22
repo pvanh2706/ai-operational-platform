@@ -432,6 +432,46 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-60` · Ba màn console + ui_server — và một trang chỉ cần MỞ ra là đã đổi cấu hình
+
+**Ngày 2026-10-22, P13-3/P13-4.** Quyết định: `docs/18` `Q4-1` (mã issue: có trong kho thì mở, chưa có thì kéo từ Jira
+qua ui_server), `Q6-1` (màn Cấu hình trong console, ui_server lưu), `Q8-1` (màn Phần mềm khách + hộp nhận).
+
+```text
+ui_server · khach_va_nap.py   cau-hinh-ai.json (git chặn, KHÔNG chứa khoá) · /api/nap-issue · /khach-gia-lap/webhook/<cổng>
+                              · /api/khach-dang-ky · /api/khach-hop-nhan
+console                       /nap-hoi · /phan-mem-khach · /cau-hinh · trang giả lập đọc cấu hình chung (bỏ localStorage)
+bấm thật (Edge headless)      22/22 — nạp file → hỏi qua File → chip mã mở đúng mẩu đã che · nạp mã có sẵn · đăng ký hộp
+                              nhận → case-observed → gói về sau ~2 giây, chữ ký hợp lệ · chữ ký giả → 401 · Cấu hình
+                              cảnh báo OpenAI chưa dùng được · mở trang giả lập KHÔNG ghi cấu hình
+```
+
+### Lỗi lượt bấm thật bắt được — vue-tsc, build và mọi curl đều xanh
+
+Bản đầu của trang giả lập nạp chế độ từ cấu hình chung vào `cheDo` rồi dùng `watch(cheDo)` để ghi ngược lại, kèm cờ
+"đang nạp" để bỏ qua lượt gán lúc mở trang. Watcher của Vue chạy ở lượt flush SAU — lúc đó cờ đã tắt. Kết quả: **chỉ MỞ
+trang là ghi file**, và ghi chế độ HIỆU LỰC (File khi khoá tạm thiếu) đè lên lựa chọn API của người dùng. Không lỗi nào
+hiện ra: file vẫn hợp lệ, trang vẫn chạy. Sửa: ghi từ `@change` của ô chọn, không từ watcher. Kịch bản bấm thật giờ kiểm
+cả hai chiều (mở không ghi, bấm thì ghi). Khoá bị Thử khoá từ chối thì đổi về File CHO PHIÊN ĐÓ, không ghi file — sửa
+khoá rồi thử lại được thì lựa chọn đã lưu còn nguyên.
+
+### Bốn chỗ tự quyết
+
+```text
+1  ui_server KHÔNG `import ui_server` để đọc phiên Jira: chạy bằng `python ui_server.py` thì module đó tên `__main__`,
+   import lại là nạp BẢN THỨ HAI với PHIEN rỗng — phiên vừa kết nối trông như chưa từng có. Đọc qua sys.modules của
+   lớp Handler.
+2  Mã Jira kiểm HÌNH DẠNG (KHOÁ-123) trước khi ghép vào `key = "…"` — một chuỗi tuỳ ý ở đó là một JQL tuỳ ý.
+3  Hộp nhận kiểm chữ ký trên NGUYÊN BYTE (đứng trước json.loads, như đường /app/) và trả 401 khi sai — đúng việc
+   docs/19 §3.2 bắt bên tích hợp làm. Bí mật ký ở lại RAM ui_server; trình duyệt chỉ biết CÓ giữ hay không.
+4  Cấu hình định tuyến KHÔNG nhận nhà cung cấp (ui_server từ chối cả lượt ghi): nó là cấu hình host (IM-58 §1).
+```
+
+⚠ Kéo một issue từ Jira THẬT chưa chạy — máy dev không có phiên Jira. Đã bấm: nhánh đã-có-trong-kho, nhánh chưa-kết-nối
+(409 nói việc phải làm), nhánh mã sai hình dạng (404).
+
+---
+
 ## `IM-59` · Hỏi tự do về một case / một tài liệu — đường đầu tiên cho model nói từ vật liệu CHƯA DUYỆT
 
 **Ngày 2026-10-22, P13-2.** Quyết định: `docs/18` `Q3-1` (nội bộ, nhãn CHƯA DUYỆT, có biên lai + trần), `Q5-1` (tài

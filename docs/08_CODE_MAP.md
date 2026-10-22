@@ -376,7 +376,7 @@ nạp thắng bảng đo), và nếu case đang chạy quy trình của nhóm C�
 
 ---
 
-# 6. Ba mươi ba endpoint — cái nào đòi gì
+# 6. Bốn mươi thao tác — cái nào đòi gì
 
 **Ba loại cửa, không có loại thứ tư:**
 
@@ -397,9 +397,18 @@ nạp thắng bảng đo), và nếu case đang chạy quy trình của nhóm C�
 | Kênh 2 — tài liệu | `POST /documents` · `GET /documents` · `GET /documents/{id}/chu` · `GET /documents/{id}/tai` | `DocumentHandler` |
 | Cấu hình của khách | `PUT /internal/webhook` · `GET /internal/webhook` | `WebhookConfigHandler` |
 | Đo hạ tầng | `GET /internal/tenant-boundary` (SQL thô cố ý không lọc tenant — hai khách gọi phải ra hai con số khác nhau) · `GET /internal/sub-tenant-coverage` | `Program.cs` · `CaseEvidenceReadHandler` |
+| Console nội bộ — xem (`P2-1`) | `GET /internal/cases` · `GET /internal/cases/{khoaNguon}/dong-chay` — KHÔNG gọi model, KHÔNG ghi gì | `DongChayHandler` |
+| Console nội bộ — model (`IM-57`, `Q1-1`, `Q6-1`) | `POST /internal/thu-khoa-model?nhaCungCap=` (miễn phí) · `GET /internal/ai` (không ra mạng, không trả khoá) | `ThuKhoaModel` · `CacModel` |
+| Console nội bộ — hỏi tự do (`Q3-1`) | `POST /internal/hoi-dap` (TỐN TIỀN, biên lai `luot_hoi_dap`) · `POST /internal/hoi-dap/xuat-prompt` · `POST /internal/hoi-dap/nap-ket-qua` — mọi câu trả lời `CHUA-DUYET`, KHÔNG vào kho tri thức | `HoiDapHandler` |
 
 Danh sách thật, kèm mô tả từng endpoint, là `GET /openapi/v1.json` — sinh từ code, và cửa 8 làm nó không lệch
 được. Bảng trên chỉ nhóm lại để đọc.
+
+🎯 **Nhà cung cấp model (`Q1-1`, 2026-10-22):** mọi lượt gọi model đi qua `CacModel` (Api/Knowledge) — đọc khoá Anthropic
+và OpenAI ĐÚNG MỘT LẦN, dựng bản hiện thực theo tên. OpenAI đi bằng `OpenAiChat` (HttpClient thuần, không gói NuGet).
+Định tuyến chọn nhà cung cấp ở cấu hình host (`DinhTuyen:NhaCungCap`); soạn nháp và hỏi đáp nhận `nhaCungCap` theo
+request. Bản nháp gửi OpenAI dùng `SopDraftSchemaOpenAi` — dựng TỪ `SopDraftSchema` lúc chạy, vì strict mode của OpenAI
+từ chối hai chỗ của bản gốc (`IM-58`).
 
 ⚠ Ở chế độ shared, hai endpoint duyệt (`/knowledge/{id}/approve`, `/processes/{id}/approve`) trả `409` (`AR-l`).
 
