@@ -299,6 +299,21 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> 🔄 **NẠP THEO MÃ/FILE · HỎI TỰ DO · GIẢ LẬP PHẦN MỀM KHÁCH · OpenAI — chốt 2026-10-22, ĐANG CODE.** Quyết định:
+> `docs/18` NHÓM Q (8/8, cả 8 rơi vào ô đề xuất). 🛑 Hai câu §10.1: OpenAI bằng **HttpClient thuần**, không thư viện
+> mới (`Q1-1`, mở lại `O3-1`); model OpenAI **bắt buộc cấu hình**, không mặc định (`Q2-1`). 🛑 Hỏi tự do là đường
+> ĐẦU TIÊN cho model sinh chữ từ vật liệu CHƯA DUYỆT — nên nó NỘI BỘ (`/internal/hoi-dap`), nhãn "CHƯA DUYỆT", không
+> vào hợp đồng; `F2-1` (một cửa hỏi cho sản phẩm = `/hoi`) giữ nguyên.
+> ```text
+>    P13-0  ghi quyết định (docs/18 Q, file này)                                     ✅ 2026-10-22
+>    P13-1  host: OpenAI qua HttpClient (soạn nháp, định tuyến, thử khoá) · KhoaOpenAI · chọn nhà cung cấp
+>           · GET /internal/ai (trạng thái, KHÔNG BAO GIỜ trả khoá) · --kiem-cau-hinh có mục OpenAI
+>    P13-2  host: POST /internal/hoi-dap (+ /prompt, /nap cho chế độ File) · biên lai + trần tháng · trỏ nguồn
+>    P13-3  ui_server: lưu cấu hình AI · nạp một mã issue từ Jira · hộp nhận webhook kiểm HMAC
+>    P13-4  console: màn Cấu hình · Nạp & hỏi · Phần mềm khách; trang giả lập đọc cấu hình chung
+>    P13-5  tài liệu khớp code (07 §3, 08, 19, 21) + kiem_dau_cuoi phủ đường mới
+> ```
+
 > 🔄 **CONSOLE VUE 3 ĐỂ NHÌN LUỒNG CHẠY — chốt 2026-10-19, CHƯA CODE.** Quyết định: `docs/18` NHÓM P (4/4).
 > Console NỘI BỘ (không phải widget `AR2`/`D5-1`), build tĩnh do `ui_server.py` phục vụ (loopback), Vue 3 + Vite +
 > TS + Vue Flow + Router + Pinia. 🛑 Chỗ khó là DỮ LIỆU: host chưa có đường liệt kê case hay trả dòng thời gian

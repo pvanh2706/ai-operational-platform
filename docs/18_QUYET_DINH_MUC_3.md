@@ -38,6 +38,7 @@ NHÓM N  hoàn thiện sơ đồ luồng        ✅ 4/7 CHỐT 2026-10-10   · 3
 NHÓM O  giả lập 2 luồng + 2 cách gán AI ✅ 6/6 CHỐT 2026-10-19   · O5 sinh ra lúc đọc code
         (thêm 2026-10-19, từ câu hỏi "đã hoàn thiện chưa / test bằng dữ liệu giả")
 NHÓM P  giao diện Vue 3 — luồng chạy    ✅ 6/6 CHỐT 2026-10-19   · console nội bộ, KHÔNG phải widget
+NHÓM Q  nạp mã/file · hỏi tự do · OpenAI ✅ 8/8 CHỐT 2026-10-22   · Q1 MỞ LẠI O3-1 (§10.1)
 ```
 
 🛑 **20/20 KHÔNG nghĩa là hết chặn.** Ba thứ còn chặn và **không thứ nào gỡ được bằng một
@@ -593,6 +594,8 @@ không phải mọi file JSON. `appsettings.Local.json` đã nằm trong `.gitig
 - [x] **O3-1 — Chỉ Anthropic.** (đề xuất) SDK đã có trong host. Codex vẫn dùng được qua cách 2 (file).
 - [ ] **O3-2 — Anthropic + OpenAI** (thư viện mới — `AGENT.md` §10.1).
 
+🔄 **MỞ LẠI 2026-10-22 ở `Q1`:** thêm OpenAI bằng HttpClient thuần — không thư viện mới, nên lý do bỏ `O3-2` không còn chặn.
+
 ## O4 · Cách 2 — xuất/nạp file điều khiển thế nào?
 
 - [ ] **O4-1 — Script giả lập có cờ `--ai api|file`.** (đề xuất)
@@ -710,3 +713,92 @@ cho mã lỗi. `kp_dev` chưa bị — bản nháp máy sinh thật tình cờ c
 
 ⚠ `AGENT.md` §10.1: thư viện lớn là câu BẮT BUỘC hỏi — bốn thư viện trên (Vue, Vite, Vue Flow, Router+Pinia,
 cộng TypeScript) là toàn bộ phạm vi đã được chốt. Thêm thư viện thứ năm (biểu đồ, bộ component…) là hỏi lại.
+
+---
+
+# NHÓM Q — nạp theo mã/file, hỏi tự do, giả lập phần mềm khách, OpenAI · ✅ 8/8 CHỐT 2026-10-22
+
+Sinh từ yêu cầu của chủ dự án ngày 2026-10-22, năm ý: *"(1) giao diện nhập mã issue hoặc import file, hệ thống nạp
+dữ liệu từ issue/tài liệu đó; (2) giao diện hỏi về issue/file đã nạp; (3) api giả lập có tín hiệu từ phần mềm khác và
+nhận được phản hồi; (4) nơi cấu hình dùng api token hay prompt import/export; (5) cấu hình api token cho OpenAI"*.
+Chọn qua form, tám câu, hai lượt. **8/8 rơi vào ô `(đề xuất)`** — ghi ra theo đúng cảnh báo đầu file.
+
+**Hiện trạng đọc được TRƯỚC khi hỏi** (để người đọc sau thấy câu hỏi đứng trên cái gì):
+```text
+(1) mã issue   host KHÔNG BAO GIỜ gọi Jira; kéo Jira sống ở ui_server, chỉ theo JQL (export_jira_to_channel1.py).
+    file       POST /documents (multipart) ĐÃ CÓ + trích chữ txt/md/html/docx (N4-1) — nhưng KHÔNG giao diện nào
+               gọi nó, và tài liệu ĐỨNG RIÊNG, không gắn case.
+(2) hỏi        🛑 /hoi KHÔNG nhận câu hỏi tự do: chỉ mã ticket / tiêu đề, chỉ trả tri thức ĐÃ DUYỆT của bước hiện
+               tại. Không có gì trả lời câu hỏi về NỘI DUNG tài liệu. Hỏi tự do = model đọc evidence/tài liệu
+               CHƯA DUYỆT — đi vòng cổng duyệt (S7) và cổng KHÔNG BIẾT. F2-1 đã chốt một cửa hỏi = /hoi.
+(3) tín hiệu   /signals/* trả phản hồi đồng bộ; kết quả gửi về qua webhook ký HMAC — nhưng KHÔNG có chỗ nào
+               NHẬN webhook (các test trỏ vào cổng không ai nghe).
+(4) chế độ     chỉ có localStorage của trang giả lập, từng bước; server không có setting nào.
+(5) OpenAI     🛑 ngược O3-1 ("Chỉ Anthropic"); câu §10.1. Code gọi thẳng SDK Anthropic, không có lớp trừu tượng.
+```
+
+## Q1 · Gọi OpenAI bằng gì? (`AGENT.md` §10.1 — MỞ LẠI `O3-1`)
+
+- [x] **Q1-1 — HttpClient thuần.** (đề xuất) Không thêm thư viện: REST Chat Completions bằng `System.Net.Http` +
+      `System.Text.Json` (first-party .NET). Đổi lại phải tự parse JSON và xử lý lỗi.
+- [ ] **Q1-2 — NuGet `OpenAI` chính hãng.** Thêm một dependency bên thứ ba.
+- [ ] **Q1-3 — Hoãn OpenAI**, giữ `O3-1`.
+
+⚠ `O3-1` KHÔNG bị xoá: nó đúng ở thời điểm đó (SDK Anthropic đã có, Codex đi được bằng File). `Q1-1` mở rộng nó mà
+không thêm thư viện — đúng cái lý do khiến `O3-2` bị bỏ.
+
+## Q2 · Model OpenAI mặc định là gì? (§10.1 — agent không tự chọn model)
+
+- [x] **Q2-1 — Bắt buộc cấu hình.** (đề xuất) `OpenAI:Model` không có mặc định; thiếu thì `--kiem-cau-hinh` báo và
+      chế độ API của OpenAI bị khoá. Không ai vô tình tiêu tiền vào một model mình chưa chọn.
+- [ ] **Q2-2 — Mặc định `gpt-5`.**
+
+## Q3 · "Hỏi về issue/file đã nạp" là loại hỏi nào?
+
+- [x] **Q3-1 — Hỏi tự do, NỘI BỘ.** (đề xuất) Đường mới `/internal/hoi-dap` trên host, chỉ console dùng, KHÔNG vào
+      hợp đồng — `F2-1` giữ nguyên. Model đọc nội dung ĐÃ qua cổng che; mỗi câu trả lời trỏ về mẩu nguồn, nhãn
+      **"CHƯA DUYỆT"**, có biên lai + trần tháng; không đọc thấy nguồn → KHÔNG BIẾT.
+- [ ] **Q3-2 — Hỏi tự do, vào sản phẩm** (thêm `cauHoi` vào `POST /hoi`).
+- [ ] **Q3-3 — Tìm đoạn khớp, không AI.**
+
+⚠ **Rủi ro mang theo, không biến mất vì đã chọn:** đây là đường ĐẦU TIÊN cho model sinh chữ từ vật liệu CHƯA DUYỆT
+rồi đưa cho người đọc. Lớp chặn là: (a) chỉ loopback/console, (b) nhãn "CHƯA DUYỆT" trên mọi câu trả lời, (c) không
+ghi lại câu trả lời thành tri thức. Ai nối đường này ra phần mềm khách là đang làm `Q3-2` — phải hỏi lại.
+
+## Q4 · "Mã issue" là mã gì?
+
+- [x] **Q4-1 — Cả hai.** (đề xuất) Mã đã có trong kho → mở ngay. Chưa có → `ui_server` kéo từ Jira bằng phiên kết nối
+      Jira có sẵn (khoá chỉ trong RAM), qua `check_corpus`, rồi gửi vào `/signals/*`. Host vẫn KHÔNG gọi Jira.
+- [ ] **Q4-2 — Chỉ kéo từ Jira.**
+- [ ] **Q4-3 — Chỉ case đã có trong kho.**
+
+## Q5 · File import vào đâu?
+
+- [x] **Q5-1 — Tài liệu đứng riêng.** (đề xuất) `POST /documents` có sẵn, giữ `S6` (nạp tài liệu không sinh tri
+      thức). Hỏi đáp đọc chữ đã trích. PDF/ảnh vẫn "chưa đọc được" (`N4-1`).
+- [ ] **Q5-2 — Tuỳ chọn gắn vào một case** thành evidence (đổi `S6`).
+
+## Q6 · Nơi chọn dùng API hay File nằm ở đâu?
+
+- [x] **Q6-1 — Màn Cấu hình trong console.** (đề xuất) Mỗi bước có AI (định tuyến, soạn nháp, hỏi đáp) chọn API/File,
+      và với API thì chọn Anthropic/OpenAI. `ui_server` lưu vào file local (gitignore); mọi màn đọc chung — thay
+      localStorage riêng của trang giả lập.
+- [ ] **Q6-2 — Trong appsettings của host** (`AI:CheDo`, `AI:NhaCungCap`).
+
+⚠ **Hệ quả nói trước:** định tuyến bằng API đi qua `/hoi` → `DinhTuyenKho` tầng 4 — tầng đó chọn nhà cung cấp phía
+HOST, không phía console. Nên lựa chọn nhà cung cấp của màn Cấu hình phải truyền được xuống host cho từng lượt, hoặc
+host phải có một nhà cung cấp mặc định. Agent tự quyết phần kỹ thuật này, ghi ở `07` §3.
+
+## Q7 · Khoá API (Anthropic/OpenAI) nhập ở đâu?
+
+- [x] **Q7-1 — Giữ `O2-1`: file local.** (đề xuất) `OpenAI:ApiKey` / `OPENAI_API_KEY` trong `appsettings.Local.json`
+      (đã gitignore, cùng cổng `git check-ignore`). Màn cấu hình chỉ hiện có/không + nút Thử khoá, không bao giờ hiện
+      khoá.
+- [ ] **Q7-2 — Ô nhập trên màn cấu hình** (mở lại `O2-3`).
+
+## Q8 · Giả lập phần mềm khác gửi tín hiệu và nhận phản hồi thế nào?
+
+- [x] **Q8-1 — Màn "Phần mềm khách" + hộp nhận.** (đề xuất) Console soạn và gửi tín hiệu tới `/signals/*` và `/hoi`,
+      hiện phản hồi đồng bộ; `ui_server` có một đường NHẬN webhook kiểm chữ ký HMAC → thấy cả kết quả gửi về sau đó.
+- [ ] **Q8-2 — Chỉ gửi + phản hồi đồng bộ.**
+- [ ] **Q8-3 — Endpoint giả lập trên host** (`/internal/gia-lap/*`).
