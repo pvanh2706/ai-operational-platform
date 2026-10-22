@@ -120,5 +120,13 @@ public sealed class LuotDinhTuyenModel : ITenantScoped
 
     public string? Loi { get; set; }
 
+    /// <summary>
+    /// `Q1-1` (2026-10-22): lượt này tính tiền ở nhà cung cấp nào, model nào. <c>NULL</c> = lượt trước `Q1-1` — khi đó chỉ
+    /// có Anthropic + <c>claude-opus-5</c>.
+    /// </summary>
+    public string? NhaCungCap { get; set; }
+
+    public string? Model { get; set; }
+
     public DateTimeOffset Luc { get; init; } = DateTimeOffset.UtcNow;
 }

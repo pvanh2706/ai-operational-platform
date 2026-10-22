@@ -119,15 +119,42 @@ public static class SoiCauHinh
             Console.WriteLine("    KHÔNG có khoá — dùng vòng xuất/nạp file (--xuat-dinh-tuyen, --xuat-soan-nhap, giao diện).");
         }
 
+        // --- Khoá OpenAI (Q1-1, Q2-1): khoá VÀ model, vì model không có mặc định ---
+        Muc("Khoá OpenAI (Q1-1 · model bắt buộc Q2-1)");
+        var coKhoaOpenAi = KhoaOpenAI.Doc(cfg) is not null;
+        var modelOpenAi = KhoaOpenAI.Model(cfg);
+        if (coKhoaOpenAi && modelOpenAi is not null)
+        {
+            Ok($"OpenAI dùng được — model \"{modelOpenAi}\" (CHƯA nói khoá hợp lệ: bấm Thử khoá ở màn Cấu hình).");
+        }
+        else if (coKhoaOpenAi)
+        {
+            Canh($"có khoá OpenAI nhưng THIẾU {KhoaOpenAI.TenCauHinhModel} — Q2-1: không có mặc định, OpenAI coi như chưa dùng được.");
+            vanDe.Add("có khoá OpenAI mà thiếu model");
+        }
+        else
+        {
+            Console.WriteLine($"    không có khoá OpenAI ({KhoaOpenAI.TenCauHinh} / {KhoaOpenAI.TenMoiTruong}) — chỉ Anthropic hoặc chế độ File.");
+        }
+
+        var nccSoanNhap = NhaCungCap.TuCauHinhDaChuan(cfg[$"{SoanNhapOptions.SectionName}:NhaCungCap"]);
+        Console.WriteLine($"    soạn nháp mặc định: {nccSoanNhap} (SoanNhap:NhaCungCap; request khai nhaCungCap thì đè được)");
+
         // --- Định tuyến ticket MỚI bằng model (P8, N7-1 PROPOSED) ---
         Muc("Định tuyến ticket mới bằng model (N7-1)");
+        var nccDinhTuyen = NhaCungCap.TuCauHinhDaChuan(dinhTuyen.NhaCungCap);
+        var dinhTuyenDungDuoc = nccDinhTuyen == NhaCungCap.OpenAI
+            ? coKhoaOpenAi && modelOpenAi is not null
+            : coKhoa;
+        Console.WriteLine($"    nhà cung cấp: {nccDinhTuyen} (DinhTuyen:NhaCungCap — cấu hình host, console không đổi được)");
         if (!dinhTuyen.GoiModel)
         {
             Console.WriteLine("    TẮT (DinhTuyen:GoiModel = false) — ticket ngoài bảng đo nhận KHÔNG BIẾT.");
         }
-        else if (!coKhoa)
+        else if (!dinhTuyenDungDuoc)
         {
-            Canh("DinhTuyen:GoiModel = true nhưng KHÔNG có khoá Anthropic — vẫn không gọi được, ticket mới nhận KHÔNG BIẾT.");
+            Canh($"DinhTuyen:GoiModel = true nhưng {nccDinhTuyen} CHƯA dùng được (thiếu khoá/model) — vẫn không gọi được, " +
+                 "ticket mới nhận KHÔNG BIẾT.");
             vanDe.Add("bật định tuyến bằng model mà thiếu khoá");
         }
         else

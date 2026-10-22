@@ -22,6 +22,11 @@ public sealed class SoanNhapOptions
 
     /// <summary>Số case tối đa đưa vào một lượt soạn nháp.</summary>
     public int ToiDaCaseMoiLuot { get; set; } = 30;
+
+    /// <summary>
+    /// `Q6-1`: nhà cung cấp khi request KHÔNG khai <c>nhaCungCap</c> — <c>anthropic</c> (mặc định) hoặc <c>openai</c>.
+    /// </summary>
+    public string? NhaCungCap { get; set; }
 }
 
 /// <param name="LyDo">
@@ -36,7 +41,9 @@ public sealed record KetQuaSoanNhap(
     int SoCase,
     int SoChoDaChe,
     SopDraftIngestResult? DaNap,
-    int SoCaseTuModel = 0);
+    int SoCaseTuModel = 0,
+    string? NhaCungCap = null,
+    string? Model = null);
 
 /// <summary>Case đã gom cho một nhóm, và bao nhiêu trong đó đến từ MODEL định tuyến (`O5-1`).</summary>
 public sealed record CaseDaGom(SopDraftRequest YeuCau, int SoCaseTuModel);
@@ -71,7 +78,8 @@ public sealed class SoanNhapHandler(
     IOptions<SoanNhapOptions> options,
     Startup.CongChe congChe,
     IOptions<DinhTuyenOptions> dinhTuyenOptions,
-    TaxonomyNhom taxonomy)
+    TaxonomyNhom taxonomy,
+    CacModel cacModel)
 {
     private readonly SoanNhapOptions _options = options.Value;
 
@@ -153,8 +161,19 @@ public sealed class SoanNhapHandler(
             .ToHashSet(StringComparer.Ordinal);
     }
 
-    public async Task<KetQuaSoanNhap> SoanAsync(string nhom, string nguoiYeuCau, CancellationToken ct = default)
+    public Task<KetQuaSoanNhap> SoanAsync(string nhom, string nguoiYeuCau, CancellationToken ct = default) =>
+        SoanAsync(nhom, nguoiYeuCau, nhaCungCap: null, ct);
+
+    /// <param name="nhaCungCap">
+    /// `Q6-1`: <c>anthropic</c> · <c>openai</c> · <c>null</c>. <c>null</c> = bộ soạn nháp DI đang cắm (mặc định của host,
+    /// <c>SoanNhap:NhaCungCap</c>) — để test cắm bản giả vẫn đi đúng đường cũ. Đã CHUẨN HOÁ ở chỗ gọi.
+    /// </param>
+    public async Task<KetQuaSoanNhap> SoanAsync(string nhom, string nguoiYeuCau, string? nhaCungCap, CancellationToken ct = default)
     {
+        var ncc = nhaCungCap ?? NhaCungCap.TuCauHinhDaChuan(_options.NhaCungCap);
+        var boSoan = nhaCungCap is null ? drafter : cacModel.SoanNhap(nhaCungCap);
+        var tenModel = cacModel.TenModel(ncc);
+
         var bayGio = clock.GetUtcNow();
 
         // --- Trần tháng (E3-1) ---
@@ -200,6 +219,8 @@ public sealed class SoanNhapHandler(
             SoCase = yeuCau.Cases.Count,
             SoChoDaChe = prompt.RedactedCount,
             Luc = bayGio,
+            NhaCungCap = ncc,
+            Model = tenModel,
         };
 
         db.Set<LuotSoanNhap>().Add(luot);
@@ -207,14 +228,15 @@ public sealed class SoanNhapHandler(
 
         try
         {
-            var ketQua = await drafter.DraftAsync(yeuCau, ct);
+            var ketQua = await boSoan.DraftAsync(yeuCau, ct);
 
             var daNap = await nap.HandleAsync(ketQua.Draft, ct);
 
             luot.ThanhCong = true;
             await db.SaveChangesAsync(ct);
 
-            return new KetQuaSoanNhap(true, null, null, yeuCau.Cases.Count, prompt.RedactedCount, daNap, gom.SoCaseTuModel);
+            return new KetQuaSoanNhap(true, null, null, yeuCau.Cases.Count, prompt.RedactedCount, daNap, gom.SoCaseTuModel,
+                ncc, tenModel);
         }
         catch (ChuaCoCreditException e)
         {
@@ -222,7 +244,7 @@ public sealed class SoanNhapHandler(
             await db.SaveChangesAsync(ct);
 
             return new KetQuaSoanNhap(false, "chua-co-credit", e.Message,
-                yeuCau.Cases.Count, prompt.RedactedCount, null, gom.SoCaseTuModel);
+                yeuCau.Cases.Count, prompt.RedactedCount, null, gom.SoCaseTuModel, ncc, tenModel);
         }
         catch (ModelTuChoiException e)
         {
@@ -232,7 +254,7 @@ public sealed class SoanNhapHandler(
             await db.SaveChangesAsync(ct);
 
             return new KetQuaSoanNhap(false, e.LyDo, e.Message,
-                yeuCau.Cases.Count, prompt.RedactedCount, null, gom.SoCaseTuModel);
+                yeuCau.Cases.Count, prompt.RedactedCount, null, gom.SoCaseTuModel, ncc, tenModel);
         }
         catch (Exception e)
         {

@@ -134,8 +134,10 @@ public static partial class OpenApiMoTa
                 "⚠ `nguoiYeuCau` là LỜI KHAI, không phải phép xác thực: sản phẩm biết request " +
                 "thuộc công ty nào, chưa biết người nào. " +
                 "🛑 Chưa cấu hình khoá model thì trả 409 kèm `lyDo: chua-co-credit` và ba bước " +
-                "của vòng thay thế — KHÔNG hỏng im lặng, KHÔNG trả bản nháp rỗng. Anthropic từ chối vì CẤU HÌNH " +
-                "cũng là 409, không phải 500: `khoa-bi-tu-choi` (401/403) · `model-khong-ton-tai` (404) · `het-credit`."),
+                "của vòng thay thế — KHÔNG hỏng im lặng, KHÔNG trả bản nháp rỗng. Nhà cung cấp từ chối vì CẤU HÌNH " +
+                "cũng là 409, không phải 500: `khoa-bi-tu-choi` (401/403) · `model-khong-ton-tai` (404) · `het-credit`. " +
+                "`nhaCungCap` (tuỳ chọn, `Q6-1`): `anthropic` · `openai`; bỏ trống = `SoanNhap:NhaCungCap` của host. " +
+                "Kết quả trả `nhaCungCap` + `model` của lượt đó."),
 
             ["POST /knowledge/{id}/approve"] = new(NhomTriThuc,
                 "Duyệt — nội dung và quyền xem trong MỘT hành động",
@@ -211,9 +213,17 @@ public static partial class OpenApiMoTa
 
             ["POST /internal/thu-khoa-model"] = new(NhomConsole,
                 "Khoá model có dùng được không",
-                "Dùng ĐÚNG khoá host đang dùng, gọi đường MIỄN PHÍ của Anthropic (xem một model) — trả lời trước khi tiêu " +
-                "lượt gọi: khoá được nhận chưa, và model mà code ghim có tồn tại không. `hopLe: null` = không thử được " +
-                "(mạng, 5xx) — KHÔNG phải khoá sai. ⚠ KHÔNG kiểm được số dư credit. Không bao giờ trả khoá."),
+                "Dùng ĐÚNG khoá host đang dùng, gọi đường MIỄN PHÍ của nhà cung cấp (xem một model) — trả lời trước khi " +
+                "tiêu lượt gọi: khoá được nhận chưa, và model đang dùng có tồn tại không. `?nhaCungCap=openai` thử khoá " +
+                "OpenAI (`Q1-1`); bỏ trống = Anthropic. `hopLe: null` = không thử được (mạng, 5xx, thiếu `OpenAI:Model`) " +
+                "— KHÔNG phải khoá sai. ⚠ KHÔNG kiểm được số dư credit. Không bao giờ trả khoá."),
+
+            ["GET /internal/ai"] = new(NhomConsole,
+                "Nhà cung cấp model nào dùng được",
+                "Cho màn Cấu hình của console (`Q6-1`): Anthropic và OpenAI có khoá chưa, model nào, và mỗi bước có AI " +
+                "(định tuyến, soạn nháp) đang dùng nhà cung cấp nào mặc định. ⚠ \"dùng được\" = có khoá (và với OpenAI: " +
+                "có model) — CHƯA nói khoá hợp lệ; muốn biết thì gọi `POST /internal/thu-khoa-model`. 🛑 Không ra mạng, " +
+                "không bao giờ trả khoá."),
 
             ["GET /internal/cases/{khoaNguon}/dong-chay"] = new(NhomConsole,
                 "Dòng chảy của một case",

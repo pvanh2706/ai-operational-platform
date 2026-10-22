@@ -697,9 +697,17 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("Luc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Model")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<string>("Nguon")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<string>("NhaCungCap")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("Nhom")
                         .HasMaxLength(512)
@@ -737,10 +745,18 @@ namespace KnowledgePlatform.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("Luc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Model")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<string>("NguoiYeuCau")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NhaCungCap")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("Nhom")
                         .IsRequired()

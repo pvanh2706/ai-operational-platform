@@ -432,6 +432,62 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-58` · OpenAI bằng HttpClient thuần — và schema bản nháp mà strict của OpenAI sẽ từ chối
+
+**Ngày 2026-10-22, P13-1.** Quyết định: `docs/18` `Q1-1` (HttpClient thuần, mở lại `O3-1`), `Q2-1` (model bắt buộc cấu
+hình), `Q6-1` (chọn nhà cung cấp), `Q7-1` (khoá ở `appsettings.Local.json`). Không thêm gói NuGet nào.
+
+```text
+OpenAiChat (Infrastructure)    POST /v1/chat/completions · response_format json_schema strict · max_completion_tokens
+                               · GET /v1/models/{model} cho Thử khoá (miễn phí) · lỗi 401/403/404/429-insufficient_quota
+                               → ModelTuChoiException (cùng ba lyDo với Anthropic) · 429 còn lại ném nguyên (tạm thời)
+OpenAiSopDrafter/OpenAiDinhTuyen  cùng prompt + cùng cổng che với bản Anthropic, chỉ khác đường gọi
+KhoaOpenAI (Api)               OpenAI:ApiKey / OPENAI_API_KEY + OpenAI:Model (KHÔNG mặc định) · giá trị mẫu = không có khoá
+CacModel (singleton)           đọc khoá MỘT lần cho mỗi nhà cung cấp; dựng bản hiện thực theo tên
+DinhTuyen:NhaCungCap           định tuyến — cấu hình HOST (chạy tự động trên mọi webhook, không có ai đứng chọn)
+SoanNhap:NhaCungCap            soạn nháp mặc định; request `nhaCungCap` đè được
+GET /internal/ai               trạng thái cho màn Cấu hình — có khoá/không, model, mặc định từng bước; không ra mạng
+POST /internal/thu-khoa-model  thêm ?nhaCungCap=openai
+biên lai                       luot_soan_nhap + luot_dinh_tuyen_model thêm NhaCungCap, Model (migration NhaCungCapBienLai)
+✅ 592 test (257 + 58 + 277) · 15 test OpenAI qua HttpMessageHandler giả · 11 test API
+```
+
+### Một chỗ test bắt được TRƯỚC lượt gọi thật nào — `SopDraftSchemaOpenAi`
+
+Viết test "schema có dùng được với `strict: true` của OpenAI không" trước khi viết bản soạn nháp. Lần chạy đầu ĐỎ:
+
+```text
+$.bangTraMaLoi   nullable nhưng KHÔNG trong required      Anthropic nhận · OpenAI strict từ chối CẢ request
+$._haiCaseLech   nullable ngoài required + là MAP khoá động (additionalProperties: {type:string}) — strict không có
+                 cách nào nói "khoá tuỳ ý"
+```
+
+Không sửa `SopDraftSchema`: bộ eval `nhom_sop.py --kiem-cay` và đường Anthropic đứng trên nó. `SopDraftSchemaOpenAi` DỰNG
+TỪ bản gốc lúc chạy: mọi trường vào required (trường cũ không bắt buộc phải cho null, không thì NÉM — nghĩa không được đổi
+lặng lẽ), map cấp cao nhất thành mảng `{khoa, giaTri}`, và `ChuyenVe` đổi lại thành map trước khi đọc vào `SopDraft`. Map
+lồng bên trong → NÉM lúc nạp lớp, để lần sửa schema sau lộ ra ngay thay vì lộ ở lượt gọi thật.
+⚠ Đây vẫn chỉ là luật ĐỌC TỪ TÀI LIỆU, chưa từng được OpenAI thật xác nhận.
+
+### Bốn chỗ tự quyết, ghi lý do
+
+```text
+1  Định tuyến chọn nhà cung cấp ở HOST, không ở console. Nó chạy trên mọi webhook — một lựa chọn chỉ sống ở console không
+   chạm được lượt định tuyến không đi qua console. docs/18 Q6 đã nói trước hệ quả này. Màn Cấu hình chỉ HIỆN nó.
+2  Tên nhà cung cấp sai chính tả → KHÔNG KHỞI ĐỘNG (kiểm ngay sau builder.Build()). Rơi về mặc định là tiêu tiền ở
+   nhà cung cấp người vận hành không chọn.
+   ⚠ Bản đầu đọc tên đó TRƯỚC Build() — phạm luật đầu Program.cs, và test bắt ngay: WebApplicationFactory ghi đè cấu
+   hình lúc Build(), nên bản đầu không thấy giá trị test đặt. Giờ đọc qua IOptions trong DI.
+3  Thông điệp lỗi 401 của OpenAI CHÉP LẠI một phần khoá ("Incorrect API key provided: sk-proj-****abcd"). OpenAiChat gỡ
+   mọi chuỗi sk-… trước khi thông điệp rời lớp — nó đi vào biên lai, log và response 409. Có test.
+4  Trần token định tuyến 4096 (Anthropic: 1024): model suy luận của OpenAI đếm token suy luận vào cùng trần; đụng trần
+   là `finish_reason: length` → lỗi nói rõ, KHÔNG đọc JSON bị cắt.
+```
+
+⚠ `SopDraftResult.EstimatedUsd` tính theo bảng giá Claude — với bản nháp OpenAI nó KHÔNG đúng. Token thì đúng. Chưa sửa vì
+nó không được đọc ở đâu trong host.
+
+---
+
 ## `IM-57` · Nút "Thử khoá" — biết khoá dùng được không TRƯỚC khi tiêu lượt gọi
 
 **Ngày 2026-10-19.** Chủ dự án đồng ý thêm sau `IM-56` (11 lượt định tuyến hỏng mới biết khoá bị từ chối). Đây là một

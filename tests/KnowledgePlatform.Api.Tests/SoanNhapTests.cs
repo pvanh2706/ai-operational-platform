@@ -400,4 +400,79 @@ public sealed class SoanNhapTests(ApiDatabaseFixture db) : IClassFixture<ApiData
         Assert.Contains("nhom-khong-co-case", await res.Content.ReadAsStringAsync());
         Assert.Equal(0, _drafter.SoLanGoi);
     }
+
+    // ---- Q1-1 / Q6-1 (2026-10-22): chọn nhà cung cấp theo request -------------------------------
+
+    /// <summary>
+    /// Request khai <c>openai</c> mà host không có khoá OpenAI → 409 nói THIẾU KHOÁ OPENAI, và biên lai ghi đúng nhà cung
+    /// cấp. Bản giả cắm vào DI KHÔNG được gọi: request đã chọn nhà cung cấp thì không được rơi về mặc định.
+    /// </summary>
+    [Fact]
+    public async Task Khai_openai_ma_thieu_khoa_thi_409_noi_ro_va_bien_lai_ghi_openai()
+    {
+        var (app, tenantId) = await MoiKhachAsync(coDrafter: true);
+        using var _ = app;
+        var c = app.CreateClient();
+        var nhom = await DungNhomAsync(app, tenantId, c);
+
+        var res = await c.PostAsJsonAsync("/knowledge/soan-nhap", new { nhom, nguoiYeuCau = "chị Lan", nhaCungCap = "OpenAI" });
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        var body = await res.Content.ReadAsStringAsync();
+        Assert.Contains("chua-co-credit", body);
+        Assert.Contains("OPENAI_API_KEY", body);
+        Assert.Equal(0, _drafter.SoLanGoi);
+
+        await using var ctx = db.OpenContext(tenantId);
+        var luot = await ctx.Set<LuotSoanNhap>().SingleAsync();
+        Assert.Equal("openai", luot.NhaCungCap);
+    }
+
+    /// <summary>Có khoá mà thiếu <c>OpenAI:Model</c> (`Q2-1`) — câu trả lời phải nói thiếu MODEL, không nói thiếu khoá.</summary>
+    [Fact]
+    public async Task Co_khoa_openai_ma_thieu_model_thi_noi_thieu_model()
+    {
+        var (app, tenantId) = await MoiKhachAsync(coDrafter: false);
+        using var app2 = app.With("OpenAI:ApiKey", "sk-proj-khoa-gia-test");
+        var c = app2.CreateClient();
+        var nhom = await DungNhomAsync(app2, tenantId, c);
+
+        var res = await c.PostAsJsonAsync("/knowledge/soan-nhap", new { nhom, nguoiYeuCau = "chị Lan", nhaCungCap = "openai" });
+
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        Assert.Contains("OpenAI:Model", await res.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Nha_cung_cap_la_thi_400_va_khong_ghi_bien_lai()
+    {
+        var (app, tenantId) = await MoiKhachAsync(coDrafter: true);
+        using var _ = app;
+        var c = app.CreateClient();
+        var nhom = await DungNhomAsync(app, tenantId, c);
+
+        var res = await c.PostAsJsonAsync("/knowledge/soan-nhap", new { nhom, nguoiYeuCau = "chị Lan", nhaCungCap = "gemini" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        await using var ctx = db.OpenContext(tenantId);
+        Assert.False(await ctx.Set<LuotSoanNhap>().AnyAsync());
+    }
+
+    /// <summary>Không khai gì → bản DI (mặc định của host), và biên lai ghi <c>anthropic</c> + model đang ghim.</summary>
+    [Fact]
+    public async Task Khong_khai_thi_dung_mac_dinh_cua_host_va_bien_lai_ghi_anthropic()
+    {
+        var (app, tenantId) = await MoiKhachAsync(coDrafter: true);
+        using var _ = app;
+        var c = app.CreateClient();
+        var nhom = await DungNhomAsync(app, tenantId, c);
+
+        var res = await c.PostAsJsonAsync("/knowledge/soan-nhap", new { nhom, nguoiYeuCau = "chị Lan" });
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        Assert.Equal(1, _drafter.SoLanGoi);
+        await using var ctx = db.OpenContext(tenantId);
+        var luot = await ctx.Set<LuotSoanNhap>().SingleAsync();
+        Assert.Equal(("anthropic", SopDrafterOptions.ModelMacDinh), (luot.NhaCungCap, luot.Model));
+    }
 }

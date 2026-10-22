@@ -372,6 +372,21 @@ def console_noi_bo(ma_case: str) -> None:
          (b or {}).get("lyDo") in (None, "khong-co-khoa", "khoa-bi-tu-choi", "model-khong-ton-tai", "loi-khac"), True)
     kiem("  ... KHÔNG có gì trông như khoá trong response", "sk-ant-" in json.dumps(b or {}), False)
 
+    # Q1-1: cùng nút cho OpenAI. Không có khoá OpenAI thì trả lời ngay, không ra mạng.
+    s, b = goi("POST", "/internal/thu-khoa-model?nhaCungCap=openai")
+    kiem("POST /internal/thu-khoa-model?nhaCungCap=openai", s, 200)
+    kiem("  ... trả lời một trong năm kết cục đã định",
+         (b or {}).get("lyDo") in (None, "khong-co-khoa", "thieu-model", "khoa-bi-tu-choi", "model-khong-ton-tai",
+                                   "het-credit", "loi-khac"), True)
+    kiem("  ... KHÔNG có gì trông như khoá trong response", "sk-" in json.dumps(b or {}), False)
+
+    # Q6-1: trạng thái cho màn Cấu hình — không ra mạng, không bao giờ trả khoá.
+    s, b = goi("GET", "/internal/ai")
+    kiem("GET /internal/ai", s, 200)
+    kiem("  ... có đủ hai nhà cung cấp và hai bước",
+         all(k in (b or {}) for k in ("anthropic", "openAI", "dinhTuyen", "soanNhap")), True)
+    kiem("  ... KHÔNG có gì trông như khoá trong response", "sk-" in json.dumps(b or {}), False)
+
 
 def rut_lai(ma_ev: str) -> None:
     muc("D · AR-m · rút lại  (1 endpoint)")

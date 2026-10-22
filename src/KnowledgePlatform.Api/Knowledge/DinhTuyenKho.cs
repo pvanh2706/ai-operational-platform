@@ -154,6 +154,7 @@ public sealed class DinhTuyenKho(
         var bienLai = new LuotDinhTuyenModel
         {
             TenantId = tenant.TenantId, KhoaNguon = ma, HashDauVao = hash, SoChoDaChe = prompt.RedactedCount, Luc = bayGio,
+            NhaCungCap = model.NhaCungCap, Model = model.TenModel,
         };
         db.Set<LuotDinhTuyenModel>().Add(bienLai);
         await db.SaveChangesAsync(ct);
@@ -223,9 +224,16 @@ public sealed class DinhTuyenTraSanNguon(DinhTuyenTraSan bang)
 }
 
 /// <summary>
-/// Bản gọi model định tuyến, hoặc <c>null</c> khi KHÔNG có khoá Anthropic (P8). Bọc lại để DI tiêm được "không có".
+/// Bản gọi model định tuyến, hoặc <c>null</c> khi nhà cung cấp đã chọn CHƯA dùng được (P8). Bọc lại để DI tiêm được
+/// "không có".
 /// </summary>
-public sealed class ModelDinhTuyen(IGoiModelDinhTuyen? model)
+/// <param name="nhaCungCap">`Q1-1`: ghi vào biên lai. <c>null</c> ở test cắm bản giả.</param>
+/// <param name="tenModel">Tên model ghi vào biên lai.</param>
+public sealed class ModelDinhTuyen(IGoiModelDinhTuyen? model, string? nhaCungCap = null, string? tenModel = null)
 {
     public IGoiModelDinhTuyen? Model { get; } = model;
+
+    public string? NhaCungCap { get; } = nhaCungCap;
+
+    public string? TenModel { get; } = tenModel;
 }

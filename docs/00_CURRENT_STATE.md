@@ -306,8 +306,9 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 > vào hợp đồng; `F2-1` (một cửa hỏi cho sản phẩm = `/hoi`) giữ nguyên.
 > ```text
 >    P13-0  ghi quyết định (docs/18 Q, file này)                                     ✅ 2026-10-22
->    P13-1  host: OpenAI qua HttpClient (soạn nháp, định tuyến, thử khoá) · KhoaOpenAI · chọn nhà cung cấp
+>    P13-1  host: OpenAI qua HttpClient (soạn nháp, định tuyến, thử khoá) · KhoaOpenAI · chọn nhà cung cấp  ✅ 2026-10-22
 >           · GET /internal/ai (trạng thái, KHÔNG BAO GIỜ trả khoá) · --kiem-cau-hinh có mục OpenAI
+>           — 592 test · IM-58 · test bắt schema bản nháp mà strict OpenAI sẽ từ chối → SopDraftSchemaOpenAi
 >    P13-2  host: POST /internal/hoi-dap (+ /prompt, /nap cho chế độ File) · biên lai + trần tháng · trỏ nguồn
 >    P13-3  ui_server: lưu cấu hình AI · nạp một mã issue từ Jira · hộp nhận webhook kiểm HMAC
 >    P13-4  console: màn Cấu hình · Nạp & hỏi · Phần mềm khách; trang giả lập đọc cấu hình chung

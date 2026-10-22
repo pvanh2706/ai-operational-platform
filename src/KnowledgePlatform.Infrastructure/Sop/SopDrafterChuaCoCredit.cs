@@ -21,10 +21,14 @@ public sealed class ChuaCoCreditException(string message) : Exception(message);
 /// ⚠ Đổi sang bản gọi model thật là đặt `Anthropic:ApiKey` hoặc `ANTHROPIC_API_KEY` — KHÔNG sửa
 /// dòng code nào. Đó là toàn bộ lý do `AR3` giữ interface này mỏng.
 /// </summary>
-public sealed class SopDrafterChuaCoCredit : ISopDrafter
+/// <param name="thongDiep">
+/// Thông điệp thay cho bản mặc định (viết cho Anthropic). Bản OpenAI (`Q1-1`) nói thiếu khoá HAY thiếu model — hai việc
+/// phải làm khác nhau.
+/// </param>
+public sealed class SopDrafterChuaCoCredit(string? thongDiep = null) : ISopDrafter
 {
     public Task<SopDraftResult> DraftAsync(SopDraftRequest request, CancellationToken ct = default) =>
-        throw new ChuaCoCreditException(
+        throw new ChuaCoCreditException(thongDiep ??
             """
             Chưa cấu hình khoá Anthropic (Anthropic:ApiKey hoặc ANTHROPIC_API_KEY) nên không gọi model được.
 

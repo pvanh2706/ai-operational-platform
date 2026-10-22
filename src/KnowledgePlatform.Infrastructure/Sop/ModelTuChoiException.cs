@@ -15,7 +15,7 @@ namespace KnowledgePlatform.Infrastructure.Sop;
 /// ⚠ Chỉ đổi lỗi CẤU HÌNH. Lỗi tạm thời (429, 5xx, mất mạng) vẫn ném nguyên — chúng cần thử lại, không cần sửa cấu
 /// hình, và gộp chúng vào đây là nói sai việc phải làm.
 /// </summary>
-public sealed class ModelTuChoiException(string lyDo, string message, Exception inner) : Exception(message, inner)
+public sealed class ModelTuChoiException(string lyDo, string message, Exception? inner) : Exception(message, inner)
 {
     public const string KhoaBiTuChoi = "khoa-bi-tu-choi";
     public const string ModelKhongTonTai = "model-khong-ton-tai";
@@ -46,6 +46,34 @@ public sealed class ModelTuChoiException(string lyDo, string message, Exception 
             new(HetCredit,
                 "Tài khoản Anthropic HẾT CREDIT (khoá đúng, nhưng không còn tiền để gọi). Nạp credit ở " +
                 "console.anthropic.com. " + VongThayThe + $"\n\nAnthropic trả: {e.Message}", e),
+
+        _ => null,
+    };
+
+    /// <summary>
+    /// Lỗi HTTP của OpenAI (`Q1-1`) → lỗi cấu hình có tên, hoặc <c>null</c>. Cùng ba lý do với bản Anthropic, để chỗ gọi
+    /// và giao diện không phải biết lỗi đến từ nhà cung cấp nào.
+    /// </summary>
+    /// <param name="thongDiep">Thông điệp ĐÃ gỡ chuỗi trông như khoá — xem <see cref="OpenAiChat"/>.</param>
+    /// <remarks>
+    /// ⚠ 429 chỉ là hết tiền khi <c>code = insufficient_quota</c>. 429 còn lại là bị giới hạn tốc độ — lỗi TẠM THỜI, thử lại
+    ///   là được, nên nó KHÔNG vào đây.
+    /// </remarks>
+    public static ModelTuChoiException? TuOpenAi(int ma, string? code, string thongDiep, string model) => (ma, code) switch
+    {
+        (401 or 403, _) => new(KhoaBiTuChoi,
+            $"OpenAI TỪ CHỐI khoá hoặc quyền dùng model ({ma}). Khoá trong OpenAI:ApiKey / OPENAI_API_KEY (máy dev: " +
+            "appsettings.Local.json) không hợp lệ, đã thu hồi, chép thiếu — hoặc tổ chức chưa được dùng model này. Tạo " +
+            "khoá ở platform.openai.com, đặt lại, rồi KHỞI ĐỘNG LẠI app. Kiểm bằng --kiem-cau-hinh (không in khoá). " +
+            VongThayThe + $"\n\nOpenAI trả: {thongDiep}", null),
+
+        (404, _) or (_, "model_not_found") => new(ModelKhongTonTai,
+            $"OpenAI không tìm thấy model \"{model}\". Tên model đặt ở OpenAI:Model (Q2-1 — chủ dự án chọn, không có mặc " +
+            "định). Sửa tên rồi khởi động lại app. " + VongThayThe + $"\n\nOpenAI trả: {thongDiep}", null),
+
+        (429, "insufficient_quota") => new(HetCredit,
+            "Tài khoản OpenAI HẾT HẠN MỨC (insufficient_quota — khoá đúng, nhưng không còn tiền để gọi). Nạp tiền ở " +
+            "platform.openai.com. " + VongThayThe + $"\n\nOpenAI trả: {thongDiep}", null),
 
         _ => null,
     };

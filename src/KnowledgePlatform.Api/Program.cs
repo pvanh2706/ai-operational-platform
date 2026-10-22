@@ -146,19 +146,23 @@ builder.Services.AddSingleton<IKhoFile>(sp =>
         ?? Path.Combine(Path.GetTempPath(), "kp-kho-file"));
 });
 
+// `Q1-1` + `Q6-1` (2026-10-22): hai nhà cung cấp model. Tên nhà cung cấp đọc qua options TRONG DI (không đọc
+// builder.Configuration ở đây — xem đầu file), và tên SAI CHÍNH TẢ thì không khởi động: kiểm ngay sau builder.Build().
+//
+// OpenAI đi bằng HttpClient thuần (`Q1-1`, không thư viện mới). Timeout dài: một bản nháp SOP sinh hàng nghìn token,
+// và 100 giây mặc định cắt nó giữa chừng SAU KHI đã tính tiền.
+builder.Services.AddHttpClient(OpenAiChat.TenHttpClient, c => c.Timeout = TimeSpan.FromMinutes(10));
+
+// Sổ đăng ký nhà cung cấp — đọc khoá ĐÚNG MỘT LẦN (xem KhoaAnthropic cho lỗi đã có ở đây: kiểm một tên, client đọc
+// một tên khác). Singleton: nó không chạm tenant.
+builder.Services.AddSingleton<CacModel>();
+
 // `AR3` — MỘT DÒNG để đổi bản hiện thực, và đây là dòng đó.
 //
 // 🛑 Không có khoá thì cắm bản NÉM kèm hướng dẫn, KHÔNG để trống DI (host chết vì một tính
 //   năng chưa dùng tới) và KHÔNG trả bản nháp rỗng (nó đi thẳng vào kho, trông như thật).
-//
-// ⚠ Khoá đọc ĐÚNG MỘT LẦN và đưa thẳng cho client — xem KhoaAnthropic cho lỗi đã có ở đây
-//   (kiểm một tên, client đọc một tên khác).
-builder.Services.AddScoped<ISopDrafter>(sp =>
-    KhoaAnthropic.Doc(sp.GetRequiredService<IConfiguration>()) is { } khoaAnthropic
-        ? new AnthropicSopDrafter(
-            new Anthropic.AnthropicClient { ApiKey = khoaAnthropic },
-            new SopDrafterOptions { QuaCongChe = sp.GetRequiredService<CongChe>().DaQuaCongChe })
-        : new SopDrafterChuaCoCredit());
+builder.Services.AddScoped<ISopDrafter>(sp => sp.GetRequiredService<CacModel>().SoanNhap(
+    NhaCungCap.TuCauHinhDaChuan(sp.GetRequiredService<IOptions<SoanNhapOptions>>().Value.NhaCungCap)));
 builder.Services.AddScoped<WebhookConfigHandler>();
 builder.Services.AddScoped<WebhookSender>();
 
@@ -183,12 +187,14 @@ builder.Services.AddSingleton(sp =>
         new DinhTuyenTraSan(cfg.DuongDanBangTraSan ?? DinhTuyenOptions.DuongDanMacDinh()));
 });
 
-// P8 (N7-1, PROPOSED): bản gọi model định tuyến — CHỈ dựng khi có khoá Anthropic. Có khoá thôi CHƯA gọi: còn phải
-// bật DinhTuyen:GoiModel. Singleton vì AnthropicClient dùng chung được; nó không chạm tenant.
-builder.Services.AddSingleton(sp => new ModelDinhTuyen(
-    KhoaAnthropic.Doc(sp.GetRequiredService<IConfiguration>()) is { } khoaDinhTuyen
-        ? new AnthropicDinhTuyen(new Anthropic.AnthropicClient { ApiKey = khoaDinhTuyen })
-        : null));
+// P8 (N7-1, PROPOSED): bản gọi model định tuyến — CHỈ dựng khi nhà cung cấp của DinhTuyen:NhaCungCap dùng được. Có
+// khoá thôi CHƯA gọi: còn phải bật DinhTuyen:GoiModel. Singleton; nó không chạm tenant.
+builder.Services.AddSingleton(sp =>
+{
+    var cac = sp.GetRequiredService<CacModel>();
+    var ncc = NhaCungCap.TuCauHinhDaChuan(sp.GetRequiredService<IOptions<DinhTuyenOptions>>().Value.NhaCungCap);
+    return new ModelDinhTuyen(cac.DinhTuyen(ncc), ncc, cac.TenModel(ncc));
+});
 
 // Bản đang cắm: KHO KẾT QUẢ ĐÃ NẠP của khách hàng này, rơi về bảng đã đo, rồi (nếu bật) về model.
 // SCOPED vì nó đọc dữ liệu của tenant trong request — xem DinhTuyenKho.
@@ -216,6 +222,11 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi(o => o.AddDocumentTransformer<OpenApiMoTa.TrinhGan>());
 
 var app = builder.Build();
+
+// `Q6-1`: tên nhà cung cấp sai chính tả → KHÔNG KHỞI ĐỘNG (kể cả lệnh vận hành — --kiem-cau-hinh phải nói ra được lỗi
+// này, nhưng nó nói bằng cách không chạy, như mọi cấu hình hỏng khác ở đây).
+NhaCungCap.TuCauHinh(app.Configuration, $"{DinhTuyenOptions.SectionName}:NhaCungCap");
+NhaCungCap.TuCauHinh(app.Configuration, $"{SoanNhapOptions.SectionName}:NhaCungCap");
 
 // Lệnh vận hành của `AR-e` (tạo/thu hồi khoá): chạy rồi THOÁT, không mở cổng nghe.
 // Cố ý đứng TRƯỚC StartupChecks — xem AdminCommands.
@@ -562,7 +573,14 @@ app.MapPost("/knowledge/soan-nhap", async (
                         "hôm nay biết request thuộc công ty nào, chưa biết người nào.");
         }
 
-        var kq = await handler.SoanAsync(body.Nhom, body.NguoiYeuCau, ct);
+        string? ncc = null;
+        if (!string.IsNullOrWhiteSpace(body.NhaCungCap) && !NhaCungCap.TryChuanHoa(body.NhaCungCap, out ncc))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "nhaCungCap không nhận ra",
+                detail: $"\"{body.NhaCungCap}\" — nhận: {NhaCungCap.DanhSach}. Bỏ trống = mặc định của host (SoanNhap:NhaCungCap).");
+        }
+
+        var kq = await handler.SoanAsync(body.Nhom, body.NguoiYeuCau, ncc, ct);
 
         return kq.Thanh
             ? Results.Ok(kq)
@@ -571,9 +589,9 @@ app.MapPost("/knowledge/soan-nhap", async (
                 title: kq.LyDo switch
                 {
                     "chua-co-credit" => "Chưa gọi model được",
-                    "khoa-bi-tu-choi" => "Anthropic từ chối khoá",
-                    "model-khong-ton-tai" => "Anthropic không có model này",
-                    "het-credit" => "Tài khoản Anthropic hết credit",
+                    "khoa-bi-tu-choi" => "Nhà cung cấp model từ chối khoá",
+                    "model-khong-ton-tai" => "Nhà cung cấp không có model này",
+                    "het-credit" => "Tài khoản model hết credit",
                     "vuot-tran-thang" => "Đã chạm trần tháng",
                     "nhom-khong-co-case" => "Nhóm chưa có case nào",
                     _ => "Không soạn nháp được",
@@ -1172,10 +1190,34 @@ app.MapGet("/internal/cases", async (string? tienTo, int? soLuong,
 // "Khoá model DÙNG ĐƯỢC không?" — trước khi tiêu một lượt gọi (IM-57). POST chứ không GET: nó ĐI RA MẠNG tới Anthropic
 // (miễn phí, nhưng vẫn là một lượt ra ngoài), và một GET thì trình duyệt, proxy, công cụ quét có quyền tự gọi lại.
 // ⚠ Dựng client từ ĐÚNG chỗ đọc khoá của host (KhoaAnthropic) — thử một khoá khác với khoá host dùng là trả lời sai câu.
-app.MapPost("/internal/thu-khoa-model", async (IConfiguration cfg, CancellationToken ct) =>
-        Results.Ok(await ThuKhoaModel.ThuAsync(
-            KhoaAnthropic.Doc(cfg) is { } khoa ? new Anthropic.AnthropicClient { ApiKey = khoa, MaxRetries = 0 } : null,
-            SopDrafterOptions.ModelMacDinh, ct)))
+// `Q1-1`: `?nhaCungCap=openai` thử khoá OpenAI theo cùng khuôn — `GET /v1/models/{model}`, miễn phí.
+app.MapPost("/internal/thu-khoa-model", async (string? nhaCungCap, IConfiguration cfg, CacModel cac, CancellationToken ct) =>
+    {
+        if (!string.IsNullOrWhiteSpace(nhaCungCap) && !NhaCungCap.TryChuanHoa(nhaCungCap, out _))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "nhaCungCap không nhận ra",
+                detail: $"\"{nhaCungCap}\" — nhận: {NhaCungCap.DanhSach}. Bỏ trống = anthropic.");
+        }
+
+        return NhaCungCap.TuCauHinhDaChuan(nhaCungCap) == NhaCungCap.OpenAI
+            ? Results.Ok(await ThuKhoaModel.ThuOpenAiAsync(cac.OpenAi(khongThuLai: true), cac.CoKhoaOpenAi, ct))
+            : Results.Ok(await ThuKhoaModel.ThuAsync(
+                KhoaAnthropic.Doc(cfg) is { } khoa ? new Anthropic.AnthropicClient { ApiKey = khoa, MaxRetries = 0 } : null,
+                SopDrafterOptions.ModelMacDinh, ct));
+    })
+    .AddEndpointFilter<ApiKeyEndpointFilter>()
+    .AddEndpointFilter<TenantEndpointFilter>();
+
+// `Q6-1`: màn Cấu hình của console đọc ở đây thay vì đọc chữ in ra của --kiem-cau-hinh. 🛑 KHÔNG BAO GIỜ trả khoá —
+// chỉ có/không, tên model, và nhà cung cấp mặc định của từng bước. Không ra mạng.
+app.MapGet("/internal/ai", (CacModel cac, IOptions<DinhTuyenOptions> dt, IOptions<SoanNhapOptions> sn) =>
+        Results.Ok(new TrangThaiAi(
+            cac.TrangThai(NhaCungCap.Anthropic),
+            cac.TrangThai(NhaCungCap.OpenAI),
+            BuocAi(cac, dt.Value.NhaCungCap, dt.Value.TranThang),
+            dt.Value.GoiModel,
+            dt.Value.NguongTinCay,
+            BuocAi(cac, sn.Value.NhaCungCap, sn.Value.TranThang))))
     .AddEndpointFilter<ApiKeyEndpointFilter>()
     .AddEndpointFilter<TenantEndpointFilter>();
 
@@ -1263,6 +1305,12 @@ static string? ValidateStatus(CaseStatusSignal s) => s switch
     _ => null,
 };
 
+static TrangThaiBuocAi BuocAi(CacModel cac, string? nhaCungCap, int tranThang)
+{
+    var ncc = NhaCungCap.TuCauHinhDaChuan(nhaCungCap);
+    return new TrangThaiBuocAi(ncc, cac.DungDuoc(ncc), tranThang);
+}
+
 // Kết cục có tên → mã HTTP. Một chỗ duy nhất, để 400/404/409 không bị chọn bằng cách đọc chuỗi lỗi.
 static IResult TraVe<T>(KetQua<T> kq, string tieuDe) => kq.KetCuc switch
 {
@@ -1275,7 +1323,8 @@ static IResult TraVe<T>(KetQua<T> kq, string tieuDe) => kq.KetCuc switch
 
 /// <summary>Thân của <c>POST /knowledge/soan-nhap</c>.</summary>
 /// <param name="NguoiYeuCau">LỜI KHAI của người bấm nút tốn tiền — KHÔNG phải một phép xác thực.</param>
-internal sealed record YeuCauSoanNhap(string? Nhom, string? NguoiYeuCau);
+/// <param name="NhaCungCap">`Q6-1`: <c>anthropic</c> · <c>openai</c>. Bỏ trống = <c>SoanNhap:NhaCungCap</c> của host.</param>
+internal sealed record YeuCauSoanNhap(string? Nhom, string? NguoiYeuCau, string? NhaCungCap = null);
 
 /// <summary>Thân của <c>POST /knowledge/{id}/link</c>.</summary>
 /// <param name="NguoiPhat">Ai phát link này. BẮT BUỘC — xem chỗ gọi.</param>

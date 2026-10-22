@@ -36,6 +36,13 @@ public sealed class DinhTuyenOptions
     public int TranThang { get; set; } = 500;
 
     /// <summary>
+    /// `Q6-1` (2026-10-22): nhà cung cấp gọi khi định tuyến bằng model — <c>anthropic</c> (mặc định) hoặc <c>openai</c>.
+    /// Là cấu hình HOST chứ không là lựa chọn của console, vì định tuyến chạy tự động trên mọi webhook — xem CacModel.
+    /// Sai tên thì host TỪ CHỐI khởi động.
+    /// </summary>
+    public string? NhaCungCap { get; set; }
+
+    /// <summary>
     /// Tìm gốc repo bằng thư mục <c>.git</c>, cùng cách <c>SoanNhapRunner</c> đã dùng.
     /// </summary>
     public static string DuongDanMacDinh()

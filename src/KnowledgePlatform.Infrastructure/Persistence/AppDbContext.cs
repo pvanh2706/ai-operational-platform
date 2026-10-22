@@ -234,6 +234,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.Property(x => x.Nguon).HasMaxLength(64);
             e.Property(x => x.GiaiThich).HasMaxLength(2048);
             e.Property(x => x.Loi).HasMaxLength(1000);
+            e.Property(x => x.NhaCungCap).HasMaxLength(32);
+            e.Property(x => x.Model).HasMaxLength(128);
 
             e.HasIndex(x => new { x.TenantId, x.Luc });          // đếm trần tháng
             e.HasIndex(x => new { x.TenantId, x.KhoaNguon });    // đệm theo case
@@ -248,6 +250,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
             e.Property(x => x.Nhom).HasMaxLength(512).IsRequired();
             e.Property(x => x.NguoiYeuCau).HasMaxLength(256).IsRequired();
             e.Property(x => x.Loi).HasMaxLength(1000);
+            e.Property(x => x.NhaCungCap).HasMaxLength(32);
+            e.Property(x => x.Model).HasMaxLength(128);
 
             // Đường NÓNG: đếm lượt của tháng này để áp trần.
             e.HasIndex(x => new { x.TenantId, x.Luc });
