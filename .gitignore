@@ -58,6 +58,10 @@ __pycache__/
 # lệnh --xuat-* của app HỎI GIT trước khi ghi (KiemChoGhi) — không chặn ở đây thì nút xuất chết.
 scripts/giao-dien/gia-lap-io/
 
+# Lựa chọn API/File + nhà cung cấp của màn Cấu hình (docs/18 Q6-1). Không có khoá (Q7-1), nhưng là lựa chọn của MỘT
+# máy — và file cấu hình được git theo dõi là chỗ đầu tiên người ta dán khoá vào "cho tiện".
+scripts/giao-dien/cau-hinh-ai.json
+
 # Console Vue (docs/18 nhóm P): phụ thuộc + bản build sinh lại được bằng build-console.bat.
 # package-lock.json THÌ ĐƯỢC theo dõi — nó là thứ ghim đúng phiên bản đã chọn.
 scripts/giao-dien/console/node_modules/

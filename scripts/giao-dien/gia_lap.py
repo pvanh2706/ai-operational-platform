@@ -337,8 +337,10 @@ class GiaLapApi:
     def api_gl_soan_api(self, t: dict) -> None:
         nhom = (t.get("nhom") or "").strip()
         GL["nhom"] = nhom
+        # Q6-1: nhà cung cấp do màn Cấu hình chọn; bỏ trống = mặc định của host (SoanNhap:NhaCungCap).
         s, b = goi_app("POST", "/knowledge/soan-nhap",
-                       {"nhom": nhom, "nguoiYeuCau": (t.get("nguoi") or "trang-gia-lap").strip()})
+                       {"nhom": nhom, "nguoiYeuCau": (t.get("nguoi") or "trang-gia-lap").strip(),
+                        "nhaCungCap": t.get("nhaCungCap") or None})
         b = b if isinstance(b, dict) else {"raw": b}
         if s == 200 and b.get("daNap"):
             GL["banNhap"] = b["daNap"]

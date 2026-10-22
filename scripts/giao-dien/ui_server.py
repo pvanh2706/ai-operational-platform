@@ -42,6 +42,7 @@ sys.path.insert(0, JIRA_DIR)
 import export_jira_to_channel1 as X  # noqa: E402
 import gia_lap  # noqa: E402 — trang giả lập hai luồng (O4-2), cùng server, đường /gia-lap
 import console_web  # noqa: E402 — console Vue (P3-1): /console tĩnh + /app/<cổng>/... chuyển tiếp sang host
+import khach_va_nap  # noqa: E402 — nhóm Q: cấu hình AI chung, nạp một mã issue, hộp nhận webhook của phần mềm khách
 
 # 🛑 CHỈ loopback. Đổi thành "" hay "0.0.0.0" là phơi dữ liệu khách ra cả LAN.
 DIA_CHI = "127.0.0.1"
@@ -455,7 +456,7 @@ def kiem_ket_qua(du_lieu: dict, cases: list) -> list[str]:
 # ------------------------------------------------------------------ HTTP
 
 
-class Handler(gia_lap.GiaLapApi, http.server.BaseHTTPRequestHandler):
+class Handler(gia_lap.GiaLapApi, khach_va_nap.KhachVaNapApi, http.server.BaseHTTPRequestHandler):
     server_version = "KP-UI"
 
     def log_message(self, fmt, *args):
@@ -527,6 +528,10 @@ class Handler(gia_lap.GiaLapApi, http.server.BaseHTTPRequestHandler):
         # Trước khi đọc thân: thân của đường chuyển tiếp đi nguyên byte sang host, không qua json.loads ở đây.
         if console_web.la_duong_app(duong):
             console_web.chuyen_tiep(self, "POST")
+            return
+        # Q8-1: hộp nhận webhook — chữ ký HMAC tính trên NGUYÊN BYTE, nên cũng phải đứng trước json.loads.
+        if khach_va_nap.la_duong_nhan(duong):
+            khach_va_nap.nhan_webhook(self)
             return
         try:
             than = self._doc()
