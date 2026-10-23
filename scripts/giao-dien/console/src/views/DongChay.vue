@@ -3,11 +3,12 @@
 // Mọi thứ ở đây đến từ MỘT lượt GET không tác dụng phụ (IM-51): mở trang này không gọi model, không ghi gì.
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { api, LoiGoiApp } from '../api'
+import { api, LoiGoiApp, moTaLoi } from '../api'
 import NhanNguon from '../components/NhanNguon.vue'
 import SoDoLuong from '../components/SoDoLuong.vue'
 import { gio } from '../gio'
-import type { DongChayCase } from '../kieu'
+import type { CaseEvidenceView, DongChayCase } from '../kieu'
+import { docEvidence, quenEvidence } from '../nguon'
 import { dongThoiGian, tinhSoDo } from '../soDo'
 import { useKetNoi } from '../stores/ketNoi'
 
@@ -19,9 +20,16 @@ const dc = ref<DongChayCase | null>(null)
 const loi = ref<string | null>(null)
 const dangTai = ref(false)
 
+// Bản ĐỦ của evidence (xem docDu) — khai trước tai(): watch immediate gọi tai() ngay trong setup.
+const banDu = ref<CaseEvidenceView | null>(null)
+const loiBanDu = ref<string | null>(null)
+
 async function tai() {
   dangTai.value = true
   loi.value = null
+  banDu.value = null
+  loiBanDu.value = null
+  quenEvidence(ketNoi.cong, khoa.value)
   try {
     dc.value = await api.dongChay(ketNoi.cong, khoa.value)
   } catch (e) {
@@ -39,6 +47,18 @@ const soDo = computed(() => (dc.value ? tinhSoDo(dc.value) : null))
 const moc = computed(() => (dc.value ? dongThoiGian(dc.value) : []))
 
 const NAC = ['RETRIEVED', 'SHOWN', 'OPENED', 'ACCEPTED', 'USED'] as const
+
+// Đọc bản đủ — cùng đường đọc (GET /cases/{k}/evidence, nguon.ts) mà các nút dẫn chứng dùng. Chỉ đọc khi bấm.
+async function docDu() {
+  if (!dc.value) return
+  loiBanDu.value = null
+  try {
+    banDu.value = await docEvidence(ketNoi.cong, dc.value.khoaNguon)
+  } catch (e) {
+    loiBanDu.value = moTaLoi(e)
+  }
+}
+const noiDungDu = (k: string) => banDu.value?.mau.find((m) => m.khoaNguon === k)?.noiDung ?? null
 
 async function toiMuc(muc: string) {
   await nextTick()
@@ -124,6 +144,7 @@ async function toiMuc(muc: string) {
           <li v-for="b in dc.quyTrinh.tienDo.buoc" :key="b.id" :class="{ xong: b.daXong, hien: dc.quyTrinh.tienDo.buocHienTai?.id === b.id }">
             <b>{{ b.ma }}</b> {{ b.noiDung }}
             <span v-if="dc.quyTrinh.tienDo.buocHienTai?.id === b.id" class="nhan-hien">bước hiện tại</span>
+            <span v-if="b.noiXem" class="mo"> · xem ở: {{ b.noiXem }}</span>
             <div v-for="(c, i) in b.canCu" :key="i" class="mo can-cu">✓ {{ c.cach }} — <code>{{ c.khoaNguonMau }}</code></div>
           </li>
         </ol>
@@ -161,6 +182,8 @@ async function toiMuc(muc: string) {
         </div>
       </div>
       <p class="mo">SHOWN = hệ thống đã GIAO, không phải người đã đọc. ACCEPTED / USED là LỜI KHAI.</p>
+      <p class="mo">Dòng chảy chỉ giữ SỐ bản ghi tri thức của mỗi lượt. Nội dung hướng dẫn + dẫn chứng của một lượt hỏi: Giả lập bước 5
+        (“n hướng dẫn ▸”) hoặc màn <RouterLink :to="{ name: 'phien' }">Phiên</RouterLink> nếu lượt đó đã được ghi.</p>
       <h3>Gửi kết quả về ({{ dc.guiVe.length }})</h3>
       <p v-if="!dc.guiVe.length" class="mo">Không có lượt gửi về — khách chưa khai webhook, hoặc case không mới.</p>
       <ul v-else>
@@ -173,14 +196,19 @@ async function toiMuc(muc: string) {
 
     <section id="muc-evidence" class="the">
       <h2>Evidence ({{ dc.evidence.length }})</h2>
-      <p class="mo">Rút gọn. Bản đủ: <code>GET /cases/{{ dc.khoaNguon }}/evidence</code>.</p>
+      <p class="mo">
+        {{ banDu ? 'Bản ĐỦ, đọc lúc bấm qua' : 'Rút gọn. Bản đủ:' }} <code>GET /cases/{{ dc.khoaNguon }}/evidence</code>
+        <button v-if="!banDu" class="phu nho" @click="docDu">Đọc bản đủ</button>
+        <template v-else> · {{ banDu.soMau }} mẩu dùng được, {{ banDu.soMauDaRutLai }} đã rút lại (nội dung không hiện — AR-m)</template>
+      </p>
+      <div v-if="loiBanDu" class="bao loi">{{ loiBanDu }}</div>
       <div v-for="e in dc.evidence" :key="e.khoaNguon" class="mau" :class="{ rut: e.rutLaiLuc, xn: e.xacNhanBuoc }">
         <div class="mo">
           <code>{{ e.khoaNguon }}</code> · {{ gio(e.quanSatLuc ?? e.napLuc) }} · khách sạn {{ e.maKhachSan ?? 'chưa khai' }} · {{ e.doDai }} ký tự
           <b v-if="e.xacNhanBuoc"> · LỜI XÁC NHẬN bước {{ e.xacNhanBuoc }}</b>
           <b v-if="e.rutLaiLuc" class="xau"> · ĐÃ RÚT LẠI {{ gio(e.rutLaiLuc) }}</b>
         </div>
-        <div>{{ e.noiDungRutGon }}</div>
+        <div class="nd">{{ noiDungDu(e.khoaNguon) ?? e.noiDungRutGon }}</div>
       </div>
     </section>
   </template>
@@ -216,5 +244,7 @@ th { font-size: 11px; color: var(--mo); text-transform: uppercase; }
 .mau { border-left: 3px solid var(--vien); padding: 4px 10px; margin: 8px 0; font-size: 13px; }
 .mau.xn { border-left-color: var(--lam); }
 .mau.rut { border-left-color: var(--do); opacity: .7; }
+.mau .nd { white-space: pre-wrap; word-break: break-word; }
+button.nho { padding: 2px 9px; font-size: 12px; margin-left: 6px; }
 @media (max-width: 640px) { .dong-tg li { grid-template-columns: 1fr; gap: 2px; } }
 </style>

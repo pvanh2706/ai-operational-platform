@@ -8,6 +8,7 @@
     "dev": "vite",
     "kiem": "vue-tsc --noEmit",
     "kiem:so-do": "node --experimental-strip-types --no-warnings kiem/so-do.kiem.ts",
+    "kiem:phien": "node --experimental-strip-types --no-warnings kiem/phien.kiem.ts",
     "build": "vue-tsc --noEmit && vite build"
   },
   "dependencies": {

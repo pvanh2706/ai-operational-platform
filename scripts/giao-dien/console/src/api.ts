@@ -1,5 +1,6 @@
 import type {
-  CaseTrongDanhSach, DongChayCase, KetQuaHoiDap, KetQuaNapTaiLieu, KetQuaThuKhoa, LoiHost, NhaCungCap, PromptHoiDap,
+  BanGhiDaDuyet, BanGhiDaSua, BuocChiTiet, CaseEvidenceView, CaseTrongDanhSach, DongChayCase, KetQuaHoiDap,
+  KetQuaNapTaiLieu, KetQuaThuKhoa, LichSuTriThuc, LoiHost, NhaCungCap, PromptHoiDap, QuyTrinhChiTiet, RanhGioiTenant,
   TaiLieu, TrangThaiAi,
 } from './kieu'
 
@@ -74,6 +75,41 @@ export const api = {
     goiApp<PromptHoiDap>(cong, '/internal/hoi-dap/xuat-prompt', { method: 'POST', body: JSON.stringify(than) }),
   napKetQuaHoiDap: (cong: number, than: NguonHoi & { cauHoi: string; ketQua: string }) =>
     goiApp<KetQuaHoiDap>(cong, '/internal/hoi-dap/nap-ket-qua', { method: 'POST', body: JSON.stringify(than) }),
+
+  // --- đọc / sửa / duyệt bản nháp (màn Bản nháp SOP). Đọc KHÔNG có tác dụng phụ; sửa và duyệt là hai đường riêng (S7).
+  triThuc: (cong: number, id: string) => goiApp<LichSuTriThuc>(cong, `/knowledge/${id}`),
+  /** Không đè bản A: host tạo bản B, bản A còn nguyên trong lịch sử. Lô bị từ chối TRỌN VẸN nếu một mục sai. */
+  suaTriThuc: (cong: number, id: string, than: { nguoiSua: string; sua: { assertionId: string; noiDungMoi: string; mucKiemChung: string }[] }) =>
+    goiApp<BanGhiDaSua>(cong, `/knowledge/${id}/sua`, { method: 'POST', body: JSON.stringify(than) }),
+  duyetTriThuc: (cong: number, id: string, than: YeuCauDuyet) =>
+    goiApp<BanGhiDaDuyet>(cong, `/knowledge/${id}/approve`, { method: 'POST', body: JSON.stringify(than) }),
+  quyTrinh: (cong: number, id: string) => goiApp<QuyTrinhChiTiet>(cong, `/processes/${id}`),
+  /** Chỉ DRAFT (N5-1). ⚠ THAY toàn bộ bước — host không giữ bản bước cũ. */
+  thayBuoc: (cong: number, id: string, than: { nguoiSua: string; buoc: Omit<BuocChiTiet, 'thuTu'>[] }) =>
+    goiApp<QuyTrinhChiTiet>(cong, `/processes/${id}/buoc`, { method: 'PUT', body: JSON.stringify(than) }),
+  duyetQuyTrinh: (cong: number, id: string, than: YeuCauDuyet) =>
+    goiApp<QuyTrinhChiTiet>(cong, `/processes/${id}/approve`, { method: 'POST', body: JSON.stringify(than) }),
+
+  /** Đường đọc nội dung mẩu DUY NHẤT — nơi luật rút lại (AR-m) đã thực thi. Không tác dụng phụ. */
+  evidenceCase: (cong: number, khoa: string) => goiApp<CaseEvidenceView>(cong, `/cases/${maHoa(khoa)}/evidence`),
+  ranhGioi: (cong: number) => goiApp<RanhGioiTenant>(cong, '/internal/tenant-boundary'),
+}
+
+/** Thân duyệt — CÙNG cho tri thức và quy trình. `xacNhanDuLieuThuongMai` do NGƯỜI tích, không bao giờ điền sẵn (AR-n). */
+export interface YeuCauDuyet {
+  nguoiDuyet: string
+  phamViXem: string
+  xacNhanDuLieuThuongMai: boolean
+  lyDo?: string
+}
+
+/** Lỗi host đọc được cho người: tiêu đề + chi tiết + lỗi từng mục (ValidationProblem). */
+export function moTaLoi(e: unknown): string {
+  if (!(e instanceof LoiGoiApp)) return e instanceof Error ? e.message : String(e)
+  const c = e.chiTiet
+  if (!c || typeof c === 'string') return `HTTP ${e.status}${c ? ` — ${c.slice(0, 400)}` : ''}`
+  const muc = Object.entries(c.errors ?? {}).map(([k, v]) => `${k}: ${v.join(' ')}`)
+  return [`HTTP ${e.status}${c.title ? ` — ${c.title}` : ''}`, c.detail, ...muc].filter(Boolean).join('\n')
 }
 
 /** Đúng MỘT trong hai — host trả 400 nếu không. */

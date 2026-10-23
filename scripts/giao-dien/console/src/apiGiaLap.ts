@@ -4,6 +4,8 @@
 // ⚠ Giả lập LUÔN chạy trên app 5120 (kp_gialap): các lệnh xuất/nạp CLI mà gia_lap.py gọi thay có chuỗi kết nối
 //   ghim vào kp_gialap. Chọn app 5119 ở góc phải KHÔNG đổi chỗ giả lập chạy.
 
+import type { HuongDan } from './kieu'
+
 export const CONG_GIA_LAP = 5120
 
 export interface TicketGiaLap {
@@ -23,6 +25,18 @@ export interface TrangThaiGiaLap {
   lo: string | null
   tienTo: string | null
   ticket: TicketGiaLap[]
+  /** Bản nháp vừa nạp ở bước 3 (RAM + gia-lap-io/<lô>/ban-nhap.json) — để mở màn Bản nháp SOP sau khi tải lại. */
+  banNhap: BanNhapDaNap | null
+}
+
+/** SopDraftIngestResult rút gọn — SopDraftIngestHandler.cs. */
+export interface BanNhapDaNap {
+  nhom: string
+  daTao: number
+  daCoTuTruoc: number
+  nguyenNhan: { id: string; tenNguyenNhan: string; trangThai: string; soAssertion: number }[]
+  quyTrinh: { id: string; phienBan: number; trangThai: string; soBuoc: number; canhBao?: string } | null
+  danChung?: { soLienKetMoi: number; maMoHo?: string[] }
 }
 
 export interface DongCham {
@@ -33,11 +47,18 @@ export interface DongCham {
   nguon: string
   giaiThich: string | null
   ketQua: 'dung' | 'sai' | 'khong-biet'
+  /** HTTP của POST /hoi. Khác 200 = lỗi VẬN HÀNH, không phải "không biết". */
+  http?: number
+  loiVanHanh?: string | null
   bietTraLoi: boolean | null
   lyDoKhongBiet: string | null
   soHuongDan: number
+  /** Nguyên văn `huongDan` của /hoi — đọc đủ ở bước 5, không chỉ đếm. */
+  huongDan?: HuongDan[]
   buocHienTai: string | null
   noiDungBuoc: string | null
+  noiXemBuoc?: string | null
+  quyTrinh?: { id: string; ten: string; phienBan: number; traTheo: string } | null
   daXongHet: boolean | null
   lyDoKhongCoQuyTrinh: string | null
   maLuotGoiY: string | null

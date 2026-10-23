@@ -249,6 +249,155 @@ export interface PromptHoiDap {
   trangThai: string
 }
 
+// ------------------------------------------------------------------ hướng dẫn, tri thức, quy trình
+
+/** Ô `I` — dẫn chứng TRỎ về nguồn, KHÔNG mang nội dung. Api/Knowledge/HoiHandler.cs `DanChungRef`. */
+export interface DanChungRef {
+  khoaNguonMau: string
+  /** null = không biết mẩu thuộc case nào → không mở được qua GET /cases/{k}/evidence. */
+  khoaNguonCase: string | null
+  /** `Support` · `ContextFor` · `Refute`. */
+  quanHe: string
+  ghiChu: string | null
+}
+
+/** Một phát biểu trong `/hoi` — nội dung + mức kiểm chứng + nguồn gốc luôn đi cùng nhau (`AP3`). */
+export interface PhatBieuHoi {
+  noiDung: string
+  mucKiemChung: string
+  nguonGoc: string
+  danChung?: DanChungRef[]
+}
+
+/** `/hoi` → `huongDan[]` — HoiHandler.cs `HuongDan`. */
+export interface HuongDan {
+  id: string
+  tenNguyenNhan: string
+  /** ACTIVE · NEEDS_REVIEW (V3: đã đổi kể từ lần duyệt cuối, vẫn trả nhưng gắn cờ). */
+  trangThai: string
+  phamViXem: string | null
+  cachNhanRa: PhatBieuHoi[]
+  cachXuLy: PhatBieuHoi[]
+  dieuKienApDung: PhatBieuHoi[]
+}
+
+/** `/hoi` → `quyTrinh` (P5). Vắng = case không khớp được quy trình nào. */
+export interface QuyTrinhHienTai {
+  id: string
+  ten: string
+  phienBan: number
+  luotChayId: string | null
+  buocHienTai: { ma: string; noiDung: string; noiXem: string | null } | null
+  daXongHet: boolean
+  /** `buoc` = tri thức tra theo chủ đề của bước · `nhom` = rơi về mức nhóm. */
+  traTheo: string
+}
+
+/** `GET /knowledge/{id}` — KnowledgeRevisionHandler.cs `DanChungMau`. */
+export interface DanChungMau {
+  mauId: string
+  khoaNguonMau: string | null
+  quanHe: string
+  ghiChu: string | null
+  daRutLai: boolean
+}
+export interface AssertionCoLichSu {
+  id: string
+  /** CauseExists · Recognition · Applicability · Handling. */
+  kind: string
+  noiDung: string
+  mucKiemChung: string
+  nguonGoc: string
+  nguoiGhi: string | null
+  conHieuLuc: boolean
+  biThayBoi: string | null
+  lucTao: string
+  danChung: DanChungMau[]
+}
+export interface LichSuTriThuc {
+  id: string
+  tenNguyenNhan: string
+  /** DRAFT · ACTIVE · NEEDS_REVIEW · SUPERSEDED · … */
+  trangThai: string
+  phamViXem: string | null
+  canDuyetLai: boolean
+  assertion: AssertionCoLichSu[]
+}
+/** `POST /knowledge/{id}/sua`. */
+export interface BanGhiDaSua {
+  id: string
+  tenNguyenNhan: string
+  trangThai: string
+  canDuyetLai: boolean
+  daSua: { kind: string; banA: { id: string; noiDung: string }; banB: { id: string; noiDung: string } }[]
+}
+/** `POST /knowledge/{id}/approve` — KnowledgeApprovalHandler.cs `BanGhiDaDuyet`. */
+export interface BanGhiDaDuyet {
+  id: string
+  tenNguyenNhan: string
+  trangThaiSau: string
+  phamViXem: string
+  nguoiDuyet: string
+  lucDuyet: string
+}
+
+/** `GET /processes/{id}` — QuyTrinhHandler.cs `QuyTrinhChiTiet`. */
+export interface BuocChiTiet {
+  thuTu: number
+  ma: string
+  noiDung: string
+  noiXem: string | null
+  dauHieu: string[]
+  chuDe: string
+}
+export interface QuyTrinhChiTiet {
+  id: string
+  nhom: string
+  ten: string
+  phienBan: number
+  trangThai: string
+  phamViXem: string | null
+  nguonGoc: string
+  nguoiTao: string | null
+  sinhTuBanNhap: string | null
+  buoc: BuocChiTiet[]
+  canhBao: string[]
+  daRutPhienBanCu: string[]
+}
+
+/** `GET /cases/{k}/evidence` — Signals/CaseEvidenceReadHandler.cs. Mẩu đã rút lại KHÔNG mang nội dung (AR-m). */
+export interface MauEvidence {
+  id: string
+  khoaNguon: string
+  noiDung: string
+  mayDocDuoc: string
+  quanSatLuc: string | null
+  napLuc: string
+  maKhachSan: string | null
+}
+export interface MauEvidenceDaRutLai {
+  id: string
+  khoaNguon: string
+  rutLaiLuc: string
+  rutLaiBoi: string
+  rutLaiLyDo: string
+}
+export interface CaseEvidenceView {
+  caseId: string
+  khoaNguon: string
+  tieuDe: string
+  soMau: number
+  soMauDaRutLai: number
+  mau: MauEvidence[]
+  mauDaRutLai: MauEvidenceDaRutLai[]
+}
+
+/** `GET /internal/tenant-boundary` — chỉ dùng `mode` + `tenantId` để tách lịch sử theo ngữ cảnh. */
+export interface RanhGioiTenant {
+  mode: string
+  tenantId: string | null
+}
+
 /** ProblemDetails của ASP.NET — mọi lỗi 4xx/5xx của host. */
 export interface LoiHost {
   title?: string
@@ -257,4 +406,6 @@ export interface LoiHost {
   lyDo?: string
   /** 409 của `/internal/hoi-dap` mang kèm kết quả (mẩu đã gửi, lý do). */
   ketQua?: KetQuaHoiDap
+  /** ValidationProblem (`POST /knowledge/{id}/sua`): lỗi theo từng mục. */
+  errors?: Record<string, string[]>
 }

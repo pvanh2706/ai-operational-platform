@@ -3,18 +3,29 @@
 // BẢN ĐỒ LÔ: sau mỗi bước, cả lô được tô lại theo đúng sơ đồ luồng của màn dòng chảy.
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { api } from '../api'
-import { CONG_GIA_LAP, giaLap, type DongCham, type KetQuaDinhTuyen, type KetQuaSoan, type TicketGiaLap, type TrangThaiGiaLap } from '../apiGiaLap'
+import { api, LoiGoiApp, moTaLoi } from '../api'
+import {
+  CONG_GIA_LAP, giaLap, type BanNhapDaNap, type DongCham, type KetQuaDinhTuyen, type KetQuaSoan, type TicketGiaLap,
+  type TrangThaiGiaLap,
+} from '../apiGiaLap'
 import BanDoLo from '../components/BanDoLo.vue'
+import DanhGiaLuot from '../components/DanhGiaLuot.vue'
+import KetQuaHoiDoc from '../components/KetQuaHoiDoc.vue'
 import NhanNguon from '../components/NhanNguon.vue'
+import PhienBar from '../components/PhienBar.vue'
 import XuatNapFile from '../components/XuatNapFile.vue'
 import ThuKhoa from '../components/ThuKhoa.vue'
 import type { CheDoAi as CheDo, KetQuaThuKhoa } from '../kieu'
+import { LY_DO_KHONG_BIET, LY_DO_KHONG_CO_QUY_TRINH } from '../doc'
+import { quenEvidence } from '../nguon'
+import { danhGiaTrong, idMoi, ketCucGiaLap, type DanhGia, type Luot } from '../phien'
 import { useCauHinhAi } from '../stores/cauHinhAi'
 import { useKetNoi } from '../stores/ketNoi'
+import { usePhien } from '../stores/phien'
 
 const ketNoi = useKetNoi()
 const ai = useCauHinhAi()
+const phienTN = usePhien()
 const router = useRouter()
 
 const tt = ref<TrangThaiGiaLap | null>(null)
@@ -49,6 +60,7 @@ async function kiem() {
     lo.value = k.lo
     tienTo.value = k.tienTo
     ticket.value = k.ticket
+    banNhapLuu.value = k.banNhap
     // Q6-1: chế độ đọc từ cấu hình CHUNG (ui_server), không từ localStorage riêng của trang này. Chọn API mà host không
     // dùng được thì cheDoHieuLuc đã là File.
     await ai.tai(CONG_GIA_LAP)
@@ -173,6 +185,18 @@ const banNhap = computed(() => {
   return { nap: (k.daNap ?? (k.nguyenNhan ? k : null)) as Record<string, any> | null, goc: k }
 })
 
+/** Bản nháp ui_server còn nhớ (RAM hoặc gia-lap-io/<lô>/ban-nhap.json) — tải lại trang vẫn mở được màn đọc/duyệt. */
+const banNhapLuu = ref<BanNhapDaNap | null>(null)
+const banNhapMo = computed<BanNhapDaNap | null>(() => (banNhap.value?.nap as BanNhapDaNap | null | undefined) ?? banNhapLuu.value)
+const denBanNhap = computed(() => {
+  const b = banNhapMo.value
+  if (!b) return null
+  return {
+    name: 'ban-nhap',
+    query: { cong: String(CONG_GIA_LAP), tri: b.nguyenNhan.map((n) => n.id).join(','), qt: b.quyTrinh?.id ?? undefined, nhom: b.nhom },
+  }
+})
+
 async function duyet() {
   await lam('duyet', async () => {
     ketQuaDuyet.value = await giaLap.duyet(nguoi.value)
@@ -187,25 +211,115 @@ const khoaCuaNhom = computed(() => {
   return ticket.value.map((t) => t.khoa)
 })
 
+// Mỗi ticket hỏi lại = MỘT lượt trong phiên (bản chụp hàng /hoi, gồm hướng dẫn + khoá dẫn chứng). Hỏi lại lần nữa là
+// lượt MỚI — lượt cũ giữ nguyên. Mở/đóng phần đọc chỉ là giao diện: không gọi host.
+const luotCua = ref<Record<string, Luot>>({})
+const moRong = ref<Set<string>>(new Set())
+const loiPhien = ref<string | null>(null)
+
+function batTat(khoa: string) {
+  const s = new Set(moRong.value)
+  if (s.has(khoa)) s.delete(khoa)
+  else s.add(khoa)
+  moRong.value = s
+}
+
+function luotGiaLap(
+  d: DongCham | null, batDau: Date, ms: number, soTicket: number, truocDo: string | null, loi?: { http: number | null; text: string },
+): Luot {
+  return {
+    id: idMoi(),
+    loai: 'hoi-gia-lap',
+    batDau: batDau.toISOString(),
+    ketThuc: new Date().toISOString(),
+    thoiGianChoMs: ms,
+    thoiGianCaLo: soTicket > 1 ? soTicket : undefined,
+    nguoiThaoTac: nguoi.value || null,
+    nguon: d
+      ? { loai: 'ticket-gia-lap', khoa: d.khoa, ten: d.tieuDe }
+      : { loai: 'ticket-gia-lap', khoa: `nhóm ${nhom.value}`, ten: 'hỏi lại cả nhóm' },
+    cauHoi: d ? `POST /hoi {maTicket: ${d.khoa}}` : `hỏi lại nhóm ${nhom.value}`,
+    // /hoi không nói nó có gọi model hay không — nguồn định tuyến nằm trong bản chụp. Không gán chế độ/model khi không biết.
+    cheDo: null,
+    nhaCungCap: null,
+    model: null,
+    ketCuc: d ? ketCucGiaLap(d) : 'loi-van-hanh',
+    loi: d?.loiVanHanh ? { http: d.http ?? null, lyDo: null, text: d.loiVanHanh } : loi ? { http: loi.http, lyDo: null, text: loi.text } : null,
+    giaLap: d,
+    lienKet: { maLuotGoiY: d?.maLuotGoiY ?? null, truocDo, triThuc: d?.huongDan?.map((h) => h.id) ?? [], quyTrinh: d?.quyTrinh?.id ?? null },
+    kichBan: phienTN.o(CONG_GIA_LAP).hienTai?.kichBan ?? null,
+    danhGia: danhGiaTrong(),
+  }
+}
+
+async function ghiLuotDs(ds: Luot[]) {
+  for (const l of ds) {
+    const loi = await phienTN.ghiLuot(CONG_GIA_LAP, l)
+    if (loi) {
+      loiPhien.value = loi
+      return
+    }
+    if (l.giaLap) luotCua.value = { ...luotCua.value, [l.giaLap.khoa]: l }
+  }
+  loiPhien.value = null
+}
+
+async function luuDanhGia(khoa: string, danhGia: DanhGia) {
+  const l = luotCua.value[khoa]
+  if (!l) return
+  const moi = { ...l, danhGia }
+  const loi = await phienTN.ghiLuot(CONG_GIA_LAP, moi)
+  loiPhien.value = loi
+  if (!loi) luotCua.value = { ...luotCua.value, [khoa]: moi }
+}
+
 async function hoi() {
+  const batDau = new Date()
   await lam('hoi', async () => {
-    const ds = await api.danhSachCase(CONG_GIA_LAP, tienTo.value ?? undefined, 200)
-    const khoa = ds.filter((c) => c.nhomHieuLuc === nhom.value).map((c) => c.khoaNguon)
-    const k = await giaLap.hoiLai(nhom.value, khoa.length ? khoa : khoaCuaNhom.value)
+    // Mọi chỗ hỏng của lượt (app chết ngay ở bước đọc danh sách case, ui_server lỗi…) đều phải thành một lượt LỖI VẬN HÀNH
+    // trong phiên — bấm thật đã bắt được bản đầu bỏ sót: 502 ở danhSachCase ném ra trước khối try, lượt không được ghi.
+    let k: Awaited<ReturnType<typeof giaLap.hoiLai>>
+    let httpLoi: number | null = null
+    try {
+      const ds = await api.danhSachCase(CONG_GIA_LAP, tienTo.value ?? undefined, 200)
+      const khoa = ds.filter((c) => c.nhomHieuLuc === nhom.value).map((c) => c.khoaNguon)
+      k = await giaLap.hoiLai(nhom.value, khoa.length ? khoa : khoaCuaNhom.value)
+    } catch (e) {
+      k = { ok: false, loi: moTaLoi(e), nhom: nhom.value, dong: [] }
+      httpLoi = e instanceof LoiGoiApp ? e.status : null
+    }
+    const ms = Date.now() - batDau.getTime()
     hoiLai.value = k.ok ? k.dong : null
-    if (!k.ok) loiChung.value = k.loi ?? 'Hỏi lại thất bại'
+    if (!k.ok) {
+      loiChung.value = k.loi ?? 'Hỏi lại thất bại'
+      // Cả lô không chạy được (ui_server/app chết) — vẫn là một lượt, kết cục LỖI VẬN HÀNH, không phải "không biết".
+      await ghiLuotDs([luotGiaLap(null, batDau, ms, 0, null, { http: httpLoi, text: k.loi ?? 'Hỏi lại thất bại' })])
+      return
+    }
+    await ghiLuotDs(k.dong.map((d) => luotGiaLap(d, batDau, ms, k.dong.length, luotCua.value[d.khoa]?.id ?? null)))
     await sauMoiBuoc()
   })
 }
 
 async function xacNhan(d: DongCham) {
+  const batDau = new Date()
   await lam(`xn-${d.khoa}`, async () => {
     const k = await giaLap.xacNhanBuoc(d.khoa, d.buocHienTai!, nguoi.value)
+    quenEvidence(CONG_GIA_LAP, d.khoa)
     const sau = k.dong?.[0]
+    const ketQua = k.ketQua as { title?: string; detail?: string } | null
     baoVong.value = k.ok
-      ? { ok: true, text: `Đã xác nhận ${d.buocHienTai} cho ${d.khoa.split('-').pop()} → bước hiện tại giờ là ${sau?.buocHienTai ?? (sau?.daXongHet ? 'đã xong hết' : '—')}.` }
-      : { ok: false, text: `HTTP ${k.http}: ${JSON.stringify(k.ketQua)}` }
-    if (k.ok && hoiLai.value && sau) hoiLai.value = hoiLai.value.map((x) => (x.khoa === d.khoa ? sau : x))
+      ? {
+          ok: true,
+          text: `Đã xác nhận ${d.buocHienTai} cho ${d.khoa.split('-').pop()} → bước hiện tại giờ là ${
+            sau?.buocHienTai ? `${sau.buocHienTai} · ${sau.noiDungBuoc ?? ''}` : sau?.daXongHet ? 'đã xong hết' : '—'}.`,
+        }
+      : { ok: false, text: `HTTP ${k.http}: ${ketQua?.title ?? ''} ${ketQua?.detail ?? JSON.stringify(k.ketQua)}` }
+    if (k.ok && hoiLai.value && sau) {
+      hoiLai.value = hoiLai.value.map((x) => (x.khoa === d.khoa ? sau : x))
+      // ui_server hỏi lại ticket sau khi ghi lời xác nhận — một kết quả /hoi MỚI, nối sau lượt trước.
+      await ghiLuotDs([luotGiaLap(sau, batDau, Date.now() - batDau.getTime(), 1, luotCua.value[d.khoa]?.id ?? null)])
+    }
     await sauMoiBuoc()
   })
 }
@@ -227,6 +341,7 @@ const chamLabel = { dung: '✓ đúng', sai: '✗ sai', 'khong-biet': '? không 
 </script>
 
 <template>
+  <PhienBar :cong="CONG_GIA_LAP" :nguoi="nguoi" />
   <div v-if="loiChung" class="bao loi">{{ loiChung }}</div>
 
   <!-- 0 -->
@@ -336,13 +451,24 @@ const chamLabel = { dung: '✓ đúng', sai: '✗ sai', 'khong-biet': '? không 
           · dẫn chứng nối được {{ banNhap.nap.danChung?.soLienKetMoi }} · mã mơ hồ {{ banNhap.nap.danChung?.maMoHo?.length ?? 0 }}
         </div>
       </template>
+      <div v-if="denBanNhap" class="den-ban-nhap">
+        <RouterLink class="nut-lien" :to="denBanNhap">Đọc · sửa · duyệt bản nháp nhóm “{{ banNhapMo?.nhom }}” →</RouterLink>
+        <span class="mo">{{ banNhapMo?.nguyenNhan.length }} bản ghi tri thức + quy trình {{ banNhapMo?.quyTrinh ? `v${banNhapMo.quyTrinh.phienBan}` : '—' }}
+          — đọc nội dung và dẫn chứng, sửa, rồi duyệt từng đối tượng.</span>
+      </div>
     </section>
 
     <!-- 4 -->
     <section class="the">
       <h2>4 · <span class="luong">Luồng ngược</span> Duyệt tri thức + quy trình</h2>
-      <p class="mo">Quyền xem <code>noi-bo</code> + lời khai đã soát dữ liệu thương mại (AR-n) — dữ liệu ở đây là bịa.</p>
-      <button :disabled="!!ban || !banNhap?.nap" @click="duyet">{{ ban === 'duyet' ? 'Đang duyệt…' : 'Duyệt bản nháp vừa nạp' }}</button>
+      <p class="mo">
+        Cách đề xuất: nút <b>Đọc · sửa · duyệt bản nháp</b> ở bước 3 — đọc nội dung + dẫn chứng, tự chọn phạm vi xem và tự tích lời khai.
+      </p>
+      <p class="bao chu-y">
+        <b>Duyệt nhanh — CHỈ cho dữ liệu giả lập.</b> Nút dưới duyệt hết mà không cho đọc, và TỰ KHAI hộ bạn
+        <code>xacNhanDuLieuThuongMai: true</code> + phạm vi <code>noi-bo</code> (AR-n). Chỉ chấp nhận được vì dữ liệu ở đây là bịa.
+      </p>
+      <button :disabled="!!ban || !banNhapMo" @click="duyet">{{ ban === 'duyet' ? 'Đang duyệt…' : 'Duyệt nhanh (dữ liệu giả)' }}</button>
       <table v-if="ketQuaDuyet?.dong">
         <thead><tr><th>Loại</th><th>Tên</th><th>HTTP</th><th>Trạng thái</th><th /></tr></thead>
         <tbody>
@@ -355,22 +481,40 @@ const chamLabel = { dung: '✓ đúng', sai: '✗ sai', 'khong-biet': '? không 
     <!-- 5 -->
     <section class="the">
       <h2>5 · <span class="luong">Đóng vòng</span> Hỏi lại nhóm “{{ nhom || '—' }}”</h2>
-      <p class="mo">Ticket của nhóm vừa duyệt phải ra <b>biết trả lời</b>, kèm bước hiện tại. Xác nhận một bước xong thì bước hiện tại phải nhảy.</p>
+      <p class="mo">Ticket của nhóm vừa duyệt phải ra <b>biết trả lời</b>, kèm bước hiện tại. Xác nhận một bước xong thì bước hiện tại phải nhảy.
+        Bấm <b>“n hướng dẫn ▸”</b> để đọc đủ nội dung, mức kiểm chứng và mở dẫn chứng — chỉ mở xem, không ghi gì lên app.</p>
       <button :disabled="!!ban || !nhom" @click="hoi">{{ ban === 'hoi' ? 'Đang hỏi…' : 'Hỏi lại các ticket của nhóm' }}</button>
       <div v-if="baoVong" class="bao" :class="baoVong.ok ? 'ok' : 'loi'">{{ baoVong.text }}</div>
-      <table v-if="hoiLai">
-        <thead><tr><th>Ticket</th><th>Trả lời</th><th>Bước hiện tại</th><th>Hướng dẫn</th><th /></tr></thead>
+      <div v-if="loiPhien" class="bao chu-y">{{ loiPhien }}</div>
+      <table v-if="hoiLai" class="bang-hoi">
+        <thead><tr><th>Ticket</th><th>Trả lời · định tuyến</th><th>Bước hiện tại</th><th>Hướng dẫn</th><th /></tr></thead>
         <tbody>
-          <tr v-for="d in hoiLai" :key="d.khoa">
-            <td><a href="#" @click.prevent="mo(d.khoa)"><code>{{ d.khoa.split('-').pop() }}</code></a> {{ d.tieuDe }}</td>
-            <td :class="d.bietTraLoi ? 'tot' : 'xau'">{{ d.bietTraLoi ? 'biết' : 'không biết' }} <span class="mo">{{ d.lyDoKhongBiet }}</span></td>
-            <td>{{ d.buocHienTai ? `${d.buocHienTai} · ${d.noiDungBuoc}` : d.daXongHet ? 'đã xong hết' : d.lyDoKhongCoQuyTrinh ?? '—' }}</td>
-            <td>{{ d.soHuongDan }}</td>
-            <td class="nut">
-              <button v-if="d.buocHienTai" class="phu nho" :disabled="!!ban" @click="xacNhan(d)">Xác nhận {{ d.buocHienTai }} xong</button>
-              <button v-if="d.maLuotGoiY" class="phu nho" :disabled="!!ban" @click="khaiDung(d)">Khai: đã dùng gợi ý</button>
-            </td>
-          </tr>
+          <template v-for="d in hoiLai" :key="d.khoa">
+            <tr :class="{ mo: moRong.has(d.khoa) }">
+              <td><a href="#" @click.prevent="mo(d.khoa)"><code>{{ d.khoa.split('-').pop() }}</code></a> {{ d.tieuDe }}</td>
+              <td>
+                <span v-if="d.loiVanHanh" class="xau">lỗi vận hành · HTTP {{ d.http }}</span>
+                <span v-else :class="d.bietTraLoi ? 'tot' : 'vang'">{{ d.bietTraLoi ? 'biết' : 'không biết' }}</span>
+                <div v-if="d.bietTraLoi === false && !d.loiVanHanh" class="mo">{{ LY_DO_KHONG_BIET[d.lyDoKhongBiet ?? ''] ?? d.lyDoKhongBiet }}</div>
+                <div><NhanNguon :nguon="d.nguon" /> <span class="mo">{{ d.nhom }}</span></div>
+              </td>
+              <td>
+                <template v-if="d.buocHienTai"><b>{{ d.buocHienTai }}</b> · {{ d.noiDungBuoc }}</template>
+                <template v-else>{{ d.daXongHet ? 'đã xong hết' : LY_DO_KHONG_CO_QUY_TRINH[d.lyDoKhongCoQuyTrinh ?? ''] ?? d.lyDoKhongCoQuyTrinh ?? '—' }}</template>
+              </td>
+              <td><button class="phu nho" @click="batTat(d.khoa)">{{ d.huongDan?.length ?? d.soHuongDan }} hướng dẫn {{ moRong.has(d.khoa) ? '▾' : '▸' }}</button></td>
+              <td class="nut">
+                <button v-if="d.buocHienTai" class="phu nho" :disabled="!!ban" @click="xacNhan(d)">Xác nhận {{ d.buocHienTai }} xong</button>
+                <button v-if="d.maLuotGoiY" class="phu nho" :disabled="!!ban" title="Ghi nấc USED (lời khai) lên app — khác với đánh giá chất lượng" @click="khaiDung(d)">Khai: đã dùng gợi ý</button>
+              </td>
+            </tr>
+            <tr v-if="moRong.has(d.khoa)" class="doc">
+              <td colspan="5">
+                <KetQuaHoiDoc :cong="CONG_GIA_LAP" :d="d" />
+                <DanhGiaLuot v-if="luotCua[d.khoa]" :luot="luotCua[d.khoa]!" @luu="(g) => luuDanhGia(d.khoa, g)" />
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </section>
@@ -384,14 +528,18 @@ const chamLabel = { dung: '✓ đúng', sai: '✗ sai', 'khong-biet': '? không 
 fieldset { border: 1px solid var(--vien); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
 fieldset label { margin-right: 12px; }
 legend { font-size: 12px; font-weight: 600; color: var(--mo); }
-.nguoi { display: inline-flex; flex-direction: column; font-size: 12px; font-weight: 600; gap: 4px; margin-right: 10px; }
+.nguoi { display: inline-flex; flex-direction: column; font-size: 12px; font-weight: 600; gap: 4px; margin-right: 10px; max-width: 100%; }
 .nguoi input, .nguoi select { font: inherit; font-weight: 400; padding: 6px 8px; border: 1px solid var(--vien); border-radius: 6px; max-width: 100%; }
 section button { margin-top: 8px; }
 .luong { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--lam); background: var(--lam-nhat); border-radius: 4px; padding: 2px 7px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
 th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--vien); vertical-align: top; }
 th { font-size: 11px; color: var(--mo); text-transform: uppercase; }
-.tot { color: var(--xanh); } .xau { color: var(--do); }
+.tot { color: var(--xanh); } .xau { color: var(--do); } .vang { color: var(--vang); }
+.bang-hoi tr.mo td { border-bottom-color: transparent; background: #fafbfc; }
+.bang-hoi tr.doc td { background: #fafbfc; padding: 4px 12px 12px; }
+.den-ban-nhap { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.nut-lien { display: inline-block; background: var(--chu); color: #fff; border-radius: 6px; padding: 8px 14px; font-weight: 600; text-decoration: none; }
 .kq { font-weight: 700; white-space: nowrap; }
 .kq.dung { color: var(--xanh); } .kq.sai { color: var(--do); } .kq.khong-biet { color: var(--vang); }
 .diem { display: flex; gap: 10px; margin-top: 10px; }

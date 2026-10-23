@@ -6,14 +6,22 @@
 //              trỏ về một mẩu nguồn. Đây KHÔNG phải /hoi — /hoi chỉ trả tri thức đã duyệt (F2-1).
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { api, LoiGoiApp, type NguonHoi } from '../api'
+import { api, LoiGoiApp, moTaLoi, type NguonHoi } from '../api'
 import { apiUi, type KetQuaNapIssue } from '../apiUi'
+import DanhGiaLuot from '../components/DanhGiaLuot.vue'
+import PhienBar from '../components/PhienBar.vue'
+import TraLoiHoiDap from '../components/TraLoiHoiDap.vue'
+import { LY_DO_HOI_DAP } from '../doc'
+import { gio } from '../gio'
 import type { CaseTrongDanhSach, KetQuaHoiDap, KetQuaNapTaiLieu, PromptHoiDap, TaiLieu } from '../kieu'
+import { danhGiaTrong, DO_DUNG, idMoi, TEN_KET_CUC, type DanhGia, type Luot } from '../phien'
 import { useCauHinhAi } from '../stores/cauHinhAi'
 import { useKetNoi } from '../stores/ketNoi'
+import { usePhien } from '../stores/phien'
 
 const ketNoi = useKetNoi()
 const ai = useCauHinhAi()
+const phien = usePhien()
 const router = useRouter()
 
 const loiChung = ref<string | null>(null)
@@ -85,7 +93,8 @@ async function taiDaNap() {
   taiLieu.value = t
 }
 onMounted(() => lam('tai', async () => { await Promise.all([taiDaNap(), ai.tai(ketNoi.cong)]) }))
-watch(() => ketNoi.cong, () => { nguon.value = null; void lam('tai', async () => { await Promise.all([taiDaNap(), ai.tai(ketNoi.cong)]) }) })
+// Đổi app = đổi ngữ cảnh: không giữ lại kết quả/lượt của app trước trên màn hình.
+watch(() => ketNoi.cong, () => { nguon.value = null; kq.value = null; xemLai.value = null; luotMoiNhat.value = null; void lam('tai', async () => { await Promise.all([taiDaNap(), ai.tai(ketNoi.cong)]) }) })
 
 // ------------------------------------------------------------- 2 · hỏi
 
@@ -96,13 +105,14 @@ const kq = ref<KetQuaHoiDap | null>(null)
 const loiHoi = ref<{ lyDo: string | null; text: string } | null>(null)
 const prompt = ref<PromptHoiDap | null>(null)
 const ketQuaFile = ref('')
-const moMa = ref<string | null>(null)
 
 function chon(n: NguonHoi) {
   nguon.value = n
   kq.value = null
   loiHoi.value = null
   prompt.value = null
+  xemLai.value = null
+  luotMoiNhat.value = null
 }
 
 const tenNguon = computed(() => {
@@ -115,19 +125,87 @@ const tenNguon = computed(() => {
 const cheDo = computed(() => ai.cheDoHieuLuc.hoiDap)
 const nccHoiDap = computed(() => ai.cauHinh?.hoiDap.nhaCungCap ?? 'anthropic')
 
+// ------------------------------------------------------------- lượt trong phiên
+//
+// Mỗi lần bấm Hỏi / Nạp kết quả là MỘT lượt: ghi "đang chờ" TRƯỚC khi gọi host (tải lại trang giữa chừng thì lượt còn đó,
+// mang kết cục đang chờ / bị gián đoạn), cập nhật khi có kết quả. Lượt mới không bao giờ đè lượt cũ, kể cả cùng câu hỏi.
+
+const luotMoiNhat = ref<Luot | null>(null)
+const xemLai = ref<Luot | null>(null)
+const loiPhien = ref<string | null>(null)
+const luotHoiDap = computed(() =>
+  [...(phien.o(ketNoi.cong).hienTai?.luot ?? [])].filter((l) => l.loai === 'hoi-dap').reverse())
+
+function luotDau(cheDoLuot: 'api' | 'file'): Luot {
+  const n = nguon.value!
+  return {
+    id: idMoi(), loai: 'hoi-dap', batDau: new Date().toISOString(), ketThuc: null, thoiGianChoMs: null,
+    nguoiThaoTac: nguoiHoi.value.trim() || null,
+    nguon: n.khoaNguon ? { loai: 'case', khoa: n.khoaNguon, ten: tenNguon.value ?? n.khoaNguon }
+      : { loai: 'tai-lieu', khoa: n.taiLieuId!, ten: tenNguon.value ?? n.taiLieuId! },
+    cauHoi: cauHoi.value, cheDo: cheDoLuot, nhaCungCap: null, model: null, ketCuc: 'dang-cho', loi: null, hoiDap: null,
+    lienKet: {}, kichBan: phien.o(ketNoi.cong).hienTai?.kichBan ?? null, danhGia: danhGiaTrong(),
+  }
+}
+
+async function ghi(l: Luot) {
+  const cong = ketNoi.cong
+  loiPhien.value = await phien.ghiLuot(cong, l)
+}
+
+/** Chạy một lượt hỏi: ghi đang chờ → gọi → ghi kết cục. `goi` trả kết quả hoặc ném. */
+async function chayLuot(cheDoLuot: 'api' | 'file', goi: () => Promise<KetQuaHoiDap>) {
+  const l = luotDau(cheDoLuot)
+  xemLai.value = null
+  await ghi(l)
+  const t0 = performance.now()
+  loiHoi.value = null
+  try {
+    const k = await goi()
+    kq.value = k
+    Object.assign(l, {
+      ketCuc: k.bietTraLoi ? 'tra-loi' : 'khong-biet', hoiDap: k,
+      // Chế độ/nhà cung cấp/model theo KẾT QUẢ host trả — đường file không có model, và không gán hộ.
+      cheDo: k.cheDo, nhaCungCap: k.nhaCungCap, model: k.model,
+    })
+  } catch (e) {
+    kq.value = null
+    const ct = e instanceof LoiGoiApp && typeof e.chiTiet === 'object' ? e.chiTiet : null
+    loiHoi.value = { lyDo: ct?.lyDo ?? null, text: ct?.detail ?? (e instanceof Error ? e.message : String(e)) }
+    Object.assign(l, {
+      ketCuc: 'loi-van-hanh',
+      loi: { http: e instanceof LoiGoiApp ? e.status : null, lyDo: ct?.lyDo ?? null, text: moTaLoi(e) },
+      // 409 mang kèm kết quả (các mẩu đã định gửi, lý do) — giữ làm bản chụp.
+      hoiDap: ct?.ketQua ?? null,
+      nhaCungCap: ct?.ketQua?.nhaCungCap ?? null, model: ct?.ketQua?.model ?? null,
+    })
+  }
+  l.ketThuc = new Date().toISOString()
+  l.thoiGianChoMs = Math.round(performance.now() - t0)
+  luotMoiNhat.value = { ...l }
+  await ghi(l)
+}
+
+async function luuDanhGia(l: Luot, g: DanhGia) {
+  const moi = { ...l, danhGia: g }
+  await ghi(moi)
+  if (!loiPhien.value) {
+    if (luotMoiNhat.value?.id === l.id) luotMoiNhat.value = moi
+    if (xemLai.value?.id === l.id) xemLai.value = moi
+  }
+}
+
+/** Mở lại một lượt đã lưu — đọc BẢN CHỤP trong phiên, không gọi host, không chạy lại câu hỏi. */
+function moLai(l: Luot) {
+  // Chọn lại đúng nguồn của lượt đó (để khung hỏi hiện ra) — nhưng nội dung hiện ra vẫn là bản chụp của lượt.
+  if (l.nguon) chon(l.nguon.loai === 'case' ? { khoaNguon: l.nguon.khoa } : { taiLieuId: l.nguon.khoa })
+  xemLai.value = l
+}
+
 async function hoiApi() {
   if (!nguon.value) return
-  await lam('hoi', async () => {
-    loiHoi.value = null
-    try {
-      kq.value = await api.hoiDap(ketNoi.cong, { ...nguon.value!, cauHoi: cauHoi.value, nguoiHoi: nguoiHoi.value, nhaCungCap: nccHoiDap.value })
-    } catch (e) {
-      kq.value = null
-      if (e instanceof LoiGoiApp && typeof e.chiTiet === 'object' && e.chiTiet) {
-        loiHoi.value = { lyDo: e.chiTiet.lyDo ?? null, text: e.chiTiet.detail ?? e.message }
-      } else throw e
-    }
-  })
+  await lam('hoi', () => chayLuot('api', () =>
+    api.hoiDap(ketNoi.cong, { ...nguon.value!, cauHoi: cauHoi.value, nguoiHoi: nguoiHoi.value, nhaCungCap: nccHoiDap.value })))
 }
 
 async function xuatPrompt() {
@@ -146,9 +224,8 @@ const khoiChep = computed(() => {
 
 async function napKetQua() {
   if (!nguon.value) return
-  await lam('nap', async () => {
-    kq.value = await api.napKetQuaHoiDap(ketNoi.cong, { ...nguon.value!, cauHoi: cauHoi.value, ketQua: ketQuaFile.value })
-  })
+  await lam('nap', () => chayLuot('file', () =>
+    api.napKetQuaHoiDap(ketNoi.cong, { ...nguon.value!, cauHoi: cauHoi.value, ketQua: ketQuaFile.value })))
 }
 
 const daChep = ref(false)
@@ -160,19 +237,10 @@ async function chep() {
   } catch { /* bôi đen chép tay */ }
 }
 
-const noiDungMa = computed(() => kq.value?.nguon.find((n) => n.ma === moMa.value) ?? null)
+/** Thứ đang hiện: lượt cũ mở lại (bản chụp) hoặc kết quả vừa có. */
+const kqHien = computed(() => (xemLai.value ? xemLai.value.hoiDap ?? null : kq.value))
+const luotHien = computed(() => xemLai.value ?? luotMoiNhat.value)
 
-const LY_DO: Record<string, string> = {
-  'khong-co-nguon-dan-chung': 'AI nói biết, nhưng không phát biểu nào dẫn được mẩu có thật — đã bỏ hết.',
-  'nguon-khong-noi': 'Nguồn không trả lời được câu hỏi này.',
-  'vuot-tran-thang': 'Đã chạm trần tháng (HoiDap:TranThang).',
-  'chua-co-credit': 'Nhà cung cấp chưa có khoá / model.',
-  'khoa-bi-tu-choi': 'Nhà cung cấp TỪ CHỐI khoá.',
-  'model-khong-ton-tai': 'Nhà cung cấp không có model này.',
-  'het-credit': 'Tài khoản model hết tiền.',
-  'cong-che-chan': 'Cổng che chặn — còn thứ nghi là bí mật sau khi che.',
-  'loi-goi-model': 'Gọi model thất bại (xem biên lai).',
-}
 
 function moCase(khoa: string) {
   void router.push({ name: 'case', params: { khoa } })
@@ -180,6 +248,7 @@ function moCase(khoa: string) {
 </script>
 
 <template>
+  <PhienBar :cong="ketNoi.cong" :nguoi="nguoiHoi" />
   <div v-if="loiChung" class="bao loi">{{ loiChung }}</div>
 
   <section class="the">
@@ -295,23 +364,42 @@ function moCase(khoa: string) {
       </div>
     </template>
 
-    <div v-if="loiHoi" class="bao loi"><b>{{ LY_DO[loiHoi.lyDo ?? ''] ?? loiHoi.lyDo ?? 'Không hỏi được' }}</b><pre>{{ loiHoi.text }}</pre></div>
-
-    <div v-if="kq" class="tra-loi">
-      <div class="nhan-cd">CHƯA DUYỆT · {{ kq.cheDo === 'api' ? `${kq.nhaCungCap} · ${kq.model}` : 'qua file' }}
-        · {{ kq.nguon.length }} mẩu đã gửi{{ kq.soChoDaChe ? ` · đã che ${kq.soChoDaChe} chỗ` : '' }}</div>
-      <div v-if="!kq.bietTraLoi" class="bao chu-y"><b>KHÔNG BIẾT</b> — {{ LY_DO[kq.lyDoKhongBiet ?? ''] ?? kq.lyDoKhongBiet }}</div>
-      <ol v-else class="phat-bieu">
-        <li v-for="(p, i) in kq.phatBieu" :key="i">
-          {{ p.noiDung }}
-          <button v-for="m in p.nguon" :key="m" class="ma" :class="{ mo: moMa === m }" @click="moMa = moMa === m ? null : m">{{ m }}</button>
-        </li>
-      </ol>
-      <div v-if="noiDungMa" class="mau"><b>[{{ noiDungMa.ma }}] {{ noiDungMa.nhan }}</b><pre>{{ noiDungMa.noiDung }}</pre></div>
-      <div v-if="kq.soPhatBieuBiBo" class="mo">Đã BỎ {{ kq.soPhatBieuBiBo }} phát biểu không dẫn được mẩu có thật.</div>
-      <div v-if="kq.ghiChu" class="mo">Ghi chú của AI: {{ kq.ghiChu }}</div>
-      <div v-if="kq.giaiThich" class="mo">{{ kq.giaiThich }}</div>
+    <div v-if="xemLai" class="bao chu-y">
+      Đang xem LẠI lượt lúc {{ gio(xemLai.batDau) }} — bản chụp lưu trong phiên (câu hỏi, câu trả lời, các mẩu nguồn ĐÃ gửi lúc đó).
+      Không gọi lại app. <a href="#" @click.prevent="xemLai = null">Đóng</a>
+      <div><b>Nguồn:</b> {{ xemLai.nguon?.ten }} · <b>Câu hỏi:</b> {{ xemLai.cauHoi }}</div>
     </div>
+    <div v-if="xemLai?.loi" class="bao loi"><b>Lỗi vận hành</b> — {{ LY_DO_HOI_DAP[xemLai.loi.lyDo ?? ''] ?? xemLai.loi.lyDo ?? '' }}<pre>{{ xemLai.loi.text }}</pre></div>
+    <div v-else-if="loiHoi && !xemLai" class="bao loi"><b>Lỗi vận hành — {{ LY_DO_HOI_DAP[loiHoi.lyDo ?? ''] ?? loiHoi.lyDo ?? 'Không hỏi được' }}</b>
+      <span class="mo"> (không phải câu trả lời “không biết”)</span><pre>{{ loiHoi.text }}</pre></div>
+    <div v-if="loiPhien" class="bao chu-y">{{ loiPhien }}</div>
+
+    <TraLoiHoiDap v-if="kqHien" :kq="kqHien" />
+    <template v-if="luotHien">
+      <div class="mo">
+        Lượt <code>{{ luotHien.id.slice(0, 8) }}</code> · {{ TEN_KET_CUC[luotHien.ketCuc] }} ·
+        thời gian chờ đo ở giao diện {{ luotHien.thoiGianChoMs != null ? `${(luotHien.thoiGianChoMs / 1000).toFixed(1)} s` : '—' }}
+        (gồm mạng + host, không phải thời gian model) · token / chi phí: chưa có dữ liệu
+      </div>
+      <DanhGiaLuot :luot="luotHien" @luu="(g) => luuDanhGia(luotHien!, g)" />
+    </template>
+  </section>
+
+  <section class="the">
+    <h2>Lượt hỏi trong phiên ({{ luotHoiDap.length }})</h2>
+    <p v-if="!luotHoiDap.length" class="mo">Chưa có lượt nào trong phiên đang chọn.</p>
+    <table v-else class="ds-luot">
+      <thead><tr><th>Lúc</th><th>Nguồn</th><th>Câu hỏi</th><th>Kết cục</th><th>Đánh giá</th></tr></thead>
+      <tbody>
+        <tr v-for="l in luotHoiDap" :key="l.id" :class="{ chon: luotHien?.id === l.id }">
+          <td class="mo">{{ gio(l.batDau) }}</td>
+          <td>{{ l.nguon?.ten }}</td>
+          <td><a href="#" @click.prevent="moLai(l)">{{ (l.cauHoi ?? '').slice(0, 80) || '—' }}</a></td>
+          <td :class="l.ketCuc">{{ TEN_KET_CUC[l.ketCuc] }}{{ l.cheDo ? ` · ${l.cheDo}` : '' }}</td>
+          <td class="mo">{{ l.danhGia.doDung === 'chua' ? 'chưa đánh giá' : DO_DUNG[l.danhGia.doDung] }}</td>
+        </tr>
+      </tbody>
+    </table>
   </section>
 </template>
 
@@ -334,11 +422,9 @@ pre.dai { max-height: 320px; overflow: auto; }
 .xuat { margin-top: 10px; }
 section button { margin-top: 8px; }
 button.nho { padding: 2px 8px; font-size: 11px; }
-.tra-loi { margin-top: 14px; border-top: 1px solid var(--vien); padding-top: 10px; }
-.nhan-cd { display: inline-block; font-size: 11px; font-weight: 700; color: var(--vang); background: var(--vang-nhat); border: 1px solid #fedf89; border-radius: 4px; padding: 2px 8px; }
-.phat-bieu { margin: 10px 0; padding-left: 22px; }
-.phat-bieu li { margin-bottom: 6px; }
-button.ma { margin: 0 0 0 4px; padding: 0 6px; font: 600 11px ui-monospace, Consolas, monospace; background: var(--lam-nhat); color: var(--lam); border: 1px solid #c7d7fe; border-radius: 4px; }
-button.ma.mo { background: var(--lam); color: #fff; }
-.mau { margin: 6px 0 10px; font-size: 13px; }
+.ds-luot { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ds-luot th, .ds-luot td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--vien); vertical-align: top; }
+.ds-luot th { font-size: 11px; color: var(--mo); text-transform: uppercase; }
+.ds-luot tr.chon td { background: var(--lam-nhat); }
+.ds-luot .loi-van-hanh { color: var(--do); } .ds-luot .khong-biet { color: var(--vang); } .ds-luot .dang-cho { color: var(--mo); }
 </style>

@@ -16,5 +16,9 @@ export const router = createRouter({
     { path: '/nap-hoi', name: 'nap-hoi', component: () => import('./views/NapHoi.vue') },
     { path: '/phan-mem-khach', name: 'phan-mem-khach', component: () => import('./views/PhanMemKhach.vue') },
     { path: '/cau-hinh', name: 'cau-hinh', component: () => import('./views/CauHinh.vue') },
+    // Tự trải nghiệm (2026-10-23): đọc/sửa/duyệt bản nháp · lịch sử + tổng kết phiên · kịch bản thử có kết quả mong đợi.
+    { path: '/ban-nhap', name: 'ban-nhap', component: () => import('./views/BanNhap.vue') },
+    { path: '/phien', name: 'phien', component: () => import('./views/LichSuPhien.vue') },
+    { path: '/kich-ban', name: 'kich-ban', component: () => import('./views/KichBan.vue') },
   ],
 })

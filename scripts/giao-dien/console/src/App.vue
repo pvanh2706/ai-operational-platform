@@ -10,10 +10,12 @@ onMounted(() => void ketNoi.kiemTra())
   <header class="dau">
     <div class="ten">Console nội bộ</div>
     <nav>
+      <RouterLink :to="{ name: 'kich-ban' }">Kịch bản</RouterLink>
       <RouterLink :to="{ name: 'danh-sach' }">Case</RouterLink>
       <RouterLink :to="{ name: 'nap-hoi' }">Nạp &amp; hỏi</RouterLink>
       <RouterLink :to="{ name: 'gia-lap' }">Giả lập</RouterLink>
       <RouterLink :to="{ name: 'phan-mem-khach' }">Phần mềm khách</RouterLink>
+      <RouterLink :to="{ name: 'phien' }">Phiên</RouterLink>
       <RouterLink :to="{ name: 'cau-hinh' }">Cấu hình AI</RouterLink>
       <RouterLink :to="{ name: 'ket-noi' }">Kết nối</RouterLink>
     </nav>
@@ -36,7 +38,7 @@ onMounted(() => void ketNoi.kiemTra())
   padding: 10px 16px; background: var(--the); border-bottom: 1px solid var(--vien);
 }
 .ten { font-weight: 700; }
-nav { display: flex; gap: 14px; flex: 1; }
+nav { display: flex; gap: 6px 14px; flex: 1; flex-wrap: wrap; }
 nav a { text-decoration: none; color: var(--mo); font-weight: 600; }
 nav a.router-link-exact-active { color: var(--chu); }
 .chon-app { display: flex; align-items: center; gap: 8px; }

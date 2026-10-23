@@ -1,6 +1,7 @@
 // Các nút của nhóm Q phía ui_server — `/api/*` của scripts/giao-dien/khach_va_nap.py (và `/api/ket-noi` của
 // ui_server.py cho phiên Jira). Hình dạng CHÉP từ đó; nguồn sự thật là file Python.
 import type { CauHinhAi } from './kieu'
+import type { Luot, NguCanh, PhienTraiNghiem } from './phien'
 
 export interface KetQuaUi { ok: boolean; loi?: string }
 
@@ -49,4 +50,16 @@ export const apiUi = {
   khachHopNhan: (cong: number) =>
     ui<{ goi: GoiNhan[]; giuBiMat: boolean | null; dangKy: { url: string; active: boolean } | null }>('khach-hop-nhan', { cong }),
   khachXoaHop: () => ui<object>('khach-xoa-hop'),
+
+  // Phiên trải nghiệm — scripts/giao-dien/phien_trai_nghiem.py. MỌI lời gọi mang `nguCanh`: không có đường đọc chéo ngữ cảnh.
+  phienDs: (nguCanh: string) => ui<{ phien: TomTatPhien[] }>('phien-ds', { nguCanh }),
+  phienDoc: (nguCanh: string, id: string) => ui<{ phien: PhienTraiNghiem }>('phien-doc', { nguCanh, id }),
+  phienTao: (nguCanh: NguCanh, ten: string, nguoiThaoTac: string, kichBan: string | null) =>
+    ui<{ phien: PhienTraiNghiem }>('phien-tao', { nguCanh: nguCanh.khoa, thongTinNguCanh: nguCanh, ten, nguoiThaoTac, kichBan }),
+  phienLuot: (nguCanh: string, id: string, luot: Luot) => ui<{ phien: PhienTraiNghiem }>('phien-luot', { nguCanh, id, luot }),
+  phienSua: (nguCanh: string, id: string, sua: { ten?: string; ghiChu?: string; nguoiThaoTac?: string }) =>
+    ui<{ phien: PhienTraiNghiem }>('phien-sua', { nguCanh, id, ...sua }),
+  phienXoa: (nguCanh: string, id: string) => ui<{ daXoa: boolean }>('phien-xoa', { nguCanh, id }),
 }
+
+export interface TomTatPhien { id: string; ten: string; kichBan: string | null; taoLuc: string; capNhatLuc: string; soLuot: number }
