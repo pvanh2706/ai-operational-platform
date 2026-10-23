@@ -43,6 +43,7 @@ import export_jira_to_channel1 as X  # noqa: E402
 import gia_lap  # noqa: E402 — trang giả lập hai luồng (O4-2), cùng server, đường /gia-lap
 import console_web  # noqa: E402 — console Vue (P3-1): /console tĩnh + /app/<cổng>/... chuyển tiếp sang host
 import khach_va_nap  # noqa: E402 — nhóm Q: cấu hình AI chung, nạp một mã issue, hộp nhận webhook của phần mềm khách
+import phien_trai_nghiem  # noqa: E402 — phiên trải nghiệm: lượt hỏi + đánh giá của người thử, tách theo ngữ cảnh
 
 # 🛑 CHỈ loopback. Đổi thành "" hay "0.0.0.0" là phơi dữ liệu khách ra cả LAN.
 DIA_CHI = "127.0.0.1"
@@ -456,7 +457,8 @@ def kiem_ket_qua(du_lieu: dict, cases: list) -> list[str]:
 # ------------------------------------------------------------------ HTTP
 
 
-class Handler(gia_lap.GiaLapApi, khach_va_nap.KhachVaNapApi, http.server.BaseHTTPRequestHandler):
+class Handler(gia_lap.GiaLapApi, khach_va_nap.KhachVaNapApi, phien_trai_nghiem.PhienTraiNghiemApi,
+              http.server.BaseHTTPRequestHandler):
     server_version = "KP-UI"
 
     def log_message(self, fmt, *args):

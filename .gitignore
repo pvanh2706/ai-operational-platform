@@ -62,6 +62,9 @@ scripts/giao-dien/gia-lap-io/
 # máy — và file cấu hình được git theo dõi là chỗ đầu tiên người ta dán khoá vào "cho tiện".
 scripts/giao-dien/cau-hinh-ai.json
 
+# Phiên trải nghiệm của console: câu hỏi, câu trả lời (có thể từ dữ liệu khách thật), nhận xét của người thử.
+scripts/giao-dien/phien-trai-nghiem/
+
 # Console Vue (docs/18 nhóm P): phụ thuộc + bản build sinh lại được bằng build-console.bat.
 # package-lock.json THÌ ĐƯỢC theo dõi — nó là thứ ghim đúng phiên bản đã chọn.
 scripts/giao-dien/console/node_modules/

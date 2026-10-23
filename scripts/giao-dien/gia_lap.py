@@ -122,6 +122,24 @@ def mo_lo_moi_nhat() -> dict | None:
     return None
 
 
+def ghi_ban_nhap(bn: dict) -> None:
+    """Bản nháp vừa nạp — RAM + đĩa (cạnh lo.json). Tải lại trang hay khởi động lại ui_server vẫn mở được màn
+    Bản nháp SOP cho đúng các id đó, thay vì phải soạn lại (tốn một lượt model ở chế độ API)."""
+    GL["banNhap"] = bn
+    with open(os.path.join(thu_muc_lo(), "ban-nhap.json"), "w", encoding="utf-8") as f:
+        json.dump(bn, f, ensure_ascii=False, indent=2)
+
+
+def doc_ban_nhap() -> dict | None:
+    if GL.get("banNhap") or not GL.get("lo"):
+        return GL.get("banNhap")
+    p = os.path.join(THU_MUC_IO, GL["lo"]["lo"], "ban-nhap.json")
+    if os.path.exists(p):
+        with open(p, encoding="utf-8") as f:
+            GL["banNhap"] = json.load(f)
+    return GL.get("banNhap")
+
+
 def doc_json_ai(tho: str):
     """JSON AI trả về — gỡ hàng rào ``` và lời dẫn trước/sau khối JSON thay vì bắt người dùng tự sửa."""
     tho = (tho or "").strip().lstrip("﻿")
@@ -195,12 +213,18 @@ def hoi_ca_lo(chi_khoa: list[str] | None = None) -> list[dict]:
             "nguon": nguon,
             "giaiThich": b.get("giaiThichDinhTuyen"),
             "ketQua": cham_mot(nhom, da["nhomDung"]),
+            # HTTP khác 200 = LỖI VẬN HÀNH (app chết, 4xx/5xx) — khác hẳn "không biết", vốn là 200 hợp lệ.
+            "http": s,
+            "loiVanHanh": None if s == 200 else (json.dumps(b, ensure_ascii=False)[:300] if b else f"HTTP {s}"),
             "bietTraLoi": b.get("bietTraLoi"),
             "lyDoKhongBiet": b.get("lyDoKhongBiet"),
             "soHuongDan": len(b.get("huongDan") or []),
             "huongDan": b.get("huongDan") or [],
             "buocHienTai": buoc.get("ma"),
             "noiDungBuoc": buoc.get("noiDung"),
+            "noiXemBuoc": buoc.get("noiXem"),
+            "quyTrinh": ({"id": qt.get("id"), "ten": qt.get("ten"), "phienBan": qt.get("phienBan"),
+                          "traTheo": qt.get("traTheo")} if qt else None),
             "daXongHet": qt.get("daXongHet"),
             "lyDoKhongCoQuyTrinh": b.get("lyDoKhongCoQuyTrinh"),
             "maLuotGoiY": b.get("maLuotGoiY"),
@@ -258,6 +282,7 @@ class GiaLapApi:
             # Console (P12-4) dựng lại bảng lô sau khi tải lại trang mà không phải sinh lô mới.
             "tienTo": GL["lo"]["tienTo"] if GL["lo"] else None,
             "ticket": [{"khoa": k, **v} for k, v in GL["lo"]["dapAn"].items()] if GL["lo"] else [],
+            "banNhap": doc_ban_nhap(),
         })
 
     def api_gl_sinh(self, t: dict) -> None:
@@ -343,7 +368,7 @@ class GiaLapApi:
                         "nhaCungCap": t.get("nhaCungCap") or None})
         b = b if isinstance(b, dict) else {"raw": b}
         if s == 200 and b.get("daNap"):
-            GL["banNhap"] = b["daNap"]
+            ghi_ban_nhap(b["daNap"])
         self._tra(200, {"ok": s == 200, "http": s, "ketQua": b})
 
     def api_gl_xuat_soan(self, t: dict) -> None:
@@ -384,11 +409,13 @@ class GiaLapApi:
 
         s, b = goi_app("POST", "/knowledge/sop-draft", du_lieu)
         if s == 200 and isinstance(b, dict):
-            GL["banNhap"] = b
+            ghi_ban_nhap(b)
         self._tra(200, {"ok": s == 200, "http": s, "ketQua": b})
 
     def api_gl_duyet(self, t: dict) -> None:
-        bn = GL.get("banNhap")
+        # ⚠ DUYỆT NHANH — chỉ cho dữ liệu BỊA của giả lập: tự khai `xacNhanDuLieuThuongMai: true` hộ người bấm. Dữ liệu
+        #   thật đi màn Bản nháp SOP của console, nơi người duyệt đọc nội dung rồi TỰ tích lời khai đó.
+        bn = doc_ban_nhap()
         if not bn:
             self._tra(400, {"loi": "Chưa có bản nháp nào được nạp ở bước soạn nháp."})
             return
