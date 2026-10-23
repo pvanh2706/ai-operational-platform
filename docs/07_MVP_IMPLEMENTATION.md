@@ -432,6 +432,106 @@ là ghi sai giờ, và không ai phát hiện cho tới khi Path A xếp case th
 
 ---
 
+## `IM-61` · Giao diện tự trải nghiệm — đọc đủ, sửa ≠ duyệt, phiên + đánh giá, kịch bản, tổng kết
+
+**Ngày 2026-10-23.** Đề bài: `docs/DE_BAI_HOAN_THIEN_GIAO_DIEN_TRAI_NGHIEM.md` (P0 §4–6, P1 §7–8). Không đổi host .NET, không
+đổi hợp đồng — chỉ console + ui_server. Cách test: `docs/21` §7c.
+
+```text
+console     doc.ts (từ vựng + phép đọc thuần) · nguon.ts (đọc mẩu qua GET /cases/{k}/evidence, nhớ theo case)
+            components: DanChungDoc · PhatBieuDoc · HuongDanDoc · KetQuaHoiDoc · TraLoiHoiDap · PhienBar · DanhGiaLuot
+            views mới: /ban-nhap (đọc·sửa·duyệt) · /phien (lịch sử·tổng kết·so sánh·xuất) · /kich-ban (6 kịch bản)
+            sửa: GiaLap bước 3–5 · NapHoi (lượt + lịch sử) · DongChay (đọc evidence bản đủ, "xem ở" của bước)
+            phien.ts + stores/phien.ts — kiểu lượt/phiên, thống kê, so sánh, xuất Markdown
+ui_server   phien_trai_nghiem.py — /api/phien-{ds,doc,tao,luot,sua,xoa}, file JSON theo ngữ cảnh, .gitignore chặn
+            gia_lap.py — hàng /hoi mang thêm http/loiVanHanh/noiXemBuoc/quyTrinh; bản nháp vừa nạp ghi ra ban-nhap.json
+kiểm        npm run kiem:phien (37) · kiem_phien_trai_nghiem.py (30) · bấm thật Edge headless qua cả 6 kịch bản
+```
+
+### Chênh lệch với đề bài — đã kiểm code trước khi làm
+
+```text
+1  PUT /processes/{id}/buoc THAY toàn bộ bước, host KHÔNG giữ bản bước cũ (khác tri thức: bản A còn nguyên). Đề bài đòi
+   "bảo toàn bản gốc" — với quy trình thì console giữ hộ: bản bước trước khi thay ghi vào thao tác của lượt bản nháp.
+   Lịch sử đó chỉ nằm trong phiên, không phải trong kho.
+2  Dẫn chứng của /hoi và GET /knowledge/{id} chỉ là KHOÁ mẩu, cố ý (DanChungDauRa). Nội dung đọc qua
+   GET /cases/{k}/evidence. GET /knowledge/{id} còn không có khoá CASE → console tìm case bằng phần trước `#` của khoá
+   mẩu rồi đối chiếu ĐÚNG id mẩu; không khớp thì nói không khớp, không dựng thay.
+3  Không có API liệt kê tri thức → màn Bản nháp mở theo id từ kết quả soạn nháp (đường dẫn mang id, tải lại vẫn mở được).
+   ui_server ghi bản nháp vừa nạp ra gia-lap-io/<lô>/ban-nhap.json để tải lại / khởi động lại không mất đường vào.
+4  /hoi không nói nó có gọi model hay không → lượt giả lập để chế độ/nhà cung cấp/model "không rõ"; nguồn định tuyến nằm
+   trong bản chụp. Không gán model của app cho kết quả không biết nguồn.
+5  Dòng chảy không giữ nội dung hướng dẫn của lượt gợi ý (chỉ số bản ghi) → đọc đủ ở Giả lập bước 5 / màn Phiên; Dòng
+   chảy dùng lại đường đọc mẩu chung (nút "Đọc bản đủ"). Không thêm endpoint.
+6  Hai app trên máy dev đều DedicatedSingleTenant → chưa bấm thật được nhánh "cổng shared trả 409" của màn duyệt; nhánh
+   409 khác (quy trình không còn DRAFT) đã bấm thật và hiện đúng lý do host.
+```
+
+### Tự quyết (J1-1)
+
+```text
+1  Phiên lưu ở ui_server (file JSON), KHÔNG ở host, KHÔNG ở localStorage. Host: đây là công cụ đánh giá nội bộ, không
+   phải capability sản phẩm (G11). localStorage: xoá cache là mất nhận xét, và không ai đọc lại được để đối chiếu.
+   ui_server đã giữ đúng loại trạng thái này (cau-hinh-ai.json, gia-lap-io/), cùng luật loopback + .gitignore.
+2  Ngữ cảnh = `cong-<cổng>.<tenantId>` từ GET /internal/tenant-boundary. Mỗi ngữ cảnh một thư mục; mọi lời gọi /api/phien-*
+   PHẢI nói ngữ cảnh — không có đường liệt kê chéo. App không trả lời → "khong-ro-tenant" của cổng đó, ghi rõ ra.
+3  Một lượt = một lần bấm có kết quả (mỗi ticket hỏi lại là một lượt; lượt sau xác nhận bước trỏ `truocDo` về lượt trước).
+   Ghi "đang chờ" TRƯỚC khi gọi host ở Nạp & hỏi — tải lại giữa chừng thì lượt còn đó, đếm vào "đang chờ / gián đoạn".
+4  Từ chối cả lượt nếu có khoá mang tên bí mật (apiKey, pat, matKhau, token, secret, authorization…). Console không bao
+   giờ gửi chúng; gặp là lỗi nơi gọi. Nội dung nguồn trong lượt hỏi đáp là bản host ĐÃ gửi model (đã qua cổng che); lượt
+   giả lập chỉ giữ khoá mẩu.
+5  Lượt bản nháp chỉ được tạo khi có thao tác hoặc đánh giá — mở màn không ghi gì.
+6  Duyệt từng đối tượng tuần tự, đọc lại từng thẻ từ app sau mỗi lượt; "duyệt tất cả" chỉ gồm DRAFT/NEEDS_REVIEW (tri thức)
+   và DRAFT (quy trình). Nút "Duyệt nhanh" cũ của giả lập GIỮ, đổi tên + ghi rõ chỉ cho dữ liệu giả (nó tự khai AR-n).
+```
+
+### Lỗi lượt bấm thật bắt được — vue-tsc, build và hai bộ kiểm đều xanh
+
+```text
+1  stores/phien.ts: `return (theoCong.value[cong] ??= {...})` trả về object THÔ chứ không phải proxy reactive. Màn nào
+   gọi o() đầu tiên giữ object thô → danh sách tải về không bao giờ hiện. Chỉ lộ khi mở THẲNG màn Phiên trên trình duyệt
+   mới (màn khác đã tạo ngữ cảnh trước thì không thấy): "chưa có phiên nào" dù có hai phiên.
+2  Giả lập bước 5: app chết giữa phiên → 502 ném ra ở bước đọc danh sách case, TRƯỚC khối try → lượt lỗi vận hành không
+   được ghi vào phiên. Kịch bản 6 bắt được.
+3  watch(..., { immediate: true }) chạm ref khai báo PHÍA DƯỚI (DongChay, LichSuPhien) → TDZ ngay trong setup. Bắt khi
+   đọc lại code trước lượt bấm; dời khai báo lên trước.
+4  Màn Bản nháp: dòng "AI" của thanh phiên trống vì màn đó không tự tải cấu hình AI → thanh phiên tự tải (chỉ đọc).
+5  Ô chọn nhóm ở Giả lập bước 3 (tên nhóm dài) làm cả trang tràn ngang ở 390px — có từ trước, sửa luôn.
+```
+
+⚠ Bẫy công cụ (không phải lỗi console): Git Bash đổi đối số `/console/...` thành đường Windows trước khi tới Node
+(`MSYS_NO_PATHCONV=1`); tab Edge headless có lúc ở `visibilityState: hidden` → timer trong trang dừng, script treo
+(`Page.bringToFront`); `--window-size=390` của Edge headless không thật sự hẹp tới 390 — đo tràn ngang bằng
+`Emulation.setDeviceMetricsOverride`.
+
+### Đã chạy thật (2026-10-23, app :5120 + :5119 + ui_server, chế độ File cho mọi bước AI — không tốn tiền)
+
+```text
+kịch bản 1  lô mới 11 ticket, định tuyến File 11/11; nhóm chưa duyệt → "không biết" + lý do; mở phần đọc: 0 request
+kịch bản 2  soạn nháp File → 2 tri thức + quy trình DRAFT, 54 liên kết dẫn chứng; mở dẫn chứng: 1 GET evidence, khớp id;
+            sửa 1 phát biểu → vẫn DRAFT; F5 → lịch sử 2 bản, bản gốc còn, mức kiểm chứng không đổi; rời trang khi chưa
+            lưu → confirm; nút duyệt khoá đủ 4 lý do; trước duyệt hỏi lại vẫn "không biết"; người duyệt KHÁC duyệt quy
+            trình song song (curl) → "Duyệt 3 đối tượng" ra 2/3, quy trình 409 "chỉ duyệt được bản DRAFT"; sau duyệt
+            hỏi lại → "biết", hướng dẫn mang ĐÚNG câu đã sửa
+kịch bản 3  xác nhận K1 → K2 (thông báo kèm nội dung bước); hỏi lại vẫn K2; ticket khác vẫn K1
+kịch bản 4  hỏi tự do File, N2 mở đúng mẩu; chuyển trang + tải lại → mở lại hai lượt đúng câu trả lời + đánh giá, 0 request
+kịch bản 5  "không biết" (nguon-khong-noi), đánh giá Đúng / Không áp dụng
+kịch bản 6  JSON hỏng → lỗi vận hành HTTP 400; tắt app :5120 giữa phiên → lỗi vận hành HTTP 502, có trong phiên
+phiên       tổng kết kịch bản 2: 10 lượt = 5 trả lời + 4 không biết + 1 bản nháp, định tuyến 9/9 riêng, bản nháp
+            1 sửa · 2 duyệt được · 1 hỏng; mở tổng kết: không POST nào tới app; xuất JSON + Markdown đối chiếu khớp
+            (10 lượt, 5/4/0, 2/8 đánh giá, 4 thao tác kèm 409), không khoá bí mật; đổi ngữ cảnh :5119 → không thấy phiên :5120
+sửa bước    quy trình DRAFT v2 nhóm NCC: thêm dấu hiệu K1 qua giao diện → PUT …/buoc 200, vẫn DRAFT, lượt giữ bản bước cũ
+hẹp 390px   Bản nháp, Phiên, Kịch bản, Nạp & hỏi, Giả lập: không tràn ngang (đo bằng CDP)
+```
+
+⚠ **Chưa kiểm bằng chạy thật:** nhánh API (gọi model thật) của hỏi đáp / soạn nháp / định tuyến — mọi lượt ở trên là File;
+cổng shared `AR-l` trên màn duyệt (cần app shared); tải xuống JSON/Markdown trên trình duyệt có hộp thoại tải xuống thật
+(headless tải thẳng vào thư mục).
+`dotnet test` và `kiem_dau_cuoi.py` KHÔNG chạy lại — host không đổi. `kiem:so-do`: bất biến 0 sai, kỳ vọng lô
+20261019-045231 `1 sai` vì dữ liệu `kp_gialap` đã đổi từ 2026-10-19 (docs/21 §8), không do thay đổi này.
+
+---
+
 ## `IM-60` · Ba màn console + ui_server — và một trang chỉ cần MỞ ra là đã đổi cấu hình
 
 **Ngày 2026-10-22, P13-3/P13-4.** Quyết định: `docs/18` `Q4-1` (mã issue: có trong kho thì mở, chưa có thì kéo từ Jira

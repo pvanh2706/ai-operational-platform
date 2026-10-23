@@ -299,6 +299,18 @@ LỊCH SỬ   "CHƯA CODE" đúng cho tới hết Workstream 06. Chốt công ng
 
 ## Việc tiếp theo
 
+> ✅ **GIAO DIỆN TỰ TRẢI NGHIỆM — 2026-10-23, P0 + P1 của `docs/DE_BAI_HOAN_THIEN_GIAO_DIEN_TRAI_NGHIEM.md`.** Chỉ console
+> + ui_server; host và hợp đồng KHÔNG đổi. Không quyết định sản phẩm mới: console vẫn nội bộ; nút đánh giá không gọi API
+> duyệt, không đổi verification/USED; duyệt vẫn qua đúng ba cổng (S7, AR-n do NGƯỜI tích, AR-l).
+> ```text
+>    P0  đọc ĐỦ hướng dẫn + mở dẫn chứng (Giả lập bước 5, Dòng chảy) · màn Bản nháp SOP: đọc · sửa ≠ duyệt · duyệt từng
+>        đối tượng · phiên trải nghiệm ở ui_server (tách theo cổng + tenant) · lượt + đánh giá 3 chiều · xuất JSON/MD
+>    P1  /kich-ban: 6 kịch bản có kết quả mong đợi · /phien: tổng kết đúng mẫu số + so sánh hai lượt
+>        — kiem:phien 37/37 · kiem_phien_trai_nghiem 30/30 · bấm thật cả 6 kịch bản (chế độ File) · bắt được 5 lỗi · IM-61
+> ```
+> ⚠ **CHƯA chạy thật:** nhánh API (model thật) của các màn mới · cổng shared AR-l trên màn duyệt (hai app dev đều
+> dedicated). ⚠ Quy trình: `PUT …/buoc` THAY bước, host không giữ bản cũ — console giữ hộ trong phiên, không trong kho.
+
 > 🔄 **NẠP THEO MÃ/FILE · HỎI TỰ DO · GIẢ LẬP PHẦN MỀM KHÁCH · OpenAI — chốt 2026-10-22, ĐANG CODE.** Quyết định:
 > `docs/18` NHÓM Q (8/8, cả 8 rơi vào ô đề xuất). 🛑 Hai câu §10.1: OpenAI bằng **HttpClient thuần**, không thư viện
 > mới (`Q1-1`, mở lại `O3-1`); model OpenAI **bắt buộc cấu hình**, không mặc định (`Q2-1`). 🛑 Hỏi tự do là đường

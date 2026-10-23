@@ -19,6 +19,7 @@
 7. [Hai cách gán AI: File và API](#7-hai-cách-gán-ai-file-và-api) — chọn ở màn **Cấu hình AI**
    - [7a. Nạp & hỏi: một mã issue hoặc một file](#7a-nạp--hỏi-một-mã-issue-hoặc-một-file)
    - [7b. Phần mềm khách: gửi tín hiệu, nhận kết quả về](#7b-phần-mềm-khách-gửi-tín-hiệu-nhận-kết-quả-về)
+   - [7c. Tự trải nghiệm: kịch bản, bản nháp SOP, phiên & tổng kết](#7c-tự-trải-nghiệm-kịch-bản-bản-nháp-sop-phiên--tổng-kết)
 8. [Các phép kiểm tự động](#8-các-phép-kiểm-tự-động)
 9. [Dọn dẹp và làm lại từ đầu](#9-dọn-dẹp-và-làm-lại-từ-đầu)
 10. [Xử lý sự cố](#10-xử-lý-sự-cố)
@@ -36,6 +37,8 @@
 | **Kiểm đầu-cuối** | `python scripts\kiem_dau_cuoi.py` | Mọi endpoint trong hợp đồng còn gọi được trên app ĐANG CHẠY | Trước khi commit thay đổi chạm API |
 | **Kiểm hai khách** | `python scripts\kiem_hai_khach.py` | Dựng được khách thứ hai mà không sửa code; hai khách không lẫn dữ liệu | Khi đụng tới tenant, xác thực, onboard |
 | **Kiểm sơ đồ console** | `npm run kiem:so-do` | Cách console tô các ô của sơ đồ luồng đúng trên dữ liệu thật | Sau khi sửa `console/src/soDo.ts` |
+| **Tự trải nghiệm theo kịch bản** (thủ công, có giao diện) | `/console/kich-ban` | Đọc đủ hướng dẫn + dẫn chứng, đọc/sửa/duyệt bản nháp, lưu lượt + đánh giá, tổng kết, xuất | Khi muốn tự đánh giá kết quả — §7c |
+| **Kiểm phiên trải nghiệm** | `npm run kiem:phien` · `python scripts\giao-dien\kiem_phien_trai_nghiem.py` | Thống kê đúng mẫu số, lịch sử sửa giữ bản gốc; nơi lưu tách ngữ cảnh, lượt không đè lượt, từ chối bí mật | Sau khi sửa `phien.ts`, `doc.ts`, `phien_trai_nghiem.py` |
 
 Phần lớn tài liệu này nói về **giả lập hai luồng** — loại duy nhất cho người test thấy được dữ liệu đi qua từng ô.
 Các phép kiểm tự động tóm ở §8.
@@ -298,6 +301,10 @@ ui_server ── POST :5120/knowledge/{id}/approve  × mỗi bản ghi tri thứ
 **Mong đợi:** mọi dòng HTTP 200, trạng thái **ACTIVE**. Duyệt một phiên bản quy trình mới thì phiên bản cũ của cùng nhóm
 thành DEPRECATED (`N6-1`) — case đang chạy dở vẫn giữ phiên bản nó bắt đầu.
 
+⚠ **Từ 2026-10-23** nút ở bước 4 tên là **"Duyệt nhanh (dữ liệu giả)"** — nó tự khai AR-n hộ bạn, nên CHỈ dùng cho dữ liệu
+bịa. Cách đề xuất: nút **"Đọc · sửa · duyệt bản nháp"** ở bước 3 → màn Bản nháp SOP (§7c): đọc nội dung + dẫn chứng, sửa,
+tự chọn phạm vi xem, tự tích lời khai, duyệt từng đối tượng.
+
 ### Bước 5 · Đóng vòng — hỏi lại, xác nhận bước, phản hồi
 
 **Ý nghĩa:** chạy lại **luồng xuôi** sau khi luồng ngược đã tạo tri thức. Kiểm các ô **D → J**: khớp quy trình, suy ra
@@ -328,6 +335,8 @@ bước hiện tại từ bằng chứng, tra tri thức theo bước, trả g�
 - Bấm "Xác nhận K1 xong" → *"bước hiện tại giờ là K2"* (hoặc bước kế). Hỏi lại thì vẫn K2 — tiến độ suy từ evidence
   nên bền qua mọi lần hỏi.
 - Bản đồ lô: ticket của nhóm sáng **A → J**.
+- Bấm **"n hướng dẫn ▸"**: đọc được nội dung từng hướng dẫn, mức kiểm chứng, dẫn chứng (§7c). Mở xem không đổi bước hiện tại.
+- Mỗi ticket hỏi lại = một lượt trong phiên đang chọn; đánh giá ngay dưới phần đọc. Xem tổng ở `/console/phien`.
 
 ---
 
@@ -505,6 +514,92 @@ NHẬN  host ── hàng đợi bền → vòng quét ~15 giây ── POST htt
 
 `? không kiểm được` ở cột chữ ký = ui_server đã khởi động lại sau khi đăng ký (mất bí mật trong RAM) — đăng ký lại.
 
+## 7c. Tự trải nghiệm: kịch bản, bản nháp SOP, phiên & tổng kết
+
+> **Thêm 2026-10-23** (`docs/DE_BAI_HOAN_THIEN_GIAO_DIEN_TRAI_NGHIEM.md`; lý do + chênh lệch với đề bài: `docs/07` §3 `IM-61`).
+> Để chủ dự án tự thao tác, đọc kết quả, đối chiếu nguồn và lưu đánh giá — không phải mở mã nguồn hay tự gọi API.
+
+**Bắt đầu ở `/console/kich-ban`.** Sáu kịch bản trên dữ liệu BỊA của app giả lập :5120, mỗi kịch bản ghi mục tiêu, dữ liệu,
+điều kiện đầu, thao tác, kết quả mong đợi và giới hạn. "Bắt đầu phiên theo kịch bản này" mở một **phiên** gắn tên kịch bản
+rồi đưa sang màn đầu tiên:
+
+```text
+1  Chưa có tri thức được duyệt     định tuyến đúng nhưng /hoi trả KHÔNG BIẾT "nhóm chưa có tri thức được người duyệt"
+2  Soạn nháp → xem/sửa → duyệt     chỉ ra điểm nội dung bắt đầu được dùng: sau duyệt, và đúng bản ĐÃ SỬA
+3  Xác nhận bước                   mở xem không đổi bước; xác nhận K1 → bước hiện tại K2, hỏi lại vẫn K2
+4  Hỏi tự do có dẫn chứng          CHƯA DUYỆT; mỗi phát biểu mở được đúng mẩu đã gửi; tải lại vẫn mở lại được
+5  Nguồn thiếu câu trả lời         KHÔNG BIẾT (nguon-khong-noi) — đánh giá việc từ chối là ĐÚNG
+6  Lỗi vận hành                    JSON hỏng → 400 · tắt app :5120 → 502; tổng kết tách khỏi "không biết". Không tốn tiền
+```
+
+### Thanh phiên (đầu các màn Giả lập, Nạp & hỏi, Bản nháp)
+
+Cho biết đang dùng **dữ liệu nào** (app, cổng, tenant, chế độ tenant), **chế độ AI nào** (định tuyến / soạn nháp / hỏi đáp:
+API · nhà cung cấp hoặc File) và ghi vào **phiên nào**. Chưa chọn phiên thì lượt đầu tiên tự mở một phiên — một lượt hỏi
+không bao giờ mất vì quên bấm "Phiên mới".
+
+**Phiên lưu ở đâu:** ui_server, `scripts\giao-dien\phien-trai-nghiem\<ngữ cảnh>\<id>.json` — `.gitignore` chặn, ghi xong mới
+thay file. Ngữ cảnh = `cong-<cổng>.<tenantId>` (đọc từ `GET /internal/tenant-boundary`): đổi app hay đổi khách là đổi thư
+mục, nên lịch sử của ngữ cảnh trước KHÔNG hiện lại. Chung cho mọi trình duyệt trên máy này (localStorage chỉ nhớ phiên nào
+đang chọn). Người thao tác là LỜI KHAI — console chưa xác thực danh tính. Lượt mang khoá tên `apiKey`/`pat`/`matKhau`/
+`token`/`secret`… bị ui_server từ chối cả lượt.
+
+### Giả lập bước 5 — đọc ĐỦ hướng dẫn
+
+Bấm **"n hướng dẫn ▸"** ở một ticket: định tuyến kèm NGUỒN (người nạp / bảng tra / model) và chấm trên đáp án giả (chỉ về
+định tuyến), KHÔNG BIẾT kèm lý do (một kết quả hợp lệ, khác hẳn **lỗi vận hành** = HTTP khác 200), quy trình + bước hiện tại
++ "xem ở", từng bản ghi tri thức: điều kiện áp dụng / cách nhận ra / cách xử lý, mỗi phát biểu có **mức kiểm chứng**,
+**nguồn gốc** và **dẫn chứng**. Bấm một dẫn chứng → nội dung mẩu đọc qua `GET /cases/{k}/evidence` (đường duy nhất thực
+thi luật rút lại): thiếu liên kết, case không truy cập được, mẩu đã rút — mỗi ca nói đúng ca của nó, không dựng thay.
+JSON thô chỉ là phần mở rộng. **Mở/đóng phần đọc không gửi request nào** (đã đo). Dưới phần đọc là form đánh giá.
+
+### Bản nháp SOP — `/console/ban-nhap` (nút "Đọc · sửa · duyệt" ở bước 3)
+
+```text
+đọc    GET  /knowledge/{id} · GET /processes/{id}                 phát biểu ĐANG hiệu lực theo loại; nội dung trái, dẫn
+                                                                  chứng phải khi màn đủ rộng; "không mẩu nào hỗ trợ trực tiếp"
+sửa    POST /knowledge/{id}/sua                                   tạo bản B, bản A còn nguyên → "Lịch sử: n bản — xem bản gốc"
+       PUT  /processes/{id}/buoc                                  CHỈ DRAFT (N5-1). ⚠ THAY toàn bộ bước — host không giữ bản
+                                                                  cũ; console ghi bản trước vào lịch sử phiên
+duyệt  POST /knowledge/{id}/approve · /processes/{id}/approve     TỪNG đối tượng, bảng kết quả từng dòng, thẻ đọc lại từ app
+```
+
+**Lưu chỉnh sửa ≠ Duyệt.** Lưu sửa không đổi trạng thái (DRAFT vẫn DRAFT). Nút duyệt khoá cho tới khi: không còn sửa chưa
+lưu, khai người duyệt, CHỌN phạm vi xem (không có mặc định — S7), tích "đã đọc", và TỰ TÍCH lời khai AR-n — giao diện liệt
+kê thiếu gì. Một đối tượng hỏng (vd. 409 "chỉ duyệt được bản DRAFT", hoặc 409 cổng shared `AR-l` trên app shared) không làm
+đối tượng khác hỏng theo và không thành "thành công toàn bộ": bảng ghi `k/n đối tượng duyệt được`. Rời trang khi còn sửa
+chưa lưu thì trình duyệt hỏi lại. Mức kiểm chứng khi sửa giữ nguyên mức cũ trừ khi bạn chủ động đổi.
+
+⚠ Nút **"Duyệt nhanh (dữ liệu giả)"** ở bước 4 vẫn còn, ghi rõ CHỈ cho giả lập: nó tự khai AR-n + `noi-bo` hộ bạn.
+
+### Nạp & hỏi — lượt, lịch sử, đánh giá
+
+Mỗi lần **Hỏi** (API) hoặc **Nạp kết quả** (File) là MỘT lượt: ghi "đang chờ" TRƯỚC khi gọi host, cập nhật khi có kết quả
+(tải lại giữa chừng thì lượt còn đó, kết cục "đang chờ / gián đoạn"). Lượt lưu câu hỏi, nguồn, chế độ, nhà cung cấp/model
+**theo kết quả host trả** (File thì "không rõ", không gán hộ), câu trả lời + các mẩu ĐÃ gửi (bản đã qua cổng che), cảnh
+báo nguồn bị cắt, thời gian chờ đo ở giao diện (gồm mạng + host, không phải thời gian model), token/chi phí "chưa có dữ
+liệu". Bảng **"Lượt hỏi trong phiên"** mở lại đúng bản chụp — không gọi app, không chạy lại câu hỏi.
+
+### Đánh giá — ba chiều độc lập
+
+| Chiều | Giá trị |
+|---|---|
+| Độ đúng nội dung | Chưa đánh giá · Đúng · Đúng một phần · Sai · Chưa đủ cơ sở |
+| Dẫn chứng hỗ trợ | Chưa đánh giá · Đủ · Một phần · Không hỗ trợ · Không áp dụng |
+| Tính thực hiện được | Chưa đánh giá · Làm theo được · Cần bổ sung · Không dùng được · Không áp dụng |
+
+\+ nhận xét + kết quả mong đợi. Mặc định "Chưa đánh giá" — không bao giờ suy từ HTTP 200. Lưu đánh giá CHỈ ghi vào phiên:
+không đổi mức kiểm chứng, trạng thái duyệt hay nấc USED (nút "Khai: đã dùng gợi ý" là việc khác, ghi lên app).
+
+### Phiên — `/console/phien`: lịch sử, tổng kết, so sánh, xuất
+
+Chọn ngữ cảnh (app) + phiên. **Tổng kết**: tổng lượt; "chạy được" (trả lời + không biết) tách khỏi lỗi vận hành và đang
+chờ; đã/chưa đánh giá; phân bố từng chiều **kèm mẫu số** (chưa ai chấm thì "chưa có đánh giá", không phải 0%); chấm định
+tuyến trên đáp án giả trình bày RIÊNG; danh sách "cần mở lại"; bản nháp: số lần lưu sửa / duyệt được / duyệt hỏng. Tích hai
+lượt để **so sánh** cạnh nhau — khác câu hỏi/nguồn/chế độ/model/phiên bản quy trình thì nói thẳng "không phải so sánh công
+bằng". **Xuất JSON** (`dinhDang: kp-phien-trai-nghiem/1`) và **Xuất Markdown** — chỉ khi bấm. Mở trang này chỉ đọc file
+phiên (đã đo: không POST nào tới app). **Xoá phiên** ở đây (xoá file, không hoàn tác).
+
 ---
 
 ## 8. Các phép kiểm tự động
@@ -565,6 +660,23 @@ npm run kiem:so-do
 Chạy `tinhSoDo` trên mọi case giả lập thật: bất biến (A/B/C luôn qua, không nhóm thì G/H không qua, đường lùi chỉ sáng
 khi không có quy trình…) + kỳ vọng trên lô `20261019-045231` nếu còn. Mong đợi: `… phép kiểm · 0 sai`.
 
+⚠ **2026-10-23:** phần KỲ VỌNG báo `1 sai` (ticket 004 của lô đó "nhóm CHƯA có quy trình: dừng ở D"). Không phải lỗi vẽ:
+nhóm "NCC từ chối payload" đã có quy trình ACTIVE trong `kp_gialap` từ 2026-10-19 19:21 (một lượt duyệt sau IM-50), nên
+dữ liệu đã đổi dưới kỳ vọng. Phần BẤT BIẾN vẫn 0 sai. Muốn lại `0 sai` thì dựng lại `kp_gialap` (§9).
+
+### Kiểm phiên trải nghiệm — kiểm ĐẾM và LƯU
+
+```bat
+cd scripts\giao-dien\console
+npm run kiem:phien                                  rem phép tính thuần — không cần app
+cd ..\..\..
+python scripts\giao-dien\kiem_phien_trai_nghiem.py  rem nơi lưu ở ui_server — không cần app, ghi vào thư mục tạm rồi xoá
+```
+`kiem:phien`: mẫu số của từng chiều đánh giá, "chưa có đánh giá" ≠ 0%, "chạy được" không gồm lỗi/đang chờ, chấm định
+tuyến không đổ vào độ đúng, lịch sử sửa giữ bản gốc, so sánh nói ra khi đầu vào khác, Markdown khớp số liệu.
+`kiem_phien_trai_nghiem.py`: hai ngữ cảnh không thấy phiên của nhau, lượt không đè lượt (kể cả cùng câu hỏi), khoá bí
+mật bị từ chối mà không ghi gì, tên ngữ cảnh/id không thoát ra ngoài thư mục. Mong đợi: `✓ n/n phép kiểm đúng` cả hai.
+
 ---
 
 ## 9. Dọn dẹp và làm lại từ đầu
@@ -575,6 +687,7 @@ khi không có quy trình…) + kỳ vọng trên lô `20261019-045231` nếu c�
 | Sinh lô mới | bước 1 → "Sinh lô mới". Lô cũ vẫn nằm trong `kp_gialap`, vô hại |
 | Xoá sạch dữ liệu giả lập | `dung-thu.bat`, rồi `psql -U postgres -h localhost -c "DROP DATABASE kp_gialap"`, rồi 3 lệnh ở §2 bước 3 |
 | Xoá file trao đổi với AI | xoá `scripts\giao-dien\gia-lap-io\` (đã nằm ngoài git) |
+| Xoá một phiên trải nghiệm | `/console/phien` → "Xoá phiên" · xoá hết: xoá `scripts\giao-dien\phien-trai-nghiem\` (ngoài git) |
 | Build lại sau khi sửa code | `dung-thu.bat` → `chay-thu.bat` (C#) · `scripts\giao-dien\build-console.bat` (Vue) |
 
 ⚠ Kho tri thức chỉ GHI THÊM: nạp lại một bản nháp sinh bản ghi mới bên cạnh bản cũ, không đè. Muốn kho "sạch" thì xoá
@@ -621,4 +734,7 @@ Ghi ra để không ai đọc màn hình xanh thành "sản phẩm dùng đượ
 5  "Thử khoá ✓" không nói còn credit — chỉ lượt gọi tốn tiền đầu tiên mới nói.
 6  Bước quy trình sinh từ bản nháp chưa có dấu hiệu nào, nên chỉ xong được bằng lời XÁC NHẬN — test bước 5 kiểm đường
    xác nhận, không kiểm đường "evidence mới tự làm xong bước" (bộ test C# TienDoQuyTrinhTests, XuLyNgayTests giữ đường đó).
+7  Đánh giá trong phiên là ý kiến của NGƯỜI THỬ trên dữ liệu BỊA — nó không phải số đo chất lượng của sản phẩm, và tổng
+   kết không suy ra tiết kiệm thời gian, giảm escalation hay ROI. Bản chụp lượt giả lập giữ KHOÁ dẫn chứng, không giữ nội
+   dung mẩu: mở dẫn chứng từ lịch sử là đọc bản HIỆN TẠI trong app.
 ```
